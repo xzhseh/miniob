@@ -79,7 +79,7 @@ public:
   RC delete_record(const Record &record);
   RC visit_record(const RID &rid, bool readonly, std::function<void(Record &)> visitor);
   RC get_record(const RID &rid, Record &record);
-
+  RC delete_table(const char *path, const char *base_dir, const char *name);
   RC recover_insert_record(Record &record);
 
   // TODO refactor
@@ -91,7 +91,7 @@ public:
   {
     return record_handler_;
   }
-
+  
 public:
   int32_t table_id() const { return table_meta_.table_id(); }
   const char *name() const;

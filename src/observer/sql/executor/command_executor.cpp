@@ -11,7 +11,7 @@ See the Mulan PSL v2 for more details. */
 //
 // Created by Wangyunlai on 2023/4/25.
 //
-
+#include "sql/executor/drop_table_executor.h"
 #include "sql/executor/command_executor.h"
 #include "event/sql_event.h"
 #include "sql/stmt/stmt.h"
@@ -45,7 +45,10 @@ RC CommandExecutor::execute(SQLStageEvent *sql_event)
       DescTableExecutor executor;
       return executor.execute(sql_event);
     }
-
+    case StmtType::DROP_TABLE: {
+      DropTableExecutor executor;
+      return executor.execute(sql_event);
+    } 
     case StmtType::HELP: {
       HelpExecutor executor;
       return executor.execute(sql_event);

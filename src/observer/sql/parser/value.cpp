@@ -13,6 +13,7 @@ See the Mulan PSL v2 for more details. */
 //
 
 #include <sstream>
+#include <regex>
 #include "sql/parser/value.h"
 #include "storage/field/field.h"
 #include "common/log/log.h"
@@ -249,6 +250,37 @@ int Value::compare(const Value &other) const {
   }
   LOG_WARN("not supported");
   return -1;  // TODO return rc?
+}
+
+bool compare_like(const char * str,const char * pattern) {
+  LOG_DEBUG("str=%s, pattern=%s", str, pattern);
+  char *c = (char *)pattern;
+  std::string re;
+  while (*c) {
+    if (*c == '%') {
+      re += "[^']*";
+    } else if (*c == '_') {
+      re += "[^']";
+    } else {
+      re += "[";
+      re += *c;
+      re += "]";
+    }
+    c++;
+  }
+  std::regex  rule(re);
+  return std::regex_match(str, rule);
+}
+
+// Compare current value with pattern if the value is `CHARS`
+RC Value::like(const Value &pattern,bool & result) const {
+    if (this->attr_type_ == CHARS && pattern.attr_type_ == CHARS) {
+        result = compare_like(this->str_value_.c_str(),pattern.str_value_.c_str());
+        return RC::SUCCESS;
+    } else {
+        LOG_WARN("not supported");
+        return RC::UNIMPLENMENT;
+    }
 }
 
 int Value::get_int() const {
