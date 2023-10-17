@@ -101,6 +101,8 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
         NE
         NOT
         LIKE
+        INNER
+        JOIN
 
 /** union 中定义各种数据类型，真实生成的代码也是union类型，所以不能有非POD类型的数据 **/
 %union {
@@ -117,6 +119,7 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
   std::vector<ConditionSqlNode> *   condition_list;
   std::vector<RelAttrSqlNode> *     rel_attr_list;
   std::vector<std::string> *        relation_list;
+  std::vector<JoinSqlNode> *        join_list;
   char *                            string;
   int                               number;
   float                             floats;
@@ -146,6 +149,8 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
 %type <rel_attr_list>       attr_list
 %type <expression>          expression
 %type <expression_list>     expression_list
+%type <join_list>           inner_join_list
+%type <join_list>           inner_join_constr
 %type <sql_node>            calc_stmt
 %type <sql_node>            select_stmt
 %type <sql_node>            insert_stmt
@@ -444,6 +449,67 @@ select_stmt:        /*  select 语句的语法解析树*/
         delete $6;
       }
       free($4);
+    }
+    |
+    SELECT select_attr FROM ID inner_join_constr inner_join_list where
+        {
+          $$ = new ParsedSqlNode(SCF_SELECT);
+          if ($2 != nullptr) {
+            $$->selection.attributes.swap(*$2);
+            delete $2;
+          }
+          $$->selection.relations.push_back($4);
+          delete $4;
+
+          $$->selection.relations.push_back((*$5)[0].relation_name);
+          $$->selection.conditions.swap((*$5)[0].conditions);
+          delete $5;
+
+          if ($6 != nullptr) {
+	    for (auto &join_relation : *$6) {
+	      $$->selection.relations.push_back(join_relation.relation_name);
+	      for (auto &condition : join_relation.conditions) {
+	      	$$->selection.conditions.emplace_back(condition);
+	      }
+	    }
+	    delete $6;
+	  }
+
+
+          if ($7 != nullptr) {
+            $$->selection.conditions.insert($$->selection.conditions.end(),$7->begin(),$7->end());
+            delete $7;
+          }
+    }
+    ;
+inner_join_constr:
+    INNER JOIN ID ON condition_list
+    {
+      $$ = new std::vector<JoinSqlNode>;
+      JoinSqlNode join_node;
+      join_node.relation_name = $3;
+      join_node.conditions.swap(*$5);
+      $$->emplace_back(join_node);
+      free($3);
+    };
+
+inner_join_list:
+    /* empty */
+    {
+      $$ = nullptr;
+    }
+    | INNER JOIN ID ON condition_list inner_join_list
+    {
+      if ($6 != nullptr) {
+	$$ = $6;
+      } else {
+	$$ = new std::vector<JoinSqlNode>;
+      }
+      JoinSqlNode join_node;
+      join_node.relation_name = $3;
+      join_node.conditions.swap(*$5);
+      $$->emplace_back(join_node);
+      free($3);
     }
     ;
 calc_stmt:

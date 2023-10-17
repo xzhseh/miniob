@@ -119,6 +119,15 @@ struct InsertSqlNode
 };
 
 /**
+ * @brief 描述一个join语句
+ */
+struct JoinSqlNode
+{
+    std::string relation_name;  ///< Relation to join
+    std::vector<ConditionSqlNode> conditions; ///< Join conditions
+};
+
+/**
  * @brief 描述一个delete语句
  * @ingroup SQLParser
  */
