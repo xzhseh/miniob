@@ -49,7 +49,6 @@ RC CommandExecutor::execute(SQLStageEvent *sql_event)
       DropTableExecutor executor;
       return executor.execute(sql_event);
     } 
-
     case StmtType::HELP: {
       HelpExecutor executor;
       return executor.execute(sql_event);
