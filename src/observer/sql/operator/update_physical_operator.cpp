@@ -45,8 +45,10 @@ RC UpdatePhysicalOperator::next()
       return rc;
     }
     ::memcpy(record.data() + value_offset_, value_.data(), value_.length());
-    
     // new Record then insert
+    if(value_.attr_type() == AttrType::CHARS) {
+      *(record.data() + value_.length() + value_offset_) = '\0';
+    }
     rc = trx_->insert_record(table_, record);
     if (rc != RC::SUCCESS) {
       LOG_WARN("failed to update:insert record: %s", strrc(rc));
