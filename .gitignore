@@ -25,10 +25,9 @@ GRTAGS
 GPATH
 GTAGS
 docs/book
-#*#
 *.log.*
 miniob/
-./src/observer/sql/parser/*.hpp
-./src/observer/sql/parser/yacc_sql.cpp
-./src/observer/sql/parser/lex_sql.cpp
-./src/observer/sql/parser/lex_sql.h
+src/observer/sql/parser/*.hpp
+src/observer/sql/parser/yacc_sql.cpp
+src/observer/sql/parser/lex_sql.cpp
+src/observer/sql/parser/lex_sql.h
