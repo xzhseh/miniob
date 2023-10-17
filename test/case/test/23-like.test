@@ -1,0 +1,13 @@
+-- echo initialization
+CREATE TABLE join_table_1(id int, name char);
+INSERT INTO join_table_1 VALUES (1, 'apple');
+INSERT INTO join_table_1 VALUES (2, 'pineapple');
+INSERT INTO join_table_1 VALUES (3, 'cmdd');
+
+select * from join_table_1 where name LIKE 'c%';
+
+select * from join_table_1 where name like 'p%';
+
+select * from join_table_1 where name not like 'p%';
+
+select * from join_table_1 where name not like 'p%' and name not like '%a';
