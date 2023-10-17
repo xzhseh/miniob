@@ -9,9 +9,14 @@
             "request": "launch",
             "name": "Debug",
             "program": "${workspaceFolder}/${defaultBuildTask}/bin/observer",
-            "args": ["-f", "${workspaceFolder}/etc/observer.ini", "-P", "cli"],
+            "args": [
+                "-f",
+                "${workspaceFolder}/etc/observer.ini",
+                "-P",
+                "cli"
+            ],
             "cwd": "${workspaceFolder}/${defaultBuildTask}/",
-            "externalConsole":true,
+            "externalConsole": true,
             "internalConsoleOptions": "openOnSessionStart",
             "osx": {
                 "MIMode": "lldb"
@@ -22,7 +27,12 @@
             "request": "launch",
             "name": "LLDB",
             "program": "${workspaceFolder}/${defaultBuildTask}/bin/observer",
-            "args": ["-f", "${workspaceFolder}/etc/observer.ini", "-P", "cli"],
+            "args": [
+                "-f",
+                "${workspaceFolder}/etc/observer.ini",
+                "-P",
+                "cli"
+            ],
             "cwd": "${workspaceFolder}/${defaultBuildTask}/"
         }
     ]
