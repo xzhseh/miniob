@@ -99,7 +99,7 @@ RC PlainCommunicator::write_state(SessionEvent *event, bool &need_disconnect)
   char *buf = new char[buf_size];
   const std::string &state_string = sql_result->state_string();
   if (state_string.empty()) {
-    const char *result = RC::SUCCESS == sql_result->return_code() ? "SUCCESS" : "FAILURE";
+    const char *result = (RC::SUCCESS == sql_result->return_code()) ? "SUCCESS" : "FAILURE";
     snprintf(buf, buf_size, "%s\n", result);
   } else {
     snprintf(buf, buf_size, "%s > %s\n", strrc(sql_result->return_code()), state_string.c_str());
@@ -161,7 +161,12 @@ RC PlainCommunicator::write_result(SessionEvent *event, bool &need_disconnect)
   if (!need_disconnect) {
     (void)write_debug(event, need_disconnect);
   }
-  writer_->flush(); // TODO handle error
+  if (rc == RC::SUCCESS) {
+    writer_->flush(); // TODO handle error
+  } else {
+    write_state(event, need_disconnect);
+    writer_->flush();
+  }
   return rc;
 }
 
@@ -263,6 +268,14 @@ RC PlainCommunicator::write_result_internal(SessionEvent *event, bool &need_disc
 
   if (rc == RC::RECORD_EOF) {
     rc = RC::SUCCESS;
+  }
+
+
+  // FIXME: Ensure this
+  if (rc != RC::SUCCESS) {
+    sql_result->set_return_code(rc);
+    writer_->clear();
+    return rc;
   }
 
   if (cell_num == 0) {

@@ -39,8 +39,6 @@ using namespace std;
 
 RC PhysicalPlanGenerator::create(LogicalOperator &logical_operator, unique_ptr<PhysicalOperator> &oper)
 {
-  RC rc = RC::SUCCESS;
-
   switch (logical_operator.type()) {
     case LogicalOperatorType::CALC: {
       return create_plan(static_cast<CalcLogicalOperator &>(logical_operator), oper);
@@ -78,11 +76,12 @@ RC PhysicalPlanGenerator::create(LogicalOperator &logical_operator, unique_ptr<P
       return RC::INVALID_ARGUMENT;
     }
   }
-  return rc;
+
+  // This is impossible
+  assert(false);
 }
 
-RC PhysicalPlanGenerator::create_plan(TableGetLogicalOperator &table_get_oper, unique_ptr<PhysicalOperator> &oper)
-{
+RC PhysicalPlanGenerator::create_plan(TableGetLogicalOperator &table_get_oper, unique_ptr<PhysicalOperator> &oper) {
   vector<unique_ptr<Expression>> &predicates = table_get_oper.predicates();
   // 看看是否有可以用于索引查找的表达式
   Table *table = table_get_oper.table();
@@ -92,7 +91,7 @@ RC PhysicalPlanGenerator::create_plan(TableGetLogicalOperator &table_get_oper, u
   for (auto &expr : predicates) {
     if (expr->type() == ExprType::COMPARISON) {
       auto comparison_expr = static_cast<ComparisonExpr *>(expr.get());
-      // 简单处理，就找等值查询
+      // 简单处理，仅找等值查询 (May be future expanded)
       if (comparison_expr->comp() != EQUAL_TO) {
         continue;
       }
@@ -131,6 +130,11 @@ RC PhysicalPlanGenerator::create_plan(TableGetLogicalOperator &table_get_oper, u
     ASSERT(value_expr != nullptr, "got an index but value expr is null ?");
 
     const Value &value = value_expr->get_value();
+
+    if (value.attr_type() == DATE && value.get_date() == -1) {
+      return RC::INVALID_ARGUMENT;
+    }
+
     IndexScanPhysicalOperator *index_scan_oper = new IndexScanPhysicalOperator(
           table, index, table_get_oper.readonly(), 
           &value, true /*left_inclusive*/, 

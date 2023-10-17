@@ -182,8 +182,7 @@ RC Table::open(const char *meta_file, const char *base_dir)
   return rc;
 }
 
-RC Table::insert_record(Record &record)
-{
+RC Table::insert_record(Record &record) {
   RC rc = RC::SUCCESS;
   rc = record_handler_->insert_record(record.data(), table_meta_.record_size(), &record.rid());
   if (rc != RC::SUCCESS) {
@@ -268,8 +267,7 @@ const TableMeta &Table::table_meta() const
   return table_meta_;
 }
 
-RC Table::make_record(int value_num, const Value *values, Record &record)
-{
+RC Table::make_record(int value_num, const Value *values, Record &record) {
   // 检查字段类型是否一致
   if (value_num + table_meta_.sys_field_num() != table_meta_.field_num()) {
     LOG_WARN("Input values don't match the table's schema, table name:%s", table_meta_.name());
@@ -289,7 +287,7 @@ RC Table::make_record(int value_num, const Value *values, Record &record)
 
   // 复制所有字段的值
   int record_size = table_meta_.record_size();
-  char *record_data = (char *)malloc(record_size);
+  char *record_data = (char *) malloc(sizeof(char) * record_size);
 
   for (int i = 0; i < value_num; i++) {
     const FieldMeta *field = table_meta_.field(i + normal_field_start_index);
@@ -300,6 +298,10 @@ RC Table::make_record(int value_num, const Value *values, Record &record)
       if (copy_len > data_len) {
         copy_len = data_len + 1;
       }
+    }
+    // Invalid date value
+    if (field->type() == DATE && value.get_date() == -1) {
+      return RC::VARIABLE_NOT_VALID;
     }
     memcpy(record_data + field->offset(), value.data(), copy_len);
   }
