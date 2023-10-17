@@ -1,8 +1,8 @@
-/* A Bison parser, made by GNU Bison 3.7.  */
+/* A Bison parser, made by GNU Bison 3.8.2.  */
 
 /* Bison interface for Yacc-like parsers in C
 
-   Copyright (C) 1984, 1989-1990, 2000-2015, 2018-2020 Free Software Foundation,
+   Copyright (C) 1984, 1989-1990, 2000-2015, 2018-2021 Free Software Foundation,
    Inc.
 
    This program is free software: you can redistribute it and/or modify
@@ -16,7 +16,7 @@
    GNU General Public License for more details.
 
    You should have received a copy of the GNU General Public License
-   along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
+   along with this program.  If not, see <https://www.gnu.org/licenses/>.  */
 
 /* As a special exception, you may create a larger work that contains
    part or all of the Bison parser skeleton and distribute that work
@@ -97,12 +97,12 @@ extern int yydebug;
     LE = 298,                      /* LE  */
     GE = 299,                      /* GE  */
     NE = 300,                      /* NE  */
-    NUMBER = 301,                  /* NUMBER  */
-    FLOAT = 302,                   /* FLOAT  */
-    ID = 303,                      /* ID  */
-    PATH = 304,                    /* PATH  */
-    SSS = 305,                     /* SSS  */
-    STRING_V = 306,                /* STRING_V  */
+    NOT = 301,                     /* NOT  */
+    LIKE = 302,                    /* LIKE  */
+    NUMBER = 303,                  /* NUMBER  */
+    FLOAT = 304,                   /* FLOAT  */
+    ID = 305,                      /* ID  */
+    SSS = 306,                     /* SSS  */
     UMINUS = 307                   /* UMINUS  */
   };
   typedef enum yytokentype yytoken_kind_t;
@@ -112,7 +112,7 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 99 "yacc_sql.y"
+#line 104 "yacc_sql.y"
 
   ParsedSqlNode *                   sql_node;
   ConditionSqlNode *                condition;
@@ -155,6 +155,8 @@ struct YYLTYPE
 
 
 
+
 int yyparse (const char * sql_string, ParsedSqlResult * sql_result, void * scanner);
+
 
 #endif /* !YY_YY_YACC_SQL_HPP_INCLUDED  */
