@@ -44,7 +44,7 @@ public:
    * @note 数据库不是放在dbpath/name下，是直接使用dbpath目录
    */
   RC init(const char *name, const char *dbpath);
-
+  RC drop_table(const char *table_name);
   RC create_table(const char *table_name, int attribute_count, const AttrInfoSqlNode *attributes);
 
   Table *find_table(const char *table_name) const;

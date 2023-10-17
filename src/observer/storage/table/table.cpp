@@ -19,6 +19,7 @@ See the Mulan PSL v2 for more details. */
 #include "common/defs.h"
 #include "storage/table/table.h"
 #include "storage/table/table_meta.h"
+#include "storage/persist/persist.h"
 #include "common/log/log.h"
 #include "common/lang/string.h"
 #include "storage/buffer/disk_buffer_pool.h"
@@ -180,6 +181,18 @@ RC Table::open(const char *meta_file, const char *base_dir)
   }
 
   return rc;
+}
+RC Table::delete_table(const char *path, const char *base_dir, const char *name)
+{
+  std::string data_file = table_data_file(base_dir, name);
+  RC rc1 = PersistHandler().remove_file(path);
+  RC rc2 = PersistHandler().remove_file(data_file.c_str());
+  if (OB_SUCC(rc1) && OB_SUCC(rc2)) {
+    return RC::SUCCESS;
+  } else {
+    LOG_WARN("table not exist");
+    return RC::SCHEMA_TABLE_NOT_EXIST;
+  }
 }
 
 RC Table::insert_record(Record &record)
