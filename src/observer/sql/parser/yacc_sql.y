@@ -466,6 +466,7 @@ select_stmt:        /*  select 语句的语法解析树*/
           delete $5;
 
           if ($6 != nullptr) {
+            std::reverse($6->begin(), $6->end());
 	    for (auto &join_relation : *$6) {
 	      $$->selection.relations.push_back(join_relation.relation_name);
 	      for (auto &condition : join_relation.conditions) {

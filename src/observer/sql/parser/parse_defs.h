@@ -123,7 +123,7 @@ struct InsertSqlNode
  */
 struct JoinSqlNode
 {
-    std::string relation_name;  ///< Relation to join
+    std::string                   relation_name;  ///< Relation to join
     std::vector<ConditionSqlNode> conditions; ///< Join conditions
 };
 

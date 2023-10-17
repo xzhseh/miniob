@@ -34,6 +34,7 @@ See the Mulan PSL v2 for more details. */
 #include "sql/operator/join_physical_operator.h"
 #include "sql/operator/calc_logical_operator.h"
 #include "sql/operator/calc_physical_operator.h"
+#include "sql/operator/inner_join_physical_operator.h"
 #include "sql/expr/expression.h"
 #include "common/log/log.h"
 
@@ -100,7 +101,7 @@ RC PhysicalPlanGenerator::create_plan(TableGetLogicalOperator &table_get_oper, u
         continue;
       }
 
-      unique_ptr<Expression> &left_expr = comparison_expr->left();
+      unique_ptr<Expression> &left_expr  = comparison_expr->left();
       unique_ptr<Expression> &right_expr = comparison_expr->right();
       // 左右比较的一边最少是一个值
       if (left_expr->type() != ExprType::VALUE && right_expr->type() != ExprType::VALUE) {
@@ -123,7 +124,7 @@ RC PhysicalPlanGenerator::create_plan(TableGetLogicalOperator &table_get_oper, u
       }
 
       const Field &field = field_expr->field();
-      index = table->find_index_by_field(field.field_name());
+      index              = table->find_index_by_field(field.field_name());
       if (nullptr != index) {
         break;
       }
@@ -224,7 +225,7 @@ RC PhysicalPlanGenerator::create_plan(UpdateLogicalOperator &update_oper, std::u
 {
   vector<unique_ptr<LogicalOperator>> &child_opers = update_oper.children();
 
-  
+
   unique_ptr<PhysicalOperator> child_physical_oper;
 
   RC rc = RC::SUCCESS;
@@ -299,7 +300,15 @@ RC PhysicalPlanGenerator::create_plan(JoinLogicalOperator &join_oper, unique_ptr
     return RC::INTERNAL;
   }
 
-  unique_ptr<PhysicalOperator> join_physical_oper(new NestedLoopJoinPhysicalOperator);
+  unique_ptr<PhysicalOperator> join_physical_oper;
+  LOG_WARN("Create the nested loop join operator");
+  if (join_oper.expressions().size() == 1) {
+    join_physical_oper =
+        unique_ptr<PhysicalOperator>(new NestedLoopJoinPhysicalOperator(std::move(join_oper.expressions().front())));
+  } else {
+    join_physical_oper = unique_ptr<PhysicalOperator>(new NestedLoopJoinPhysicalOperator(nullptr));
+  }
+
   for (auto &child_oper : child_opers) {
     unique_ptr<PhysicalOperator> child_physical_oper;
     rc = create(*child_oper, child_physical_oper);
