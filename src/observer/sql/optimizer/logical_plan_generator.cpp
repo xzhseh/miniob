@@ -45,10 +45,10 @@ RC LogicalPlanGenerator::create(Stmt *stmt, unique_ptr<LogicalOperator> &logical
     } break;
 
     case StmtType::UPDATE: {
-      UpdateStmt* update_stmt = static_cast<UpdateStmt*>(stmt);
-      rc = create_plan(update_stmt, logical_operator);
+      UpdateStmt *update_stmt = static_cast<UpdateStmt *>(stmt);
+      rc                      = create_plan(update_stmt, logical_operator);
     } break;
-    
+
     case StmtType::SELECT: {
       SelectStmt *select_stmt = static_cast<SelectStmt *>(stmt);
       rc                      = create_plan(select_stmt, logical_operator);
@@ -73,24 +73,25 @@ RC LogicalPlanGenerator::create(Stmt *stmt, unique_ptr<LogicalOperator> &logical
     }
   }
   return rc;
-}  
+}
 RC LogicalPlanGenerator::create_plan(UpdateStmt *update_stmt, std::unique_ptr<LogicalOperator> &logical_operator)
 {
-  Table* table = update_stmt->table();
-  FilterStmt* filter_stmt = update_stmt->filter_stmt();
+  Table             *table       = update_stmt->table();
+  FilterStmt        *filter_stmt = update_stmt->filter_stmt();
   std::vector<Field> fields;
-  for(int i = table->table_meta().sys_field_num(); i < table->table_meta().field_num(); i++) {
+  for (int i = table->table_meta().sys_field_num(); i < table->table_meta().field_num(); i++) {
     const FieldMeta *field_meta = table->table_meta().field(i);
-    fields.push_back(Field(table, field_meta));    
+    fields.push_back(Field(table, field_meta));
   }
-  unique_ptr<LogicalOperator> table_get_oper(new TableGetLogicalOperator(table, fields, false/*readonly*/));
+  unique_ptr<LogicalOperator> table_get_oper(new TableGetLogicalOperator(table, fields, false /*readonly*/));
 
   unique_ptr<LogicalOperator> predicate_oper;
-  RC rc = create_plan(filter_stmt, predicate_oper);
+  RC                          rc = create_plan(filter_stmt, predicate_oper);
   if (rc != RC::SUCCESS) {
     return rc;
   }
-  unique_ptr<LogicalOperator> update_oper(new UpdateLogicalOperator(update_stmt->table(), update_stmt->value(), update_stmt->value_offset()));
+  unique_ptr<LogicalOperator> update_oper(
+      new UpdateLogicalOperator(update_stmt->table(), update_stmt->values(), update_stmt->field_metas()));
   if (predicate_oper) {
     predicate_oper->add_child(std::move(table_get_oper));
     update_oper->add_child(std::move(predicate_oper));
@@ -116,32 +117,6 @@ RC LogicalPlanGenerator::create_plan(SelectStmt *select_stmt, unique_ptr<Logical
   const std::vector<Field>   &all_fields = select_stmt->query_fields();
   auto                        join_stmts = select_stmt->join_stmts();
   std::set<std::string>       joined_tables;
-  //  for (auto join_stmt : join_stmts) {
-  //    unique_ptr<Expression> left(new FieldExpr(join_stmt.left_field));
-  //    unique_ptr<Expression> right(new FieldExpr(join_stmt.right_field));
-  //    joined_tables.insert(join_stmt.left_field.table_name());
-  //    joined_tables.insert(join_stmt.right_field.table_name());
-  //
-  //    auto expression =
-  //        unique_ptr<Expression>(std::make_unique<ComparisonExpr>(CompOp::EQUAL_TO, std::move(left),
-  //        std::move(right)));
-  //    unique_ptr<LogicalOperator> join_oper(new JoinLogicalOperator(std::move(expression)));
-  //    if (table_oper == nullptr) {
-  //      // We haven't built any join yet
-  //      auto                       *left_table  = (Table *)join_stmt.left_field.table();
-  //      auto                       *right_table = (Table *)join_stmt.right_field.table();
-  //      unique_ptr<LogicalOperator> left_scan(new TableGetLogicalOperator(left_table, all_fields, true /*readonly*/));
-  //      unique_ptr<LogicalOperator> right_scan(new TableGetLogicalOperator(right_table, all_fields, true
-  //      /*readonly*/)); join_oper->add_child(std::move(left_scan)); join_oper->add_child(std::move(right_scan));
-  //      table_oper = std::move(join_oper);
-  //    } else {
-  //      // Just construct the right child
-  //      auto                       *right_table = (Table *)join_stmt.right_field.table();
-  //      unique_ptr<LogicalOperator> right_scan(new TableGetLogicalOperator(right_table, all_fields, true
-  //      /*readonly*/)); join_oper->add_child(std::move(table_oper)); join_oper->add_child(std::move(right_scan));
-  //      table_oper = std::move(join_oper);
-  //    }
-  //  }
 
   for (size_t i = 0; i < tables.size(); i++) {
     Table             *table = tables[i];
