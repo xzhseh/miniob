@@ -95,9 +95,10 @@ private:
 class KeyComparator 
 {
 public:
-  void init(AttrType type, int length)
+  void init(AttrType type, int length, bool unique = false)
   {
     attr_comparator_.init(type, length);
+    unique_ = unique;
   }
 
   const AttrComparator &attr_comparator() const
@@ -108,10 +109,9 @@ public:
   int operator()(const char *v1, const char *v2) const
   {
     int result = attr_comparator_(v1, v2);
-    if (result != 0) {
+    if (result != 0 || (result == 0 && unique_)) {
       return result;
     }
-
     const RID *rid1 = (const RID *)(v1 + attr_comparator_.attr_length());
     const RID *rid2 = (const RID *)(v2 + attr_comparator_.attr_length());
     return RID::compare(rid1, rid2);
@@ -119,6 +119,7 @@ public:
 
 private:
   AttrComparator attr_comparator_;
+  bool unique_;
 };
 
 /**
@@ -465,6 +466,7 @@ public:
   RC create(const char *file_name, 
             AttrType attr_type, 
             int attr_length, 
+            bool unique,
             int internal_max_size = -1, 
             int leaf_max_size = -1);
 
@@ -568,9 +570,10 @@ private:
 
 protected:
   DiskBufferPool *disk_buffer_pool_ = nullptr;
-  bool            header_dirty_ = false; // 
+  bool            header_dirty_ = false; //   
+  bool            unique_;       
   IndexFileHeader file_header_;
-
+  
   // 在调整根节点时，需要加上这个锁。
   // 这个锁可以使用递归读写锁，但是这里偷懒先不改
   common::SharedMutex   root_lock_;
