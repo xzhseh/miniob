@@ -47,8 +47,15 @@ RC UpdatePhysicalOperator::next()
       const Value     &value      = values_[i];
       const FieldMeta &field_meta = field_metas_[i];
       int              offset     = field_meta.offset();
+      if (value.length() > field_meta.len()) {
+        LOG_WARN("value length is too long: %d, %d", value.length(), field_meta.len());
+        return RC::INVALID_ARGUMENT;
+      }
       for (int j = 0; j < value.length(); ++j) {
         data[offset + j] = value.data()[j];
+      }
+      if (value.attr_type() == AttrType::CHARS && value.length() < field_meta.len()) {
+        data[offset + value.length()] = '\0';
       }
     }
     Record new_record;
