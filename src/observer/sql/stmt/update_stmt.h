@@ -26,7 +26,8 @@ class FilterStmt;
 class UpdateStmt : public Stmt 
 {
 public:
-  UpdateStmt() = default;
+  // FIXME: Please ensure this
+  // UpdateStmt() = default;
   UpdateStmt(Table *table,const Value &value, int value_offset, FilterStmt* filter_stmt);
   StmtType type() const override 
   {

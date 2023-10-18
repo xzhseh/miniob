@@ -98,7 +98,14 @@ void SessionStage::handle_request(StageEvent *event)
   Session::set_current_session(sev->session());
   sev->session()->set_current_request(sev);
   SQLStageEvent sql_event(sev, sql);
-  (void)handle_sql(&sql_event);
+
+  // (void) handle_sql(&sql_event);
+
+  // FIXME: Ensure this
+  auto res = handle_sql(&sql_event);
+  if (res != RC::SUCCESS) {
+    sev->sql_result()->set_return_code(res);
+  }
 
   Communicator *communicator    = sev->get_communicator();
   bool          need_disconnect = false;
@@ -121,8 +128,7 @@ void SessionStage::handle_request(StageEvent *event)
  * execute_stage中的执行，通过explain语句看需要哪些operator，然后找对应的operator来
  * 调试或者看代码执行过程即可。
  */
-RC SessionStage::handle_sql(SQLStageEvent *sql_event)
-{
+RC SessionStage::handle_sql(SQLStageEvent *sql_event) {
   RC rc = query_cache_stage_.handle_request(sql_event);
   if (OB_FAIL(rc)) {
     LOG_TRACE("failed to do query cache. rc=%s", strrc(rc));

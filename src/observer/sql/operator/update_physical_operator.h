@@ -12,8 +12,8 @@ class UpdateStmt;
 class UpdatePhysicalOperator : public PhysicalOperator
 {
 public:
-  UpdatePhysicalOperator(Table *table, const Value& value, int value_offset) : table_(table), value_(value), value_offset_(value_offset) 
-  {}
+  UpdatePhysicalOperator(Table *table, const Value& value, int value_offset)
+    : table_(table), value_(value), value_offset_(value_offset) {}
 
   virtual ~UpdatePhysicalOperator() = default;
 

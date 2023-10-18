@@ -10,6 +10,7 @@ class UpdateLogicalOperator : public LogicalOperator
 {
 public:
   UpdateLogicalOperator(Table *table, const Value& value, int value_offset);
+
   virtual ~UpdateLogicalOperator() = default;
 
   LogicalOperatorType type() const override

@@ -12,6 +12,7 @@
 #include "sql/parser/yacc_sql.hpp"
 #include "sql/parser/lex_sql.h"
 #include "sql/expr/expression.h"
+#include "event/sql_debug.h"
 
 using namespace std;
 
@@ -77,6 +78,7 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
         INT_T
         STRING_T
         FLOAT_T
+        DATE_T
         HELP
         EXIT
         DOT //QUOTE
@@ -124,6 +126,7 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
 %token <floats> FLOAT
 %token <string> ID
 %token <string> SSS
+%token <string> DATE_STR
 //非终结符
 
 /** type 定义了各种解析后的结果输出的是什么类型。类型对应了 union 中的定义的成员变量名称 **/
@@ -204,7 +207,7 @@ command_wrapper:
 
 exit_stmt:      
     EXIT {
-      (void)yynerrs;  // 这么写为了消除yynerrs未使用的告警。如果你有更好的方法欢迎提PR
+      (void) yynerrs;  // 这么写为了消除yynerrs未使用的告警。如果你有更好的方法欢迎提PR
       $$ = new ParsedSqlNode(SCF_EXIT);
     };
 
@@ -237,7 +240,7 @@ rollback_stmt:
     }
     ;
 
-drop_table_stmt:    /*drop table 语句的语法解析树*/
+drop_table_stmt:    /* drop table 语句的语法解析树 */
     DROP TABLE ID {
       $$ = new ParsedSqlNode(SCF_DROP_TABLE);
       $$->drop_table.relation_name = $3;
@@ -258,7 +261,7 @@ desc_table_stmt:
     }
     ;
 
-create_index_stmt:    /*create index 语句的语法解析树*/
+create_index_stmt:    /* create index 语句的语法解析树 */
     CREATE INDEX ID ON ID LBRACE ID RBRACE
     {
       $$ = new ParsedSqlNode(SCF_CREATE_INDEX);
@@ -272,7 +275,7 @@ create_index_stmt:    /*create index 语句的语法解析树*/
     }
     ;
 
-drop_index_stmt:      /*drop index 语句的语法解析树*/
+drop_index_stmt:      /* drop index 语句的语法解析树 */
     DROP INDEX ID ON ID
     {
       $$ = new ParsedSqlNode(SCF_DROP_INDEX);
@@ -282,7 +285,7 @@ drop_index_stmt:      /*drop index 语句的语法解析树*/
       free($5);
     }
     ;
-create_table_stmt:    /*create table 语句的语法解析树*/
+create_table_stmt:    /* create table 语句的语法解析树 */
     CREATE TABLE ID LBRACE attr_def attr_def_list RBRACE
     {
       $$ = new ParsedSqlNode(SCF_CREATE_TABLE);
@@ -316,32 +319,31 @@ attr_def_list:
       delete $2;
     }
     ;
-    
 attr_def:
-    ID type LBRACE number RBRACE 
-    {
+    /* i.e., char(255) */
+    ID type LBRACE number RBRACE {
       $$ = new AttrInfoSqlNode;
       $$->type = (AttrType)$2;
       $$->name = $1;
       $$->length = $4;
       free($1);
     }
-    | ID type
-    {
+    | ID type {
       $$ = new AttrInfoSqlNode;
-      $$->type = (AttrType)$2;
+      $$->type = (AttrType) $2;
       $$->name = $1;
       $$->length = 4;
       free($1);
     }
     ;
 number:
-    NUMBER {$$ = $1;}
+    NUMBER { $$ = $1; }
     ;
 type:
-    INT_T      { $$=INTS; }
-    | STRING_T { $$=CHARS; }
-    | FLOAT_T  { $$=FLOATS; }
+    INT_T      { $$ = INTS; }
+    | STRING_T { $$ = CHARS; }
+    | FLOAT_T  { $$ = FLOATS; }
+    | DATE_T   { $$ = DATE; }
     ;
 insert_stmt:        /*insert   语句的语法解析树*/
     INSERT INTO ID VALUES LBRACE value value_list RBRACE 
@@ -375,20 +377,26 @@ value_list:
     ;
 value:
     NUMBER {
-      $$ = new Value((int)$1);
+      $$ = new Value(static_cast<int>($1));
       @$ = @1;
     }
-    |FLOAT {
-      $$ = new Value((float)$1);
+    | FLOAT {
+      $$ = new Value(static_cast<float>($1));
       @$ = @1;
     }
-    |SSS {
-      char *tmp = common::substr($1,1,strlen($1)-2);
+    | SSS {
+      /* This is to eliminate the double/single quotes from the input string */
+      char *tmp = common::substr($1, 1, strlen($1) - 2);
       $$ = new Value(tmp);
       free(tmp);
     }
+    | DATE_STR {
+      char *tmp = common::substr($1, 1, strlen($1) - 2);
+      /* Note the length here is by default 10 */
+      $$ = new Value(DATE, tmp);
+      free(tmp);
+    }
     ;
-    
 delete_stmt:    /*  delete 语句的语法解析树*/
     DELETE FROM ID where 
     {
