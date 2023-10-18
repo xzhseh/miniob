@@ -82,8 +82,7 @@ void SessionStage::handle_event(StageEvent *event)
   return;
 }
 
-void SessionStage::handle_request(StageEvent *event)
-{
+void SessionStage::handle_request(StageEvent *event) {
   SessionEvent *sev = dynamic_cast<SessionEvent *>(event);
   if (nullptr == sev) {
     LOG_ERROR("Cannot cat event to sessionEvent");
@@ -98,7 +97,7 @@ void SessionStage::handle_request(StageEvent *event)
   Session::set_current_session(sev->session());
   sev->session()->set_current_request(sev);
   SQLStageEvent sql_event(sev, sql);
-  (void)handle_sql(&sql_event);
+  (void) handle_sql(&sql_event);
 
   Communicator *communicator    = sev->get_communicator();
   bool          need_disconnect = false;
@@ -121,37 +120,42 @@ void SessionStage::handle_request(StageEvent *event)
  * execute_stage中的执行，通过explain语句看需要哪些operator，然后找对应的operator来
  * 调试或者看代码执行过程即可。
  */
-RC SessionStage::handle_sql(SQLStageEvent *sql_event)
-{
+RC SessionStage::handle_sql(SQLStageEvent *sql_event) {
   RC rc = query_cache_stage_.handle_request(sql_event);
   if (OB_FAIL(rc)) {
     LOG_TRACE("failed to do query cache. rc=%s", strrc(rc));
     return rc;
   }
 
+  /// Frontend parsing --> output a `ParsedSqlResult` containing the SQL query
   rc = parse_stage_.handle_request(sql_event);
   if (OB_FAIL(rc)) {
     LOG_TRACE("failed to do parse. rc=%s", strrc(rc));
     return rc;
   }
 
+  /// Binder --> binding the node we get from the last stage with catalog / table infos
+  /// To generate the logical plan (statement)
   rc = resolve_stage_.handle_request(sql_event);
   if (OB_FAIL(rc)) {
     LOG_TRACE("failed to do resolve. rc=%s", strrc(rc));
     return rc;
   }
 
+  /// Optimizer --> potentially generate the physical plan based on the logical plan
   rc = optimize_stage_.handle_request(sql_event);
   if (rc != RC::UNIMPLENMENT && rc != RC::SUCCESS) {
     LOG_TRACE("failed to do optimize. rc=%s", strrc(rc));
     return rc;
   }
 
+  /// Execution --> sql execution via volcano model
   rc = execute_stage_.handle_request(sql_event);
   if (OB_FAIL(rc)) {
     LOG_TRACE("failed to do execute. rc=%s", strrc(rc));
     return rc;
   }
 
+  /// Hopefully, gracefully return
   return rc;
 }

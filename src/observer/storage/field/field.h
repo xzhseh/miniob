@@ -19,10 +19,8 @@ See the Mulan PSL v2 for more details. */
 
 /**
  * @brief 字段
- * 
  */
-class Field 
-{
+class Field {
 public:
   Field() = default;
   Field(const Table *table, const FieldMeta *field) : table_(table), field_(field)

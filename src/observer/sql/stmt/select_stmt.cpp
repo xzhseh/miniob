@@ -19,16 +19,16 @@ See the Mulan PSL v2 for more details. */
 #include "storage/db/db.h"
 #include "storage/table/table.h"
 
-SelectStmt::~SelectStmt()
-{
+SelectStmt::~SelectStmt() {
   if (nullptr != filter_stmt_) {
     delete filter_stmt_;
     filter_stmt_ = nullptr;
   }
 }
 
-static void wildcard_fields(Table *table, std::vector<Field> &field_metas)
-{
+/// Basically push all metadata from the specified table to the current `field_metas`
+/// Use case: `select count(*) from t1 where t1.c1 = 1;`
+static void wildcard_fields(Table *table, std::vector<Field> &field_metas) {
   const TableMeta &table_meta = table->table_meta();
   const int field_num = table_meta.field_num();
   for (int i = table_meta.sys_field_num(); i < field_num; i++) {
@@ -36,9 +36,10 @@ static void wildcard_fields(Table *table, std::vector<Field> &field_metas)
   }
 }
 
-RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt)
-{
-  if (nullptr == db) {
+RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt) {
+  assert(stmt == nullptr && "`stmt` must be nullptr at the beginning");
+
+  if (db == nullptr) {
     LOG_WARN("invalid argument. db is null");
     return RC::INVALID_ARGUMENT;
   }
@@ -46,6 +47,7 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt)
   // collect tables in `from` statement
   std::vector<Table *> tables;
   std::unordered_map<std::string, Table *> table_map;
+
   for (size_t i = 0; i < select_sql.relations.size(); i++) {
     const char *table_name = select_sql.relations[i].c_str();
     if (nullptr == table_name) {
@@ -65,21 +67,26 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt)
 
   // collect query fields in `select` statement
   std::vector<Field> query_fields;
+
   for (int i = static_cast<int>(select_sql.attributes.size()) - 1; i >= 0; i--) {
     const RelAttrSqlNode &relation_attr = select_sql.attributes[i];
 
     if (common::is_blank(relation_attr.relation_name.c_str()) &&
         0 == strcmp(relation_attr.attribute_name.c_str(), "*")) {
+      // If the current field is wildcard. (i.e., COUNT(*))
       for (Table *table : tables) {
+        // We basically need all the metadata from all the underlying tables
         wildcard_fields(table, query_fields);
       }
 
     } else if (!common::is_blank(relation_attr.relation_name.c_str())) {
+      // If the table name is not null. (i.e., `select t1.c1 from t1;`)
       const char *table_name = relation_attr.relation_name.c_str();
       const char *field_name = relation_attr.attribute_name.c_str();
 
       if (0 == strcmp(table_name, "*")) {
         if (0 != strcmp(field_name, "*")) {
+          // Only `*.*` is permitted, but to be honest I do not know why to use this though. 🤣
           LOG_WARN("invalid field name while table is *. attr=%s", field_name);
           return RC::SCHEMA_FIELD_MISSING;
         }
@@ -95,6 +102,7 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt)
 
         Table *table = iter->second;
         if (0 == strcmp(field_name, "*")) {
+          // i.e., `select t1.* from t1;`. Though this is essentially the same with `*`.
           wildcard_fields(table, query_fields);
         } else {
           const FieldMeta *field_meta = table->table_meta().field(field_name);
@@ -107,10 +115,15 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt)
         }
       }
     } else {
+      // Only the column name is available. (i.e., `select c1 from t1;`)
       if (tables.size() != 1) {
+        // Basically this is saying, i.e., `select c1 from t1 natural join t1;` is invalid.
+        // Though this is a perfectly valid SQL syntax.
         LOG_WARN("invalid. I do not know the attr's table. attr=%s", relation_attr.attribute_name.c_str());
         return RC::SCHEMA_FIELD_MISSING;
       }
+
+      assert(tables.size() == 1);
 
       Table *table = tables[0];
       const FieldMeta *field_meta = table->table_meta().field(relation_attr.attribute_name.c_str());

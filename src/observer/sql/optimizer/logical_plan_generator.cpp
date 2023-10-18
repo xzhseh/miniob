@@ -36,8 +36,8 @@ See the Mulan PSL v2 for more details. */
 
 using namespace std;
 
-RC LogicalPlanGenerator::create(Stmt *stmt, unique_ptr<LogicalOperator> &logical_operator)
-{
+/// Logical plan factory
+RC LogicalPlanGenerator::create(Stmt *stmt, unique_ptr<LogicalOperator> &logical_operator) {
   RC rc = RC::SUCCESS;
   switch (stmt->type()) {
     case StmtType::CALC: {
@@ -74,7 +74,8 @@ RC LogicalPlanGenerator::create(Stmt *stmt, unique_ptr<LogicalOperator> &logical
     }
   }
   return rc;
-}  
+}
+
 RC LogicalPlanGenerator::create_plan(UpdateStmt *update_stmt, std::unique_ptr<LogicalOperator> &logical_operator)
 {
   Table* table = update_stmt->table();
@@ -109,9 +110,7 @@ RC LogicalPlanGenerator::create_plan(CalcStmt *calc_stmt, std::unique_ptr<Logica
   return RC::SUCCESS;
 }
 
-RC LogicalPlanGenerator::create_plan(
-    SelectStmt *select_stmt, unique_ptr<LogicalOperator> &logical_operator)
-{
+RC LogicalPlanGenerator::create_plan(SelectStmt *select_stmt, unique_ptr<LogicalOperator> &logical_operator) {
   unique_ptr<LogicalOperator> table_oper(nullptr);
 
   const std::vector<Table *> &tables = select_stmt->tables();
@@ -128,6 +127,7 @@ RC LogicalPlanGenerator::create_plan(
     if (table_oper == nullptr) {
       table_oper = std::move(table_get_oper);
     } else {
+      // Multiple tables
       JoinLogicalOperator *join_oper = new JoinLogicalOperator;
       join_oper->add_child(std::move(table_oper));
       join_oper->add_child(std::move(table_get_oper));
@@ -135,6 +135,7 @@ RC LogicalPlanGenerator::create_plan(
     }
   }
 
+  // TODO: Predicate push down? (or later)
   unique_ptr<LogicalOperator> predicate_oper;
   RC rc = create_plan(select_stmt->filter_stmt(), predicate_oper);
   if (rc != RC::SUCCESS) {

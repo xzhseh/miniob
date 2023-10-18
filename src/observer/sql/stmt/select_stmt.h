@@ -30,14 +30,12 @@ class Table;
  * @brief 表示select语句
  * @ingroup Statement
  */
-class SelectStmt : public Stmt 
-{
+class SelectStmt : public Stmt {
 public:
   SelectStmt() = default;
   ~SelectStmt() override;
 
-  StmtType type() const override
-  {
+  StmtType type() const override {
     return StmtType::SELECT;
   }
 

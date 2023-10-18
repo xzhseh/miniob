@@ -35,8 +35,7 @@ class Stmt;
  * 不过并不是所有的语句都需要生成计划，有些可以直接执行，比如create table、create index等。
  * 这些语句可以参考 @class CommandExecutor。
  */
-class OptimizeStage
-{
+class OptimizeStage {
 public:
   RC handle_request(SQLStageEvent *event);
 

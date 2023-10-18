@@ -34,8 +34,7 @@ class Expression;
  * Rel -> Relation
  * Attr -> Attribute
  */
-struct RelAttrSqlNode
-{
+struct RelAttrSqlNode {
   std::string relation_name;   ///< relation name (may be NULL) 表名
   std::string attribute_name;  ///< attribute name              属性名
 };
@@ -44,16 +43,15 @@ struct RelAttrSqlNode
  * @brief 描述比较运算符
  * @ingroup SQLParser
  */
-enum CompOp 
-{
+enum CompOp  {
   EQUAL_TO,     ///< "="
   LESS_EQUAL,   ///< "<="
   NOT_EQUAL,    ///< "<>"
   LESS_THAN,    ///< "<"
   GREAT_EQUAL,  ///< ">="
   GREAT_THAN,   ///< ">"
-  LIKE_OP,         ///< "LIKE"
-  NOT_LIKE_OP,      ///< "NOT LIKE"
+  LIKE_OP,      ///< "LIKE"
+  NOT_LIKE_OP,  ///< "NOT LIKE"
   NO_OP
 };
 
@@ -65,8 +63,7 @@ enum CompOp
  * 左边和右边理论上都可以是任意的数据，比如是字段（属性，列），也可以是数值常量。
  * 这个结构中记录的仅仅支持字段和值。
  */
-struct ConditionSqlNode
-{
+struct ConditionSqlNode {
   int             left_is_attr;    ///< TRUE if left-hand side is an attribute
                                    ///< 1时，操作符左边是属性名，0时，是属性值
   Value           left_value;      ///< left-hand side value if left_is_attr = FALSE
@@ -89,8 +86,7 @@ struct ConditionSqlNode
  * 甚至可以包含复杂的表达式。
  */
 
-struct SelectSqlNode
-{
+struct SelectSqlNode {
   std::vector<RelAttrSqlNode>     attributes;    ///< attributes in select clause
   std::vector<std::string>        relations;     ///< 查询的表
   std::vector<ConditionSqlNode>   conditions;    ///< 查询条件，使用AND串联起来多个条件
@@ -284,12 +280,13 @@ enum SqlCommandFlag
   SCF_EXPLAIN,
   SCF_SET_VARIABLE, ///< 设置变量
 };
+
 /**
- * @brief 表示一个SQL语句
+ * @brief Represents a single SQL query being parsed by frontend
+ * Will then be translated to statement / physical plan later
  * @ingroup SQLParser
  */
-class ParsedSqlNode
-{
+class ParsedSqlNode {
 public:
   enum SqlCommandFlag       flag;
   ErrorSqlNode              error;
@@ -313,15 +310,13 @@ public:
 };
 
 /**
- * @brief 表示语法解析后的数据
+ * @brief Represents the SQL data after syntax / grammar parsing
  * @ingroup SQLParser
  */
-class ParsedSqlResult
-{
+class ParsedSqlResult {
 public:
   void add_sql_node(std::unique_ptr<ParsedSqlNode> sql_node);
-  std::vector<std::unique_ptr<ParsedSqlNode>> &sql_nodes()
-  {
+  std::vector<std::unique_ptr<ParsedSqlNode>> &sql_nodes() {
     return sql_nodes_;
   }
 
