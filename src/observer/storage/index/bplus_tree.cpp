@@ -1690,7 +1690,7 @@ RC BplusTreeScanner::open(const char *left_user_key, int left_len, bool left_inc
 
   // 校验输入的键值是否是合法范围
   if (left_user_key && right_user_key) {
-    const int result = tree_handler_.key_comparator_(left_user_key, right_user_key);
+    const int result = tree_handler_.key_comparator_(left_user_key, right_user_key, false);
     if (result > 0 ||  // left < right
                        // left == right but is (left,right)/[left,right) or (left,right]
         (result == 0 && (left_inclusive == false || right_inclusive == false))) {

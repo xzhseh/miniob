@@ -115,7 +115,7 @@ public:
     return attr_comparators_;
   }
 
-  int operator()(const char *v1, const char *v2) const
+  int operator()(const char *v1, const char *v2, bool has_rid = true) const
   {
     int attr_offset = 0;
     int result = 0;
@@ -126,7 +126,7 @@ public:
       }
       attr_offset += attr_comparators_[i].attr_length();
     }
-    if (result != 0 || (result == 0 && unique_)) {
+    if (result != 0 || (result == 0 && unique_) || !has_rid) {
       return result;
     }
     const RID *rid1 = (const RID *)(v1 + attr_offset);
