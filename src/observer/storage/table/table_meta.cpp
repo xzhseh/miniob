@@ -189,7 +189,7 @@ const IndexMeta *TableMeta::find_index_by_field(std::vector<std::string>& fields
         }
       }
     }
-    if(is_same) {
+    if(is_same && index.fields().size() == fields.size()) {
       return &index;
     }
   }
