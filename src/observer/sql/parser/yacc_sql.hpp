@@ -87,7 +87,6 @@ extern int yydebug;
     WHERE = 288,                   /* WHERE  */
     AND = 289,                     /* AND  */
     SET = 290,                     /* SET  */
-<<<<<<< HEAD
     UNIQUE = 291,                  /* UNIQUE  */
     ON = 292,                      /* ON  */
     LOAD = 293,                    /* LOAD  */
@@ -110,29 +109,6 @@ extern int yydebug;
     SSS = 310,                     /* SSS  */
     DATE_STR = 311,                /* DATE_STR  */
     UMINUS = 312                   /* UMINUS  */
-=======
-    ON = 291,                      /* ON  */
-    LOAD = 292,                    /* LOAD  */
-    DATA = 293,                    /* DATA  */
-    INFILE = 294,                  /* INFILE  */
-    EXPLAIN = 295,                 /* EXPLAIN  */
-    EQ = 296,                      /* EQ  */
-    LT = 297,                      /* LT  */
-    GT = 298,                      /* GT  */
-    LE = 299,                      /* LE  */
-    GE = 300,                      /* GE  */
-    NE = 301,                      /* NE  */
-    NOT = 302,                     /* NOT  */
-    LIKE = 303,                    /* LIKE  */
-    INNER = 304,                   /* INNER  */
-    JOIN = 305,                    /* JOIN  */
-    NUMBER = 306,                  /* NUMBER  */
-    FLOAT = 307,                   /* FLOAT  */
-    ID = 308,                      /* ID  */
-    SSS = 309,                     /* SSS  */
-    DATE_STR = 310,                /* DATE_STR  */
-    UMINUS = 311                   /* UMINUS  */
->>>>>>> origin/xiaguan/join_parser
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -141,11 +117,7 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-<<<<<<< HEAD
 #line 109 "yacc_sql.y"
-=======
-#line 108 "yacc_sql.y"
->>>>>>> origin/xiaguan/join_parser
 
   ParsedSqlNode *                   sql_node;
   ConditionSqlNode *                condition;
@@ -160,23 +132,16 @@ union YYSTYPE
   std::vector<ConditionSqlNode> *   condition_list;
   std::vector<RelAttrSqlNode> *     rel_attr_list;
   std::vector<std::string> *        relation_list;
-<<<<<<< HEAD
   std::vector<IndexAttr> *          attr_name_list;
   IndexAttr*                        index_attr;
   std::vector<IndexAttr> *          index_attr_name_list;
-=======
->>>>>>> origin/xiaguan/join_parser
   std::vector<JoinSqlNode> *        join_list;
   std::vector<UpdateValueNode> *     update_value_list;
   char *                            string;
   int                               number;
   float                             floats;
 
-<<<<<<< HEAD
 #line 145 "yacc_sql.hpp"
-=======
-#line 141 "yacc_sql.hpp"
->>>>>>> origin/xiaguan/join_parser
 
 };
 typedef union YYSTYPE YYSTYPE;

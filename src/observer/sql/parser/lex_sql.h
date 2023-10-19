@@ -541,11 +541,7 @@ extern int yylex \
 #undef yyTABLES_NAME
 #endif
 
-<<<<<<< HEAD
 #line 145 "lex_sql.l"
-=======
-#line 144 "lex_sql.l"
->>>>>>> origin/xiaguan/join_parser
 
 
 #line 548 "lex_sql.h"

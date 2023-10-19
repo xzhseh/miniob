@@ -385,13 +385,8 @@ static void yynoreturn yy_fatal_error ( const char* msg , yyscan_t yyscanner );
 	yyg->yy_hold_char = *yy_cp; \
 	*yy_cp = '\0'; \
 	yyg->yy_c_buf_p = yy_cp;
-<<<<<<< HEAD
 #define YY_NUM_RULES 64
 #define YY_END_OF_BUFFER 65
-=======
-#define YY_NUM_RULES 63
-#define YY_END_OF_BUFFER 64
->>>>>>> origin/xiaguan/join_parser
 /* This struct is not used in this scanner,
    but its presence is necessary. */
 struct yy_trans_info
@@ -399,7 +394,6 @@ struct yy_trans_info
 	flex_int32_t yy_verify;
 	flex_int32_t yy_nxt;
 	};
-<<<<<<< HEAD
 static const flex_int16_t yy_accept[196] =
     {   0,
         0,    0,    0,    0,   65,   63,    1,    2,   63,   63,
@@ -424,30 +418,6 @@ static const flex_int16_t yy_accept[196] =
        18,   13,   20,   28,   26,    0,   40,   45,    0,    0,
        32,    0,   60,    0,    0
 
-=======
-static const flex_int16_t yy_accept[191] =
-    {   0,
-        0,    0,    0,    0,   64,   62,    1,    2,   62,   62,
-       62,   45,   46,   57,   55,   47,   56,    6,   58,    3,
-        5,   52,   48,   54,   44,   44,   44,   44,   44,   44,
-       44,   44,   44,   44,   44,   44,   44,   44,   44,   44,
-       44,   44,   44,   63,   51,    0,   60,    0,   61,    0,
-        3,    0,   49,   50,   53,   44,   44,   44,   44,   44,
-       44,   44,   44,   44,   44,   44,   44,   44,   44,   44,
-       44,   44,   44,   44,   44,   15,   44,   44,   44,   44,
-       44,   44,   44,   44,    0,    4,   22,   44,   44,   44,
-       44,   44,   44,   44,   44,   44,   44,   44,   44,   44,
-
-       44,   44,   44,   44,   44,   32,   44,   44,   44,   41,
-       44,   44,   28,   44,   44,   44,   44,   44,   44,    0,
-       44,   19,   33,   44,   44,   37,   35,   44,    9,   11,
-        7,   44,   44,   20,    8,   44,   44,   44,   44,   24,
-       43,   40,   36,   44,   44,   16,   17,   44,   44,   44,
-       44,    0,   29,   44,   44,   44,   44,   34,   14,   44,
-       42,   44,   44,   44,   12,   44,   44,   21,    0,   30,
-       10,   26,   44,   38,   23,   44,   18,   13,   27,   25,
-        0,   39,   44,    0,    0,   31,    0,   59,    0,    0
->>>>>>> origin/xiaguan/join_parser
     } ;
 
 static const YY_CHAR yy_ec[256] =
@@ -460,21 +430,12 @@ static const YY_CHAR yy_ec[256] =
        15,   15,   15,   15,   15,   15,   15,    1,   16,   17,
        18,   19,    1,    1,   20,   21,   22,   23,   24,   25,
        26,   27,   28,   29,   30,   31,   32,   33,   34,   35,
-<<<<<<< HEAD
        36,   37,   38,   39,   40,   41,   42,   43,   44,   45,
         1,    1,    1,    1,   45,    1,   46,   47,   48,   49,
 
        50,   51,   52,   53,   54,   55,   56,   57,   58,   59,
        60,   61,   62,   63,   64,   65,   66,   67,   68,   69,
        70,   45,    1,    1,    1,    1,    1,    1,    1,    1,
-=======
-       36,   37,   38,   39,   40,   41,   42,   43,   44,   36,
-        1,    1,    1,    1,   36,    1,   45,   46,   47,   48,
-
-       49,   50,   51,   52,   53,   54,   55,   56,   57,   58,
-       59,   60,   36,   61,   62,   63,   64,   65,   66,   67,
-       68,   36,    1,    1,    1,    1,    1,    1,    1,    1,
->>>>>>> origin/xiaguan/join_parser
         1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
         1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
         1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
@@ -491,11 +452,7 @@ static const YY_CHAR yy_ec[256] =
         1,    1,    1,    1,    1
     } ;
 
-<<<<<<< HEAD
 static const YY_CHAR yy_meta[71] =
-=======
-static const YY_CHAR yy_meta[69] =
->>>>>>> origin/xiaguan/join_parser
     {   0,
         1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
         1,    1,    1,    1,    2,    1,    1,    1,    1,    2,
@@ -503,7 +460,6 @@ static const YY_CHAR yy_meta[69] =
         2,    2,    2,    2,    2,    2,    2,    2,    2,    2,
         2,    2,    2,    2,    2,    2,    2,    2,    2,    2,
         2,    2,    2,    2,    2,    2,    2,    2,    2,    2,
-<<<<<<< HEAD
         2,    2,    2,    2,    2,    2,    2,    2,    2,    2
     } ;
 
@@ -560,70 +516,11 @@ static const flex_int16_t yy_def[201] =
     } ;
 
 static const flex_int16_t yy_nxt[585] =
-=======
-        2,    2,    2,    2,    2,    2,    2,    2
-    } ;
-
-static const flex_int16_t yy_base[196] =
-    {   0,
-        0,    0,    0,    0,  496,  497,  497,  497,  477,  489,
-       63,  497,  497,  497,  497,  497,  478,  497,  497,   57,
-      497,   55,  497,  474,   56,   60,   61,   62,   65,   79,
-      476,   68,   70,   78,   90,   85,  100,   87,  112,   81,
-      110,  114,  115,  497,  497,  485,  497,  483,  497,  132,
-      135,  473,  497,  497,  497,    0,  472,  137,  136,  126,
-      148,  139,  150,  116,  138,  157,  160,  158,  163,  171,
-      213,  162,  151,  169,  168,  471,  188,  193,  189,  196,
-      197,  186,  206,  211,  224,  470,  469,  225,  235,  218,
-      210,  244,  250,  253,  251,  257,  230,  265,  266,  226,
-
-      269,  270,  272,  273,  286,  275,  290,  288,  291,  468,
-      276,  300,  467,  298,  305,  311,  313,  301,  293,  330,
-      323,  466,  458,  316,  331,  457,  456,  332,  455,  454,
-      453,  335,  336,  452,  451,  342,  328,  345,  346,  449,
-      447,  446,  445,  347,  351,  444,  441,  348,  338,  363,
-      364,   85,  440,  361,  381,  387,  375,  437,  425,  393,
-      420,  371,  399,  376,  389,  401,  403,  417,  414,  407,
-      406,  377,  416,  374,  359,  411,  303,  232,  195,  190,
-      431,  183,  408,  439,  441,   89,  442,  497,   84,  497,
-      474,  476,  478,   85,   77
-
-    } ;
-
-static const flex_int16_t yy_def[196] =
-    {   0,
-      190,    1,  191,  191,  190,  190,  190,  190,  190,  192,
-      193,  190,  190,  190,  190,  190,  190,  190,  190,  190,
-      190,  190,  190,  190,  194,  194,  194,  194,  194,  194,
-      194,  194,  194,  194,  194,  194,  194,  194,  194,  194,
-      194,  194,  194,  190,  190,  192,  190,  193,  190,  193,
-      190,  190,  190,  190,  190,  195,  194,  194,  194,  194,
-      194,  194,  194,  194,  194,  194,  194,  194,  194,  194,
-      194,  194,  194,  194,  194,  194,  194,  194,  194,  194,
-      194,  194,  194,  194,  193,  190,  194,  194,  194,  194,
-      194,  194,  194,  194,  194,  194,  194,  194,  194,  194,
-
-      194,  194,  194,  194,  194,  194,  194,  194,  194,  194,
-      194,  194,  194,  194,  194,  194,  194,  194,  194,  193,
-      194,  194,  194,  194,  194,  194,  194,  194,  194,  194,
-      194,  194,  194,  194,  194,  194,  194,  194,  194,  194,
-      194,  194,  194,  194,  194,  194,  194,  194,  194,  194,
-      194,  193,  194,  194,  194,  194,  194,  194,  194,  194,
-      194,  194,  194,  194,  194,  194,  194,  194,  193,  194,
-      194,  194,  194,  194,  194,  194,  194,  194,  194,  194,
-      193,  194,  194,  193,  193,  194,  193,  190,  193,    0,
-      190,  190,  190,  190,  190
-
-    } ;
-
-static const flex_int16_t yy_nxt[566] =
->>>>>>> origin/xiaguan/join_parser
     {   0,
         6,    7,    8,    9,   10,   11,   12,   13,   14,   15,
        16,   17,   18,   19,   20,   21,   22,   23,   24,   25,
        26,   27,   28,   29,   30,   31,   32,   33,   34,   31,
        35,   31,   36,   37,   31,   31,   38,   39,   40,   41,
-<<<<<<< HEAD
        42,   43,   31,   31,   31,   25,   26,   27,   28,   29,
        30,   31,   32,   33,   34,   31,   35,   31,   36,   37,
        31,   31,   38,   39,   40,   41,   42,   43,   31,   31,
@@ -687,69 +584,6 @@ static const flex_int16_t yy_nxt[566] =
     } ;
 
 static const flex_int16_t yy_chk[585] =
-=======
-       42,   43,   31,   31,   25,   26,   27,   28,   29,   30,
-       31,   32,   33,   34,   31,   35,   31,   36,   37,   31,
-       38,   39,   40,   41,   42,   43,   31,   31,   49,   52,
-       56,   51,   53,   54,   56,   56,   56,   50,   56,   56,
-       60,   64,   56,   59,   56,   65,   57,   61,   58,  188,
-       49,   70,   56,   56,   62,   56,  169,   63,   66,   56,
-
-       81,   56,   71,   56,   56,   60,   64,   67,   59,   68,
-       65,   72,   61,   58,   56,   69,   70,   73,   75,   62,
-       77,   63,   66,   74,   56,   81,   56,   71,   56,   56,
-       56,   67,   76,   83,   68,   78,   72,   49,   79,   69,
-       56,   84,   73,   75,   82,   77,   85,   52,   74,   51,
-       56,   56,   56,   56,   93,   80,   89,   76,   83,   87,
-       78,   88,   56,   79,   56,   56,   84,   90,   94,   82,
-       91,   56,   56,   92,   56,   95,   56,   56,   93,   80,
-      108,   89,   56,   56,   87,   56,   88,   97,  109,  107,
-       96,   99,   90,   94,   98,   91,  100,   56,   92,   95,
-
-       56,  101,   56,   56,   56,  108,  110,   56,  117,   56,
-       56,   56,   97,  109,  107,   96,   99,  116,  111,   98,
-       56,  100,  114,  112,   56,   56,  101,   56,  115,   49,
-      110,  113,   56,  117,  119,  102,  118,  103,  120,   56,
-       56,  124,  116,  111,   56,  104,   56,  114,  112,   56,
-      105,  106,  121,  115,  123,  113,  122,  134,   56,  119,
-      102,  118,  103,  125,   56,   56,  124,   56,  131,  126,
-      104,   56,  129,  127,  105,  106,  128,  121,  123,   56,
-       56,  122,  134,   56,   56,  133,   56,   56,  125,   56,
-       56,  130,  131,  136,  126,  132,  138,  129,  127,  137,
-
-       56,  128,   56,  135,   56,   56,  144,   56,  140,  139,
-      133,  142,   56,  143,   56,   56,  130,   56,  136,   56,
-      132,  138,  141,  145,  137,   56,  147,   56,  135,  151,
-       56,  144,  149,  140,  139,   49,  142,   56,  143,  146,
-      150,  148,   56,  154,  152,   56,   56,  141,  145,   56,
-       56,  147,   56,  151,  157,  153,   56,  149,  160,   56,
-       56,   56,   56,  146,  150,   56,  148,  163,  154,  155,
-      156,  165,  164,   56,  158,   56,  166,   56,   56,  157,
-      153,  161,  162,  160,  159,   56,  167,  168,   56,   56,
-       56,   56,  163,  155,  156,   56,  165,  164,  158,  170,
-
-      166,   56,  173,   56,  171,  161,  162,   56,  159,  175,
-      172,  167,  168,   56,  177,   56,  174,   56,  176,   49,
-       56,   56,   56,  170,  179,   56,  178,  173,  181,  171,
-       56,   56,  183,  175,   56,  172,   49,  186,  177,   56,
-      180,  174,  184,  176,   49,  185,   49,  188,  182,  179,
-      178,   56,  184,  187,   56,   56,  189,  183,   56,   56,
-       56,   56,  186,   56,  180,   56,   56,   56,   56,   56,
-       56,   56,   56,  182,   44,   44,   46,   46,   48,   48,
-       56,   56,   56,   56,   86,   56,   56,   86,   49,   47,
-       56,   55,   51,   47,   45,  190,    5,  190,  190,  190,
-
-      190,  190,  190,  190,  190,  190,  190,  190,  190,  190,
-      190,  190,  190,  190,  190,  190,  190,  190,  190,  190,
-      190,  190,  190,  190,  190,  190,  190,  190,  190,  190,
-      190,  190,  190,  190,  190,  190,  190,  190,  190,  190,
-      190,  190,  190,  190,  190,  190,  190,  190,  190,  190,
-      190,  190,  190,  190,  190,  190,  190,  190,  190,  190,
-      190,  190,  190,  190,  190
-    } ;
-
-static const flex_int16_t yy_chk[566] =
->>>>>>> origin/xiaguan/join_parser
     {   0,
         1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
         1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
@@ -757,7 +591,6 @@ static const flex_int16_t yy_chk[566] =
         1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
         1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
         1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
-<<<<<<< HEAD
         1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
        11,   20,   25,   20,   22,   22,   26,   27,   28,   11,
        33,   30,   27,   28,   29,   26,   32,   28,   34,   27,
@@ -816,64 +649,6 @@ static const flex_int16_t yy_chk[566] =
       195,  195,  195,  195,  195,  195,  195,  195,  195,  195,
       195,  195,  195,  195,  195,  195,  195,  195,  195,  195,
       195,  195,  195,  195
-=======
-        1,    1,    1,    1,    1,    1,    1,    1,   11,   20,
-       25,   20,   22,   22,   26,   27,   28,   11,  195,   29,
-       27,   28,   32,   26,   33,   28,  194,   27,   25,  189,
-      152,   32,   34,   30,   27,   40,  152,   27,   28,   36,
-
-       40,   38,   33,  186,   35,   27,   28,   29,   26,   30,
-       28,   34,   27,   25,   37,   30,   32,   35,   36,   27,
-       38,   27,   28,   35,   41,   40,   39,   33,   42,   43,
-       64,   29,   37,   42,   30,   39,   34,   50,   39,   30,
-       60,   43,   35,   36,   41,   38,   50,   51,   35,   51,
-       59,   58,   65,   62,   64,   39,   60,   37,   42,   58,
-       39,   59,   61,   39,   63,   73,   43,   61,   65,   41,
-       62,   66,   68,   63,   67,   65,   72,   69,   64,   39,
-       73,   60,   75,   74,   58,   70,   59,   67,   74,   72,
-       66,   68,   61,   65,   67,   62,   69,  182,   63,   65,
-
-       82,   70,   77,   79,  180,   73,   75,   78,   82,  179,
-       80,   81,   67,   74,   72,   66,   68,   81,   77,   67,
-       83,   69,   79,   78,   91,   84,   70,   71,   80,   85,
-       75,   78,   90,   82,   84,   71,   83,   71,   85,   88,
-      100,   91,   81,   77,   97,   71,  178,   79,   78,   89,
-       71,   71,   88,   80,   90,   78,   89,  100,   92,   84,
-       71,   83,   71,   92,   93,   95,   91,   94,   97,   93,
-       71,   96,   95,   93,   71,   71,   94,   88,   90,   98,
-       99,   89,  100,  101,  102,   99,  103,  104,   92,  106,
-      111,   96,   97,  102,   93,   98,  104,   95,   93,  103,
-
-      105,   94,  108,  101,  107,  109,  111,  119,  106,  105,
-       99,  108,  114,  109,  112,  118,   96,  177,  102,  115,
-       98,  104,  107,  112,  103,  116,  115,  117,  101,  119,
-      124,  111,  117,  106,  105,  120,  108,  121,  109,  114,
-      118,  116,  137,  124,  120,  125,  128,  107,  112,  132,
-      133,  115,  149,  119,  132,  121,  136,  117,  137,  138,
-      139,  144,  148,  114,  118,  145,  116,  144,  124,  125,
-      128,  148,  145,  175,  133,  154,  149,  150,  151,  132,
-      121,  138,  139,  137,  136,  162,  150,  151,  174,  157,
-      164,  172,  144,  125,  128,  155,  148,  145,  133,  154,
-
-      149,  156,  157,  165,  155,  138,  139,  160,  136,  162,
-      156,  150,  151,  163,  164,  166,  160,  167,  163,  169,
-      171,  170,  183,  154,  166,  176,  165,  157,  169,  155,
-      173,  168,  176,  162,  161,  156,  181,  183,  164,  159,
-      167,  160,  181,  163,  184,  181,  185,  187,  173,  166,
-      165,  158,  185,  184,  153,  147,  187,  176,  146,  143,
-      142,  141,  183,  140,  167,  135,  134,  131,  130,  129,
-      127,  126,  123,  173,  191,  191,  192,  192,  193,  193,
-      122,  113,  110,   87,   86,   76,   57,   52,   48,   46,
-       31,   24,   17,   10,    9,    5,  190,  190,  190,  190,
-
-      190,  190,  190,  190,  190,  190,  190,  190,  190,  190,
-      190,  190,  190,  190,  190,  190,  190,  190,  190,  190,
-      190,  190,  190,  190,  190,  190,  190,  190,  190,  190,
-      190,  190,  190,  190,  190,  190,  190,  190,  190,  190,
-      190,  190,  190,  190,  190,  190,  190,  190,  190,  190,
-      190,  190,  190,  190,  190,  190,  190,  190,  190,  190,
-      190,  190,  190,  190,  190
->>>>>>> origin/xiaguan/join_parser
     } ;
 
 /* The intent behind this definition is that it'll catch
@@ -908,11 +683,7 @@ extern int atoi();
 extern double atof();
 
 #define RETURN_TOKEN(token) LOG_DEBUG("%s", #token); return token
-<<<<<<< HEAD
 #line 687 "lex_sql.cpp"
-=======
-#line 681 "lex_sql.cpp"
->>>>>>> origin/xiaguan/join_parser
 /* Prevent the need for linking with -lfl */
 #define YY_NO_INPUT 1
 /* 不区分大小写 */
@@ -921,11 +692,7 @@ extern double atof();
 /* 1. 匹配的规则长的优先 */
 /* 2. 写在最前面的优先 */
 /* yylval 就可以认为是 yacc 中 %union 定义的结构体(union 结构) */
-<<<<<<< HEAD
 #line 696 "lex_sql.cpp"
-=======
-#line 690 "lex_sql.cpp"
->>>>>>> origin/xiaguan/join_parser
 
 #define INITIAL 0
 #define STR 1
@@ -1211,11 +978,7 @@ YY_DECL
 #line 75 "lex_sql.l"
 
 
-<<<<<<< HEAD
 #line 982 "lex_sql.cpp"
-=======
-#line 976 "lex_sql.cpp"
->>>>>>> origin/xiaguan/join_parser
 
 	while ( /*CONSTCOND*/1 )		/* loops until end-of-file is reached */
 		{
@@ -1242,21 +1005,13 @@ yy_match:
 			while ( yy_chk[yy_base[yy_current_state] + yy_c] != yy_current_state )
 				{
 				yy_current_state = (int) yy_def[yy_current_state];
-<<<<<<< HEAD
 				if ( yy_current_state >= 196 )
-=======
-				if ( yy_current_state >= 191 )
->>>>>>> origin/xiaguan/join_parser
 					yy_c = yy_meta[yy_c];
 				}
 			yy_current_state = yy_nxt[yy_base[yy_current_state] + yy_c];
 			++yy_cp;
 			}
-<<<<<<< HEAD
 		while ( yy_base[yy_current_state] != 514 );
-=======
-		while ( yy_base[yy_current_state] != 497 );
->>>>>>> origin/xiaguan/join_parser
 
 yy_find_action:
 		yy_act = yy_accept[yy_current_state];
@@ -1454,147 +1209,82 @@ RETURN_TOKEN(STRING_T);
 case 35:
 YY_RULE_SETUP
 #line 113 "lex_sql.l"
-<<<<<<< HEAD
 RETURN_TOKEN(FLOAT_T);
-=======
-RETURN_TOKEN(DATE_T);
->>>>>>> origin/xiaguan/join_parser
 	YY_BREAK
 case 36:
 YY_RULE_SETUP
 #line 114 "lex_sql.l"
-<<<<<<< HEAD
 RETURN_TOKEN(DATE_T);
-=======
-RETURN_TOKEN(LOAD);
->>>>>>> origin/xiaguan/join_parser
 	YY_BREAK
 case 37:
 YY_RULE_SETUP
 #line 115 "lex_sql.l"
-<<<<<<< HEAD
 RETURN_TOKEN(LOAD);
-=======
-RETURN_TOKEN(DATA);
->>>>>>> origin/xiaguan/join_parser
 	YY_BREAK
 case 38:
 YY_RULE_SETUP
 #line 116 "lex_sql.l"
-<<<<<<< HEAD
 RETURN_TOKEN(DATA);
-=======
-RETURN_TOKEN(INFILE);
->>>>>>> origin/xiaguan/join_parser
 	YY_BREAK
 case 39:
 YY_RULE_SETUP
 #line 117 "lex_sql.l"
-<<<<<<< HEAD
 RETURN_TOKEN(INFILE);
-=======
-RETURN_TOKEN(EXPLAIN);
->>>>>>> origin/xiaguan/join_parser
 	YY_BREAK
 case 40:
 YY_RULE_SETUP
 #line 118 "lex_sql.l"
-<<<<<<< HEAD
 RETURN_TOKEN(EXPLAIN);
-=======
-RETURN_TOKEN(LIKE);
->>>>>>> origin/xiaguan/join_parser
 	YY_BREAK
 case 41:
 YY_RULE_SETUP
 #line 119 "lex_sql.l"
-<<<<<<< HEAD
 RETURN_TOKEN(LIKE);
-=======
-RETURN_TOKEN(NOT);
->>>>>>> origin/xiaguan/join_parser
 	YY_BREAK
 case 42:
 YY_RULE_SETUP
 #line 120 "lex_sql.l"
-<<<<<<< HEAD
 RETURN_TOKEN(NOT);
-=======
-RETURN_TOKEN(INNER);
->>>>>>> origin/xiaguan/join_parser
 	YY_BREAK
 case 43:
 YY_RULE_SETUP
 #line 121 "lex_sql.l"
-<<<<<<< HEAD
 RETURN_TOKEN(INNER);
-=======
-RETURN_TOKEN(JOIN);
->>>>>>> origin/xiaguan/join_parser
 	YY_BREAK
 case 44:
 YY_RULE_SETUP
 #line 122 "lex_sql.l"
-<<<<<<< HEAD
 RETURN_TOKEN(JOIN);
-=======
-yylval->string=strdup(yytext); RETURN_TOKEN(ID);
->>>>>>> origin/xiaguan/join_parser
 	YY_BREAK
 case 45:
 YY_RULE_SETUP
 #line 123 "lex_sql.l"
-<<<<<<< HEAD
 yylval->string=strdup(yytext); RETURN_TOKEN(ID);
-=======
-RETURN_TOKEN(LBRACE);
->>>>>>> origin/xiaguan/join_parser
 	YY_BREAK
 case 46:
 YY_RULE_SETUP
 #line 124 "lex_sql.l"
-<<<<<<< HEAD
 RETURN_TOKEN(LBRACE);
 	YY_BREAK
 case 47:
 YY_RULE_SETUP
 #line 125 "lex_sql.l"
 RETURN_TOKEN(RBRACE);
-=======
-RETURN_TOKEN(RBRACE);
-	YY_BREAK
-case 47:
-YY_RULE_SETUP
-#line 126 "lex_sql.l"
-RETURN_TOKEN(COMMA);
->>>>>>> origin/xiaguan/join_parser
 	YY_BREAK
 case 48:
 YY_RULE_SETUP
 #line 127 "lex_sql.l"
-<<<<<<< HEAD
 RETURN_TOKEN(COMMA);
-=======
-RETURN_TOKEN(EQ);
->>>>>>> origin/xiaguan/join_parser
 	YY_BREAK
 case 49:
 YY_RULE_SETUP
 #line 128 "lex_sql.l"
-<<<<<<< HEAD
 RETURN_TOKEN(EQ);
-=======
-RETURN_TOKEN(LE);
->>>>>>> origin/xiaguan/join_parser
 	YY_BREAK
 case 50:
 YY_RULE_SETUP
 #line 129 "lex_sql.l"
-<<<<<<< HEAD
 RETURN_TOKEN(LE);
-=======
-RETURN_TOKEN(NE);
->>>>>>> origin/xiaguan/join_parser
 	YY_BREAK
 case 51:
 YY_RULE_SETUP
@@ -1604,25 +1294,16 @@ RETURN_TOKEN(NE);
 case 52:
 YY_RULE_SETUP
 #line 131 "lex_sql.l"
-<<<<<<< HEAD
 RETURN_TOKEN(NE);
-=======
-RETURN_TOKEN(LT);
->>>>>>> origin/xiaguan/join_parser
 	YY_BREAK
 case 53:
 YY_RULE_SETUP
 #line 132 "lex_sql.l"
-<<<<<<< HEAD
 RETURN_TOKEN(LT);
-=======
-RETURN_TOKEN(GE);
->>>>>>> origin/xiaguan/join_parser
 	YY_BREAK
 case 54:
 YY_RULE_SETUP
 #line 133 "lex_sql.l"
-<<<<<<< HEAD
 RETURN_TOKEN(GE);
 	YY_BREAK
 case 55:
@@ -1645,31 +1326,6 @@ case 60:
 YY_RULE_SETUP
 #line 140 "lex_sql.l"
 { yylval->string = strdup(yytext); RETURN_TOKEN(DATE_STR); }
-=======
-RETURN_TOKEN(GT);
-	YY_BREAK
-case 55:
-#line 136 "lex_sql.l"
-case 56:
-#line 137 "lex_sql.l"
-case 57:
-#line 138 "lex_sql.l"
-case 58:
-YY_RULE_SETUP
-#line 138 "lex_sql.l"
-{ return yytext[0]; }
-	YY_BREAK
-case 59:
-YY_RULE_SETUP
-#line 139 "lex_sql.l"
-{ yylval->string = strdup(yytext); RETURN_TOKEN(DATE_STR); }
-	YY_BREAK
-case 60:
-/* rule 60 can match eol */
-YY_RULE_SETUP
-#line 140 "lex_sql.l"
-{ yylval->string = strdup(yytext); RETURN_TOKEN(SSS); }
->>>>>>> origin/xiaguan/join_parser
 	YY_BREAK
 case 61:
 /* rule 61 can match eol */
@@ -1678,21 +1334,14 @@ YY_RULE_SETUP
 { yylval->string = strdup(yytext); RETURN_TOKEN(SSS); }
 	YY_BREAK
 case 62:
-<<<<<<< HEAD
 /* rule 62 can match eol */
 YY_RULE_SETUP
 #line 142 "lex_sql.l"
 { yylval->string = strdup(yytext); RETURN_TOKEN(SSS); }
-=======
-YY_RULE_SETUP
-#line 143 "lex_sql.l"
-LOG_DEBUG("Unknown character [%c]", yytext[0]); return yytext[0];
->>>>>>> origin/xiaguan/join_parser
 	YY_BREAK
 case 63:
 YY_RULE_SETUP
 #line 144 "lex_sql.l"
-<<<<<<< HEAD
 LOG_DEBUG("Unknown character [%c]", yytext[0]); return yytext[0];
 	YY_BREAK
 case 64:
@@ -1701,11 +1350,6 @@ YY_RULE_SETUP
 ECHO;
 	YY_BREAK
 #line 1353 "lex_sql.cpp"
-=======
-ECHO;
-	YY_BREAK
-#line 1342 "lex_sql.cpp"
->>>>>>> origin/xiaguan/join_parser
 case YY_STATE_EOF(INITIAL):
 case YY_STATE_EOF(STR):
 	yyterminate();
@@ -2005,11 +1649,7 @@ static int yy_get_next_buffer (yyscan_t yyscanner)
 		while ( yy_chk[yy_base[yy_current_state] + yy_c] != yy_current_state )
 			{
 			yy_current_state = (int) yy_def[yy_current_state];
-<<<<<<< HEAD
 			if ( yy_current_state >= 196 )
-=======
-			if ( yy_current_state >= 191 )
->>>>>>> origin/xiaguan/join_parser
 				yy_c = yy_meta[yy_c];
 			}
 		yy_current_state = yy_nxt[yy_base[yy_current_state] + yy_c];
@@ -2038,19 +1678,11 @@ static int yy_get_next_buffer (yyscan_t yyscanner)
 	while ( yy_chk[yy_base[yy_current_state] + yy_c] != yy_current_state )
 		{
 		yy_current_state = (int) yy_def[yy_current_state];
-<<<<<<< HEAD
 		if ( yy_current_state >= 196 )
 			yy_c = yy_meta[yy_c];
 		}
 	yy_current_state = yy_nxt[yy_base[yy_current_state] + yy_c];
 	yy_is_jam = (yy_current_state == 195);
-=======
-		if ( yy_current_state >= 191 )
-			yy_c = yy_meta[yy_c];
-		}
-	yy_current_state = yy_nxt[yy_base[yy_current_state] + yy_c];
-	yy_is_jam = (yy_current_state == 190);
->>>>>>> origin/xiaguan/join_parser
 
 	(void)yyg;
 	return yy_is_jam ? 0 : yy_current_state;
@@ -2873,11 +2505,7 @@ void yyfree (void * ptr , yyscan_t yyscanner)
 
 #define YYTABLES_NAME "yytables"
 
-<<<<<<< HEAD
 #line 145 "lex_sql.l"
-=======
-#line 144 "lex_sql.l"
->>>>>>> origin/xiaguan/join_parser
 
 
 void scan_string(const char *str, yyscan_t scanner) {
