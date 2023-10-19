@@ -38,7 +38,7 @@ RC UpdatePhysicalOperator::next()
     }
 
     RowTuple *row_tuple = static_cast<RowTuple *>(tuple);
-    Record &record = row_tuple->record();
+    Record& record = row_tuple->record();
     rc = trx_->delete_record(table_, record);
     if (rc != RC::SUCCESS) {
       LOG_WARN("failed to update:delete record: %s", strrc(rc));

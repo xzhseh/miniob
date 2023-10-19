@@ -95,30 +95,47 @@ private:
 class KeyComparator 
 {
 public:
-  void init(AttrType type, int length, bool unique = false)
+  void init(std::vector<AttrType> types, std::vector<int> lengths, bool unique = false)
   {
-    attr_comparator_.init(type, length);
+    if(types.size() != lengths.size()) {
+      LOG_ERROR("not match size");
+    }
+    attr_comparators_.clear();
+
+    for(size_t i = 0; i < types.size(); i++) {
+      AttrComparator comparator;
+      comparator.init(types[i], lengths[i]);
+      attr_comparators_.push_back(comparator);
+    }
     unique_ = unique;
   }
 
-  const AttrComparator &attr_comparator() const
+  const std::vector<AttrComparator>& attr_comparators() const
   {
-    return attr_comparator_;
+    return attr_comparators_;
   }
 
   int operator()(const char *v1, const char *v2) const
   {
-    int result = attr_comparator_(v1, v2);
+    int attr_offset = 0;
+    int result = 0;
+    for(int i = 0; i < attr_comparators_.size(); i++) {
+      result = attr_comparators_[i](v1 + attr_offset, v2 + attr_offset);
+      if(result != 0) {
+        return result;
+      }
+      attr_offset += attr_comparators_[i].attr_length();
+    }
     if (result != 0 || (result == 0 && unique_)) {
       return result;
     }
-    const RID *rid1 = (const RID *)(v1 + attr_comparator_.attr_length());
-    const RID *rid2 = (const RID *)(v2 + attr_comparator_.attr_length());
+    const RID *rid1 = (const RID *)(v1 + attr_offset);
+    const RID *rid2 = (const RID *)(v2 + attr_offset);
     return RID::compare(rid1, rid2);
   }
 
 private:
-  AttrComparator attr_comparator_;
+  std::vector<AttrComparator> attr_comparators_;
   bool unique_;
 };
 
@@ -178,28 +195,37 @@ private:
 class KeyPrinter 
 {
 public:
-  void init(AttrType type, int length)
+  void init(std::vector<AttrType> types, std::vector<int> lengths)
   {
-    attr_printer_.init(type, length);
+    attr_printers_.clear();
+    for(size_t i = 0; i < types.size(); i++) {
+      AttrPrinter attr_printer;
+      attr_printer.init(types[i], lengths[i]);
+      attr_printers_.push_back(attr_printer);
+    }
   }
 
-  const AttrPrinter &attr_printer() const
+  const std::vector<AttrPrinter> &attr_printer() const
   {
-    return attr_printer_;
+    return attr_printers_;
   }
 
   std::string operator()(const char *v) const
   {
     std::stringstream ss;
-    ss << "{key:" << attr_printer_(v) << ",";
+    int ofs = 0;
+    for(size_t i = 0; i < attr_printers_.size(); i++) {
+      ss << "{key:" << attr_printers_[i](v + ofs) << ",";
+      ofs += attr_printers_[i].attr_length();
+    }
 
-    const RID *rid = (const RID *)(v + attr_printer_.attr_length());
+    const RID *rid = (const RID *)(v + ofs);
     ss << "rid:{" << rid->to_string() << "}}";
     return ss.str();
   }
 
 private:
-  AttrPrinter attr_printer_;
+  std::vector<AttrPrinter> attr_printers_;
 };
 
 /**
@@ -218,17 +244,18 @@ struct IndexFileHeader
   PageNum root_page;          ///< 根节点在磁盘中的页号
   int32_t internal_max_size;  ///< 内部节点最大的键值对数
   int32_t leaf_max_size;      ///< 叶子节点最大的键值对数
-  int32_t attr_length;        ///< 键值的长度
+  std::vector<int32_t> attr_lengths;        ///< 键值的长度
+  std::vector<int32_t> attr_offsets;
   int32_t key_length;         ///< attr length + sizeof(RID)
-  AttrType attr_type;         ///< 键值的类型
+  std::vector<AttrType> attr_types;         ///< 键值的类型
 
   const std::string to_string()
   {
     std::stringstream ss;
 
-    ss << "attr_length:" << attr_length << ","
-       << "key_length:" << key_length << ","
-       << "attr_type:" << attr_type << ","
+    // ss << "attr_length:" << attr_length << ","
+      ss << "key_length:" << key_length << ","
+      //  << "attr_type:" << attr_type << ","
        << "root_page:" << root_page << ","
        << "internal_max_size:" << internal_max_size << ","
        << "leaf_max_size:" << leaf_max_size << ";";
@@ -464,8 +491,9 @@ public:
    * attrType描述被索引属性的类型，attrLength描述被索引属性的长度
    */
   RC create(const char *file_name, 
-            AttrType attr_type, 
-            int attr_length, 
+            std::vector<AttrType> attr_type, 
+            std::vector<int> attr_length, 
+            std::vector<int> offsets,
             bool unique,
             int internal_max_size = -1, 
             int leaf_max_size = -1);

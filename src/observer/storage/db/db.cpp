@@ -81,7 +81,7 @@ RC Db::drop_table(const char *table_name)
   if (iter != opened_tables_.end()) {
     std::string table_file_path = table_meta_file(path_.c_str(), table_name);
     iter->second->delete_table(table_file_path.c_str(), path_.c_str(), table_name);
-    iter->second->~Table();
+    delete iter->second;
     opened_tables_.erase(iter);
     return RC::SUCCESS;
   }

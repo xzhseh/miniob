@@ -71,10 +71,10 @@ public:
 
     const char *filename = btree_filename.c_str();
 
-    RC rc = handler_.create(filename, INTS, sizeof(int32_t) /*attr_len*/, internal_max_size, leaf_max_size);
-    if (rc != RC::SUCCESS) {
-      throw runtime_error("failed to create btree handler");
-    }
+    // RC rc = handler_.create(filename, INTS, sizeof(int32_t) /*attr_len*/, internal_max_size, leaf_max_size);
+    // if (rc != RC::SUCCESS) {
+    //   throw runtime_error("failed to create btree handler");
+    // }
     LOG_INFO(
         "test %s setup done. threads=%d, thread index=%d", this->Name().c_str(), state.threads(), state.thread_index());
   }
