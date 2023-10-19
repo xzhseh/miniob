@@ -1,0 +1,11 @@
+create table t_order_by_1(id int);
+create table t_order_by_2(id int, score float, name char(4));
+
+insert into t_order_by_1 values(1);
+insert into t_order_by_1 values(2);
+
+insert into t_order_by_2 values(1, 1.1, 'a');
+insert into t_order_by_2 values(2, 1.2, 'b');
+
+select * from t_order_by_1, t_order_by_2 where t_order_by_1.id=t_order_by_2.id;
+ order by t_order_by_1.id, t_order_by_2.id desc, t_order_by_2.score asc, t_order_by_2.name;
