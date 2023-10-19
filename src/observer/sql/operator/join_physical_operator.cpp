@@ -14,9 +14,6 @@ See the Mulan PSL v2 for more details. */
 
 #include "sql/operator/join_physical_operator.h"
 
-NestedLoopJoinPhysicalOperator::NestedLoopJoinPhysicalOperator()
-{}
-
 RC NestedLoopJoinPhysicalOperator::open(Trx *trx)
 {
   if (children_.size() != 2) {
@@ -24,21 +21,21 @@ RC NestedLoopJoinPhysicalOperator::open(Trx *trx)
     return RC::INTERNAL;
   }
 
-  RC rc = RC::SUCCESS;
-  left_ = children_[0].get();
-  right_ = children_[1].get();
+  RC rc         = RC::SUCCESS;
+  left_         = children_[0].get();
+  right_        = children_[1].get();
   right_closed_ = true;
-  round_done_ = true;
+  round_done_   = true;
 
-  rc = left_->open(trx);
+  rc   = left_->open(trx);
   trx_ = trx;
   return rc;
 }
 
 RC NestedLoopJoinPhysicalOperator::next()
 {
-  bool left_need_step = (left_tuple_ == nullptr);
-  RC rc = RC::SUCCESS;
+  bool left_need_step;
+  RC   rc = RC::SUCCESS;
   if (round_done_) {
     left_need_step = true;
   } else {
@@ -83,15 +80,12 @@ RC NestedLoopJoinPhysicalOperator::close()
   return rc;
 }
 
-Tuple *NestedLoopJoinPhysicalOperator::current_tuple()
-{
-  return &joined_tuple_;
-}
+Tuple *NestedLoopJoinPhysicalOperator::current_tuple() { return &joined_tuple_; }
 
 RC NestedLoopJoinPhysicalOperator::left_next()
 {
   RC rc = RC::SUCCESS;
-  rc = left_->next();
+  rc    = left_->next();
   if (rc != RC::SUCCESS) {
     return rc;
   }
@@ -104,33 +98,56 @@ RC NestedLoopJoinPhysicalOperator::left_next()
 RC NestedLoopJoinPhysicalOperator::right_next()
 {
   RC rc = RC::SUCCESS;
-  if (round_done_) {
-    if (!right_closed_) {
-      rc = right_->close();
-      right_closed_ = true;
+  while (true) {
+    if (round_done_) {
+      if (!right_closed_) {
+        rc            = right_->close();
+        right_closed_ = true;
+        if (rc != RC::SUCCESS) {
+          return rc;
+        }
+      }
+
+      rc = right_->open(trx_);
       if (rc != RC::SUCCESS) {
         return rc;
       }
+      right_closed_ = false;
+
+      round_done_ = false;
     }
 
-    rc = right_->open(trx_);
+    rc = right_->next();
     if (rc != RC::SUCCESS) {
+      if (rc == RC::RECORD_EOF) {
+        round_done_ = true;
+      }
       return rc;
     }
-    right_closed_ = false;
 
-    round_done_ = false;
-  }
+    right_tuple_ = right_->current_tuple();
+    joined_tuple_.set_right(right_tuple_);
 
-  rc = right_->next();
-  if (rc != RC::SUCCESS) {
-    if (rc == RC::RECORD_EOF) {
-      round_done_ = true;
+    if (this->join_condition_ == nullptr) {
+      return rc;
     }
-    return rc;
-  }
 
-  right_tuple_ = right_->current_tuple();
-  joined_tuple_.set_right(right_tuple_);
-  return rc;
+    Value value;
+    rc = join_condition_->get_value(joined_tuple_, value);
+    if (rc != RC::SUCCESS) {
+      LOG_WARN("failed to get value from join condition. rc=%s", strrc(rc));
+      return rc;
+    }
+    if (value.get_boolean()) {
+      return rc;
+    }
+  }
+}
+
+NestedLoopJoinPhysicalOperator::NestedLoopJoinPhysicalOperator(std::unique_ptr<Expression> join_condition)
+{
+  join_condition_ = std::move(join_condition);
+  if (join_condition != nullptr && join_condition->type() != ExprType::COMPARISON) {
+    LOG_WARN("join condition should be comparison expression");
+  }
 }

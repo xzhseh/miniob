@@ -22,46 +22,40 @@ See the Mulan PSL v2 for more details. */
 
 const char *ATTR_TYPE_NAME[] = {"undefined", "chars", "ints", "floats", "date", "booleans"};
 
-const char *attr_type_to_string(AttrType type) {
+const char *attr_type_to_string(AttrType type)
+{
   if (type >= UNDEFINED && type <= DATE) {
     return ATTR_TYPE_NAME[type];
   }
   return "unknown";
 }
-AttrType attr_type_from_string(const char *s) {
+AttrType attr_type_from_string(const char *s)
+{
   for (unsigned int i = 0; i < sizeof(ATTR_TYPE_NAME) / sizeof(ATTR_TYPE_NAME[0]); i++) {
     if (0 == strcmp(ATTR_TYPE_NAME[i], s)) {
-      return (AttrType) i;
+      return (AttrType)i;
     }
   }
   return UNDEFINED;
 }
 
-Value::Value(int val) {
-  set_int(val);
-}
+Value::Value(int val) { set_int(val); }
 
-Value::Value(float val) {
-  set_float(val);
-}
+Value::Value(float val) { set_float(val); }
 
-Value::Value(bool val) {
-  set_boolean(val);
-}
+Value::Value(bool val) { set_boolean(val); }
 
-Value::Value(const char *s, int len /*= 0*/) {
-  set_string(s, len);
-}
+Value::Value(const char *s, int len /*= 0*/) { set_string(s, len); }
 
-bool check_date(int y, int m, int d) {
+bool check_date(int y, int m, int d)
+{
   static int mon[] = {0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
-  bool leap = (y % 400 == 0 || (y % 100 && y % 4 == 0));
-  return y > 0 &&
-    ((m > 0) && (m <= 12)) &&
-    ((d > 0) && (d <= (((m == 2 && leap) ? 1 : 0) + mon[m])));
+  bool       leap  = (y % 400 == 0 || (y % 100 && y % 4 == 0));
+  return y > 0 && ((m > 0) && (m <= 12)) && ((d > 0) && (d <= (((m == 2 && leap) ? 1 : 0) + mon[m])));
 }
 
-int date_transform_inner(const char *s) {
+int date_transform_inner(const char *s)
+{
   int y;
   int m;
   int d;
@@ -74,29 +68,30 @@ int date_transform_inner(const char *s) {
 }
 
 /// Note that the input `data` is address
-void Value::set_data(char *data, int length) {
+void Value::set_data(char *data, int length)
+{
   switch (attr_type_) {
     case CHARS: {
       set_string(data, length);
       break;
     }
     case INTS: {
-      num_value_.int_value_ = *(int *) data;
-      length_ = length;
+      num_value_.int_value_ = *(int *)data;
+      length_               = length;
       break;
     }
     case FLOATS: {
-      num_value_.float_value_ = *(float *) data;
-      length_ = length;
+      num_value_.float_value_ = *(float *)data;
+      length_                 = length;
       break;
     }
     case BOOLEANS: {
-      num_value_.bool_value_ = (*(int *) data != 0);
-      length_ = length;
+      num_value_.bool_value_ = (*(int *)data != 0);
+      length_                = length;
       break;
     }
     case DATE: {
-      int date = *(int *) data;
+      int date = *(int *)data;
       set_date(date);
       assert(length == 4 && length_ == 4 && "Expect the length of date to be 4");
       break;
@@ -107,25 +102,29 @@ void Value::set_data(char *data, int length) {
     }
   }
 }
-void Value::set_int(int val) {
-  attr_type_ = INTS;
+void Value::set_int(int val)
+{
+  attr_type_            = INTS;
   num_value_.int_value_ = val;
-  length_ = sizeof(val);
+  length_               = sizeof(val);
 }
 
-void Value::set_float(float val) {
-  attr_type_ = FLOATS;
+void Value::set_float(float val)
+{
+  attr_type_              = FLOATS;
   num_value_.float_value_ = val;
-  length_ = sizeof(val);
+  length_                 = sizeof(val);
 }
 
-void Value::set_boolean(bool val) {
-  attr_type_ = BOOLEANS;
+void Value::set_boolean(bool val)
+{
+  attr_type_             = BOOLEANS;
   num_value_.bool_value_ = val;
-  length_ = sizeof(val);
+  length_                = sizeof(val);
 }
 
-void Value::set_string(const char *s, int len /* = 0 */) {
+void Value::set_string(const char *s, int len /* = 0 */)
+{
   attr_type_ = CHARS;
   if (len > 0) {
     len = strnlen(s, len);
@@ -136,20 +135,23 @@ void Value::set_string(const char *s, int len /* = 0 */) {
   length_ = str_value_.length();
 }
 
-void Value::set_date(const char *s) {
-  attr_type_ = DATE;
+void Value::set_date(const char *s)
+{
+  attr_type_             = DATE;
   num_value_.date_value_ = date_transform_inner(s);
-  length_ = sizeof(int);
+  length_                = sizeof(int);
 }
 
-void Value::set_date(int val) {
+void Value::set_date(int val)
+{
   assert(val != -1 && "Date should be valid");
-  attr_type_ = DATE;
+  attr_type_             = DATE;
   num_value_.date_value_ = val;
-  length_ = sizeof(val);
+  length_                = sizeof(val);
 }
 
-void Value::set_value(const Value &value) {
+void Value::set_value(const Value &value)
+{
   switch (value.attr_type_) {
     case INTS: {
       set_int(value.get_int());
@@ -173,18 +175,20 @@ void Value::set_value(const Value &value) {
   }
 }
 
-const char *Value::data() const {
+const char *Value::data() const
+{
   switch (attr_type_) {
     case CHARS: {
       return str_value_.c_str();
     } break;
     default: {
-      return (const char *) &num_value_;
+      return (const char *)&num_value_;
     } break;
   }
 }
 
-std::string Value::to_string() const {
+std::string Value::to_string() const
+{
   std::stringstream os;
   switch (attr_type_) {
     case INTS: {
@@ -201,7 +205,7 @@ std::string Value::to_string() const {
     } break;
     case DATE: {
       char buf[16] = {0};
-      int val = num_value_.date_value_;
+      int  val     = num_value_.date_value_;
       snprintf(buf, 11, "%04d-%02d-%02d", val / 10000, (val % 10000) / 100, val % 100);
       buf[10] = '\0';
       os << buf;
@@ -213,7 +217,8 @@ std::string Value::to_string() const {
   return os.str();
 }
 
-int Value::compare(const Value &other) const {
+int Value::compare(const Value &other) const
+{
   if (this->attr_type_ == other.attr_type_) {
     switch (this->attr_type_) {
       case INTS: {
@@ -232,10 +237,7 @@ int Value::compare(const Value &other) const {
         return common::compare_int((void *)&this->num_value_.bool_value_, (void *)&other.num_value_.bool_value_);
       }
       case DATE: {
-        return common::compare_int(
-          (void *) &this->num_value_.date_value_,
-          (void *) &other.num_value_.date_value_
-        );
+        return common::compare_int((void *)&this->num_value_.date_value_, (void *)&other.num_value_.date_value_);
       } break;
       default: {
         LOG_WARN("unsupported type: %d", this->attr_type_);
@@ -247,14 +249,31 @@ int Value::compare(const Value &other) const {
   } else if (this->attr_type_ == FLOATS && other.attr_type_ == INTS) {
     float other_data = other.num_value_.int_value_;
     return common::compare_float((void *)&this->num_value_.float_value_, (void *)&other_data);
+  } else if (this->attr_type_ == CHARS && other.attr_type_ == FLOATS) {
+    float other_data = other.num_value_.float_value_;
+    return common::compare_str_with_float(
+        (void *)this->str_value_.c_str(), this->str_value_.length(), (void *)&other_data);
+  } else if (this->attr_type_ == FLOATS && other.attr_type_ == CHARS) {
+    float this_data = this->num_value_.float_value_;
+    return -common::compare_str_with_float(
+        (void *)other.str_value_.c_str(), other.str_value_.length(), (void *)&this_data);
+  } else if (this->attr_type_ == CHARS && other.attr_type_ == INTS) {
+    int other_data = other.num_value_.int_value_;
+    return common::compare_str_with_int(
+        (void *)this->str_value_.c_str(), this->str_value_.length(), (void *)&other_data);
+  } else if (this->attr_type_ == INTS && other.attr_type_ == CHARS) {
+    int this_data = this->num_value_.int_value_;
+    return -common::compare_str_with_int(
+        (void *)other.str_value_.c_str(), other.str_value_.length(), (void *)&this_data);
   }
   LOG_WARN("not supported");
   return -1;  // TODO return rc?
 }
 
-bool compare_like(const char * str,const char * pattern) {
+bool compare_like(const char *str, const char *pattern)
+{
   LOG_DEBUG("str=%s, pattern=%s", str, pattern);
-  char *c = (char *)pattern;
+  char       *c = (char *)pattern;
   std::string re;
   while (*c) {
     if (*c == '%') {
@@ -268,22 +287,24 @@ bool compare_like(const char * str,const char * pattern) {
     }
     c++;
   }
-  std::regex  rule(re);
+  std::regex rule(re);
   return std::regex_match(str, rule);
 }
 
 // Compare current value with pattern if the value is `CHARS`
-RC Value::like(const Value &pattern,bool & result) const {
-    if (this->attr_type_ == CHARS && pattern.attr_type_ == CHARS) {
-        result = compare_like(this->str_value_.c_str(),pattern.str_value_.c_str());
-        return RC::SUCCESS;
-    } else {
-        LOG_WARN("not supported");
-        return RC::UNIMPLENMENT;
-    }
+RC Value::like(const Value &pattern, bool &result) const
+{
+  if (this->attr_type_ == CHARS && pattern.attr_type_ == CHARS) {
+    result = compare_like(this->str_value_.c_str(), pattern.str_value_.c_str());
+    return RC::SUCCESS;
+  } else {
+    LOG_WARN("not supported");
+    return RC::UNIMPLENMENT;
+  }
 }
 
-int Value::get_int() const {
+int Value::get_int() const
+{
   switch (attr_type_) {
     case CHARS: {
       try {
@@ -313,7 +334,8 @@ int Value::get_int() const {
   return 0;
 }
 
-float Value::get_float() const {
+float Value::get_float() const
+{
   switch (attr_type_) {
     case CHARS: {
       try {
@@ -343,11 +365,10 @@ float Value::get_float() const {
   return 0;
 }
 
-std::string Value::get_string() const {
-  return this->to_string();
-}
+std::string Value::get_string() const { return this->to_string(); }
 
-bool Value::get_boolean() const {
+bool Value::get_boolean() const
+{
   switch (attr_type_) {
     case CHARS: {
       try {
@@ -388,7 +409,8 @@ bool Value::get_boolean() const {
   return false;
 }
 
-int Value::get_date() const {
+int Value::get_date() const
+{
   assert(attr_type_ == DATE && "Currently expect `attr_type_` to be of type `DATE`");
   return num_value_.date_value_;
 }
