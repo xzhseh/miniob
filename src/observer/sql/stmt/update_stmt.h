@@ -16,6 +16,7 @@ See the Mulan PSL v2 for more details. */
 
 #include "common/rc.h"
 #include "sql/stmt/stmt.h"
+#include "storage/field/field_meta.h"
 
 class Table;
 class FilterStmt;
@@ -23,39 +24,26 @@ class FilterStmt;
  * @brief 更新语句
  * @ingroup Statement
  */
-class UpdateStmt : public Stmt 
+class UpdateStmt : public Stmt
 {
 public:
-  UpdateStmt() = default;
-  UpdateStmt(Table *table,const Value &value, int value_offset, FilterStmt* filter_stmt);
-  StmtType type() const override 
-  {
-    return StmtType::UPDATE;
-  }
-public:
-  static RC create(Db *db, UpdateSqlNode &update_sql, Stmt *&stmt);
+  // FIXME: Please ensure this
+  // UpdateStmt() = default;
+  UpdateStmt(Table *table, std::vector<Value> values, std::vector<FieldMeta> field_meta, FilterStmt *filter_stmt);
+  StmtType type() const override { return StmtType::UPDATE; }
 
 public:
-  Table *table() const
-  {
-    return table_;
-  }
-  const Value& value() const
-  {
-    return value_;
-  }
-  int value_offset() const
-  {
-    return value_offset_;
-  }
-  FilterStmt* filter_stmt() const 
-  {
-    return filter_stmt_;
-  }
+  static RC create(Db *db, const UpdateSqlNode &update_sql, Stmt *&stmt);
+
+public:
+  Table      *table() const { return table_; }
+  FilterStmt *filter_stmt() const { return filter_stmt_; }
+  const auto &values() const { return values_; }
+  const auto &field_metas() const { return field_metas_; }
 
 private:
-  Table *table_ = nullptr;
-  const Value& value_;
-  int value_offset_ = 0; //后面修改Record要用，但是多个Record别的字段可能不同，所以只能延迟修改, 这里做了一点改动
-  FilterStmt* filter_stmt_ = nullptr;
+  Table                 *table_ = nullptr;
+  std::vector<Value>     values_;
+  std::vector<FieldMeta> field_metas_;
+  FilterStmt            *filter_stmt_ = nullptr;
 };

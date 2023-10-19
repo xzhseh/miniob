@@ -12,6 +12,7 @@
 #include "sql/parser/yacc_sql.hpp"
 #include "sql/parser/lex_sql.h"
 #include "sql/expr/expression.h"
+#include "event/sql_debug.h"
 
 using namespace std;
 
@@ -77,6 +78,7 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
         INT_T
         STRING_T
         FLOAT_T
+        DATE_T
         HELP
         EXIT
         DOT //QUOTE
@@ -98,6 +100,10 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
         LE
         GE
         NE
+        NOT
+        LIKE
+        INNER
+        JOIN
 
 /** union 中定义各种数据类型，真实生成的代码也是union类型，所以不能有非POD类型的数据 **/
 %union {
@@ -117,6 +123,8 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
   std::vector<IndexAttr> *          attr_name_list;
   IndexAttr*                        index_attr;
   std::vector<IndexAttr> *          index_attr_name_list;
+  std::vector<JoinSqlNode> *        join_list;
+  std::vector<UpdateValueNode> *     update_value_list;
   char *                            string;
   int                               number;
   float                             floats;
@@ -126,6 +134,7 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
 %token <floats> FLOAT
 %token <string> ID
 %token <string> SSS
+%token <string> DATE_STR
 //非终结符
 
 /** type 定义了各种解析后的结果输出的是什么类型。类型对应了 union 中的定义的成员变量名称 **/
@@ -141,6 +150,7 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
 %type <attr_infos>          attr_def_list
 %type <attr_info>           attr_def
 %type <value_list>          value_list
+%type <update_value_list>   update_value_list
 %type <condition_list>      where
 %type <condition_list>      condition_list
 %type <rel_attr_list>       select_attr
@@ -148,6 +158,8 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
 %type <rel_attr_list>       attr_list
 %type <expression>          expression
 %type <expression_list>     expression_list
+%type <join_list>           inner_join_list
+%type <join_list>           inner_join_constr
 %type <sql_node>            calc_stmt
 %type <sql_node>            select_stmt
 %type <sql_node>            insert_stmt
@@ -209,7 +221,7 @@ command_wrapper:
 
 exit_stmt:      
     EXIT {
-      (void)yynerrs;  // 这么写为了消除yynerrs未使用的告警。如果你有更好的方法欢迎提PR
+      (void) yynerrs;  // 这么写为了消除yynerrs未使用的告警。如果你有更好的方法欢迎提PR
       $$ = new ParsedSqlNode(SCF_EXIT);
     };
 
@@ -242,7 +254,7 @@ rollback_stmt:
     }
     ;
 
-drop_table_stmt:    /*drop table 语句的语法解析树*/
+drop_table_stmt:    /* drop table 语句的语法解析树 */
     DROP TABLE ID {
       $$ = new ParsedSqlNode(SCF_DROP_TABLE);
       $$->drop_table.relation_name = $3;
@@ -325,7 +337,7 @@ index_attr_name_list:
     }
     ;
 
-drop_index_stmt:      /*drop index 语句的语法解析树*/
+drop_index_stmt:      /* drop index 语句的语法解析树 */
     DROP INDEX ID ON ID
     {
       $$ = new ParsedSqlNode(SCF_DROP_INDEX);
@@ -335,7 +347,7 @@ drop_index_stmt:      /*drop index 语句的语法解析树*/
       free($5);
     }
     ;
-create_table_stmt:    /*create table 语句的语法解析树*/
+create_table_stmt:    /* create table 语句的语法解析树 */
     CREATE TABLE ID LBRACE attr_def attr_def_list RBRACE
     {
       $$ = new ParsedSqlNode(SCF_CREATE_TABLE);
@@ -369,32 +381,31 @@ attr_def_list:
       delete $2;
     }
     ;
-    
 attr_def:
-    ID type LBRACE number RBRACE 
-    {
+    /* i.e., char(255) */
+    ID type LBRACE number RBRACE {
       $$ = new AttrInfoSqlNode;
       $$->type = (AttrType)$2;
       $$->name = $1;
       $$->length = $4;
       free($1);
     }
-    | ID type
-    {
+    | ID type {
       $$ = new AttrInfoSqlNode;
-      $$->type = (AttrType)$2;
+      $$->type = (AttrType) $2;
       $$->name = $1;
       $$->length = 4;
       free($1);
     }
     ;
 number:
-    NUMBER {$$ = $1;}
+    NUMBER { $$ = $1; }
     ;
 type:
-    INT_T      { $$=INTS; }
-    | STRING_T { $$=CHARS; }
-    | FLOAT_T  { $$=FLOATS; }
+    INT_T      { $$ = INTS; }
+    | STRING_T { $$ = CHARS; }
+    | FLOAT_T  { $$ = FLOATS; }
+    | DATE_T   { $$ = DATE; }
     ;
 insert_stmt:        /*insert   语句的语法解析树*/
     INSERT INTO ID VALUES LBRACE value value_list RBRACE 
@@ -428,20 +439,26 @@ value_list:
     ;
 value:
     NUMBER {
-      $$ = new Value((int)$1);
+      $$ = new Value(static_cast<int>($1));
       @$ = @1;
     }
-    |FLOAT {
-      $$ = new Value((float)$1);
+    | FLOAT {
+      $$ = new Value(static_cast<float>($1));
       @$ = @1;
     }
-    |SSS {
-      char *tmp = common::substr($1,1,strlen($1)-2);
+    | SSS {
+      /* This is to eliminate the double/single quotes from the input string */
+      char *tmp = common::substr($1, 1, strlen($1) - 2);
       $$ = new Value(tmp);
       free(tmp);
     }
+    | DATE_STR {
+      char *tmp = common::substr($1, 1, strlen($1) - 2);
+      /* Note the length here is by default 10 */
+      $$ = new Value(DATE, tmp);
+      free(tmp);
+    }
     ;
-    
 delete_stmt:    /*  delete 语句的语法解析树*/
     DELETE FROM ID where 
     {
@@ -455,20 +472,51 @@ delete_stmt:    /*  delete 语句的语法解析树*/
     }
     ;
 update_stmt:      /*  update 语句的语法解析树*/
-    UPDATE ID SET ID EQ value where 
+    UPDATE ID SET ID EQ value update_value_list where
     {
       $$ = new ParsedSqlNode(SCF_UPDATE);
       $$->update.relation_name = $2;
-      $$->update.attribute_name = $4;
-      $$->update.value = *$6;
+
+      UpdateValueNode node;
+      node.attribute_name = $4;
+      node.value = *$6;
+
+      $$->update.update_values.emplace_back(node);
+
       if ($7 != nullptr) {
-        $$->update.conditions.swap(*$7);
-        delete $7;
+      	$$->update.update_values.insert($$->update.update_values.end(), $7->begin(), $7->end());
+	delete $7;
+      }
+
+      if ($8!= nullptr) {
+        $$->update.conditions.swap(*$8);
+        delete $8;
       }
       free($2);
       free($4);
     }
     ;
+
+update_value_list:
+    /* empty */
+    {
+      $$ = nullptr;
+    }
+    | COMMA ID EQ value update_value_list  {
+      if ($5 != nullptr) {
+	$$ = $5;
+      } else {
+	$$ = new std::vector<UpdateValueNode>;
+      }
+      UpdateValueNode node;
+      node.attribute_name = $2;
+      node.value = *$4;
+      $$->emplace_back(node);
+      delete $2;
+      delete $4;
+    }
+;
+
 select_stmt:        /*  select 语句的语法解析树*/
     SELECT select_attr FROM ID rel_list where
     {
@@ -489,6 +537,68 @@ select_stmt:        /*  select 语句的语法解析树*/
         delete $6;
       }
       free($4);
+    }
+    |
+    SELECT select_attr FROM ID inner_join_constr inner_join_list where
+        {
+          $$ = new ParsedSqlNode(SCF_SELECT);
+          if ($2 != nullptr) {
+            $$->selection.attributes.swap(*$2);
+            delete $2;
+          }
+          $$->selection.relations.push_back($4);
+          delete $4;
+
+          $$->selection.relations.push_back((*$5)[0].relation_name);
+          $$->selection.conditions.swap((*$5)[0].conditions);
+          delete $5;
+
+          if ($6 != nullptr) {
+            std::reverse($6->begin(), $6->end());
+	    for (auto &join_relation : *$6) {
+	      $$->selection.relations.push_back(join_relation.relation_name);
+	      for (auto &condition : join_relation.conditions) {
+	      	$$->selection.conditions.emplace_back(condition);
+	      }
+	    }
+	    delete $6;
+	  }
+
+
+          if ($7 != nullptr) {
+            $$->selection.conditions.insert($$->selection.conditions.end(),$7->begin(),$7->end());
+            delete $7;
+          }
+    }
+    ;
+inner_join_constr:
+    INNER JOIN ID ON condition_list
+    {
+      $$ = new std::vector<JoinSqlNode>;
+      JoinSqlNode join_node;
+      join_node.relation_name = $3;
+      join_node.conditions.swap(*$5);
+      $$->emplace_back(join_node);
+      free($3);
+    };
+
+inner_join_list:
+    /* empty */
+    {
+      $$ = nullptr;
+    }
+    | INNER JOIN ID ON condition_list inner_join_list
+    {
+      if ($6 != nullptr) {
+	$$ = $6;
+      } else {
+	$$ = new std::vector<JoinSqlNode>;
+      }
+      JoinSqlNode join_node;
+      join_node.relation_name = $3;
+      join_node.conditions.swap(*$5);
+      $$->emplace_back(join_node);
+      free($3);
     }
     ;
 calc_stmt:
@@ -694,6 +804,8 @@ comp_op:
     | LE { $$ = LESS_EQUAL; }
     | GE { $$ = GREAT_EQUAL; }
     | NE { $$ = NOT_EQUAL; }
+    | LIKE { $$ = LIKE_OP;}
+    | NOT LIKE { $$ = NOT_LIKE_OP;}
     ;
 
 load_data_stmt:

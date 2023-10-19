@@ -18,13 +18,9 @@ See the Mulan PSL v2 for more details. */
 #include "persist.h"
 #include "common/log/log.h"
 
-PersistHandler::PersistHandler()
-{}
+PersistHandler::PersistHandler() {}
 
-PersistHandler::~PersistHandler()
-{
-  close_file();
-}
+PersistHandler::~PersistHandler() { close_file(); }
 
 RC PersistHandler::create_file(const char *file_name)
 {
@@ -54,7 +50,7 @@ RC PersistHandler::create_file(const char *file_name)
 RC PersistHandler::open_file(const char *file_name)
 {
   int fd;
-  RC rc = RC::SUCCESS;
+  RC  rc = RC::SUCCESS;
   if (file_name == nullptr) {
     if (file_name_.empty()) {
       LOG_ERROR("Failed to open file, because no file name.");

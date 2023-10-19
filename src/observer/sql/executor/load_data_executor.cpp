@@ -43,9 +43,7 @@ RC LoadDataExecutor::execute(SQLStageEvent *sql_event)
 RC insert_record_from_file(Table *table, 
                            std::vector<std::string> &file_values, 
                            std::vector<Value> &record_values, 
-                           std::stringstream &errmsg)
-{
-
+                           std::stringstream &errmsg) {
   const int field_num = record_values.size();
   const int sys_field_num = table->table_meta().sys_field_num();
 
@@ -73,14 +71,11 @@ RC insert_record_from_file(Table *table,
         deserialize_stream >> int_value;
         if (!deserialize_stream || !deserialize_stream.eof()) {
           errmsg << "need an integer but got '" << file_values[i] << "' (field index:" << i << ")";
-
           rc = RC::SCHEMA_FIELD_TYPE_MISMATCH;
         } else {
           record_values[i].set_int(int_value);
         }
-      }
-
-      break;
+      } break;
       case FLOATS: {
         deserialize_stream.clear();
         deserialize_stream.str(file_value);
@@ -96,6 +91,19 @@ RC insert_record_from_file(Table *table,
       } break;
       case CHARS: {
         record_values[i].set_string(file_value.c_str());
+      } break;
+      case DATE: {
+        deserialize_stream.clear();
+        deserialize_stream.str(file_value);
+
+        int int_value;
+        deserialize_stream >> int_value;
+        if (!deserialize_stream || !deserialize_stream.eof()) {
+          errmsg << "need an integer(date) but got '" << file_values[i] << "' (field index:" << i << ")";
+          rc = RC::SCHEMA_FIELD_TYPE_MISMATCH;
+        } else {
+          record_values[i].set_date(int_value);
+        }
       } break;
       default: {
         errmsg << "Unsupported field type to loading: " << field->type();

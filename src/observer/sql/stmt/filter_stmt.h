@@ -95,7 +95,7 @@ public:
   virtual ~FilterStmt();
 
 public:
-  const std::vector<FilterUnit *> &filter_units() const
+  [[nodiscard]] const std::vector<FilterUnit *> &filter_units() const
   {
     return filter_units_;
   }
@@ -110,3 +110,4 @@ public:
 private:
   std::vector<FilterUnit *> filter_units_;  // 默认当前都是AND关系
 };
+

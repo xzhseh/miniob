@@ -17,15 +17,21 @@ See the Mulan PSL v2 for more details. */
 
 using namespace std;
 
-RC FieldExpr::get_value(const Tuple &tuple, Value &value) const
-{
-  return tuple.find_cell(TupleCellSpec(table_name(), field_name()), value);
+RC FieldExpr::get_value(const Tuple &tuple, Value &value) const {
+    auto rc = tuple.find_cell(TupleCellSpec(table_name(), field_name()), value);
+    if (value.attr_type() == DATE && value.get_date() == -1) {
+      rc = RC::INVALID_ARGUMENT;
+    }
+    return rc;
 }
 
-RC ValueExpr::get_value(const Tuple &tuple, Value &value) const
-{
-  value = value_;
-  return RC::SUCCESS;
+RC ValueExpr::get_value(const Tuple &tuple, Value &value) const {
+  if (value_.attr_type() == DATE && value_.get_date() == -1) {
+    return RC::INVALID_ARGUMENT;
+  } else {
+    value = value_;
+    return RC::SUCCESS;
+  }
 }
 
 /////////////////////////////////////////////////////////////////////////////////
@@ -86,8 +92,14 @@ ComparisonExpr::ComparisonExpr(CompOp comp, unique_ptr<Expression> left, unique_
 ComparisonExpr::~ComparisonExpr()
 {}
 
-RC ComparisonExpr::compare_value(const Value &left, const Value &right, bool &result) const
-{
+RC ComparisonExpr::compare_value(const Value &left, const Value &right, bool &result) const {
+  if (left.attr_type() == DATE && left.get_date() == -1) {
+    return RC::INVALID_ARGUMENT;
+  }
+  if (right.attr_type() == DATE && right.get_date() == -1) {
+    return RC::INVALID_ARGUMENT;
+  }
+
   RC rc = RC::SUCCESS;
   int cmp_result = left.compare(right);
   result = false;
@@ -109,6 +121,13 @@ RC ComparisonExpr::compare_value(const Value &left, const Value &right, bool &re
     } break;
     case GREAT_THAN: {
       result = (cmp_result > 0);
+    } break;
+    case LIKE_OP: {
+      rc = left.like(right, result);
+    } break;
+    case NOT_LIKE_OP: {
+      rc = left.like(right, result);
+      result = !result;
     } break;
     default: {
       LOG_WARN("unsupported comparison. %d", comp_);

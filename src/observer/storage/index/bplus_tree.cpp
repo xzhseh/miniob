@@ -1709,6 +1709,10 @@ RC BplusTreeScanner::open(const char *left_user_key, int left_len, bool left_inc
   } else {
 
     char *fixed_left_key = const_cast<char *>(left_user_key);
+    if(tree_handler_.file_header_.attr_offsets.size() != 1) {
+      LOG_ERROR("not support multi-index");
+      exit(2);
+    }
     if (tree_handler_.file_header_.attr_types[0] == CHARS) {
       bool should_inclusive_after_fix = false;
       rc = fix_user_key(left_user_key, left_len, true /*greater*/, &fixed_left_key, &should_inclusive_after_fix);

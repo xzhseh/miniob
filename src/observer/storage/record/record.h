@@ -131,6 +131,7 @@ public:
     this->data_ = data;
     this->len_  = len;
   }
+
   void set_data_owner(char *data, int len)
   {
     ASSERT(len != 0, "the len of data should not be 0");
@@ -158,6 +159,6 @@ private:
   RID rid_;
 
   char *data_  = nullptr;
-  int   len_   = 0;       /// 如果不是record自己来管理内存，这个字段可能是无效的
-  bool  owner_ = false;   /// 表示当前是否由record来管理内存
+  int   len_   = 0;      /// 如果不是record自己来管理内存，这个字段可能是无效的
+  bool  owner_ = false;  /// 表示当前是否由record来管理内存
 };

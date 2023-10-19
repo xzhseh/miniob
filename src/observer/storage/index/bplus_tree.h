@@ -67,13 +67,16 @@ public:
   {
     switch (attr_type_) {
       case INTS: {
-        return common::compare_int((void *)v1, (void *)v2);
+        return common::compare_int((void *) v1, (void *) v2);
       } break;
       case FLOATS: {
-        return common::compare_float((void *)v1, (void *)v2);
+        return common::compare_float((void *) v1, (void *) v2);
       }
       case CHARS: {
-        return common::compare_string((void *)v1, attr_length_, (void *)v2, attr_length_);
+        return common::compare_string((void *) v1, attr_length_, (void *) v2, attr_length_);
+      }
+      case DATE: {
+        return common::compare_int((void *) v1, (void *) v2);
       }
       default: {
         ASSERT(false, "unknown attr type. %d", attr_type_);
@@ -160,11 +163,11 @@ public:
   std::string operator()(const char *v) const
   {
     switch (attr_type_) {
-      case INTS: {
-        return std::to_string(*(int *)v);
+      case INTS: case DATE: {
+        return std::to_string(*(int *) v);
       } break;
       case FLOATS: {
-        return std::to_string(*(float *)v);
+        return std::to_string(*(float *) v);
       }
       case CHARS: {
         std::string str;

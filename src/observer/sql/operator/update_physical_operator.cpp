@@ -5,21 +5,20 @@
 #include "storage/trx/trx.h"
 #include "sql/stmt/delete_stmt.h"
 
-
-RC UpdatePhysicalOperator::open(Trx* trx) 
+RC UpdatePhysicalOperator::open(Trx *trx)
 {
-    if(children_.empty()) {
-        return RC::SUCCESS;
-    }
-    std::unique_ptr<PhysicalOperator>& child = children_[0];
-    RC rc = child->open(trx);
-    if(rc != RC::SUCCESS) {
-        LOG_WARN("failed to open child operator: %s", strrc(rc));
-        return rc;  
-    }
-    trx_ = trx;
-
+  if (children_.empty()) {
     return RC::SUCCESS;
+  }
+  std::unique_ptr<PhysicalOperator> &child = children_[0];
+  RC                                 rc    = child->open(trx);
+  if (rc != RC::SUCCESS) {
+    LOG_WARN("failed to open child operator: %s", strrc(rc));
+    return rc;
+  }
+  trx_ = trx;
+
+  return RC::SUCCESS;
 }
 
 RC UpdatePhysicalOperator::next()
@@ -29,7 +28,8 @@ RC UpdatePhysicalOperator::next()
     return RC::RECORD_EOF;
   }
 
-  PhysicalOperator *child = children_[0].get();
+  PhysicalOperator *child      = children_[0].get();
+  const TableMeta  &table_meta = table_->table_meta();
   while (RC::SUCCESS == (rc = child->next())) {
     Tuple *tuple = child->current_tuple();
     if (nullptr == tuple) {
@@ -37,24 +37,36 @@ RC UpdatePhysicalOperator::next()
       return rc;
     }
 
-    RowTuple *row_tuple = static_cast<RowTuple *>(tuple);
-    Record& record = row_tuple->record();
-    rc = trx_->delete_record(table_, record);
+    auto  *row_tuple   = dynamic_cast<RowTuple *>(tuple);
+    Record old_record  = row_tuple->record();
+    int    record_size = table_meta.record_size();
+    char  *data        = new char[record_size];
+    memcpy(data, old_record.data(), record_size);
+
+    for (size_t i = 0; i < values_.size(); ++i) {
+      const Value     &value      = values_[i];
+      const FieldMeta &field_meta = field_metas_[i];
+      int              offset     = field_meta.offset();
+      if (value.length() > field_meta.len()) {
+        LOG_WARN("value length is too long: %d, %d", value.length(), field_meta.len());
+        return RC::INVALID_ARGUMENT;
+      }
+      for (int j = 0; j < value.length(); ++j) {
+        data[offset + j] = value.data()[j];
+      }
+      if (value.attr_type() == AttrType::CHARS && value.length() < field_meta.len()) {
+        data[offset + value.length()] = '\0';
+      }
+    }
+    Record new_record;
+    new_record.set_rid(old_record.rid());
+    new_record.set_data(data);
+
+    rc = table_->update_record(old_record, new_record);
     if (rc != RC::SUCCESS) {
       LOG_WARN("failed to update:delete record: %s", strrc(rc));
       return rc;
     }
-    ::memcpy(record.data() + value_offset_, value_.data(), value_.length());
-    // new Record then insert
-    if(value_.attr_type() == AttrType::CHARS) {
-      *(record.data() + value_.length() + value_offset_) = '\0';
-    }
-    rc = trx_->insert_record(table_, record);
-    if (rc != RC::SUCCESS) {
-      LOG_WARN("failed to update:insert record: %s", strrc(rc));
-      return rc;        
-    }
-    
   }
 
   return RC::RECORD_EOF;
@@ -67,5 +79,3 @@ RC UpdatePhysicalOperator::close()
   }
   return RC::SUCCESS;
 }
-
-
