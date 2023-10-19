@@ -55,7 +55,11 @@ RC OrderByPhysicalOperator::next()
       });
   this->result_tuples_ = std::move(result_tuples);
   construct_           = true;
-  return RC::SUCCESS;
+  if (this->result_tuples_.size() == 0) {
+    return RC::RECORD_EOF;
+  } else {
+    return RC::SUCCESS;
+  }
 }
 
 RC OrderByPhysicalOperator::close()
