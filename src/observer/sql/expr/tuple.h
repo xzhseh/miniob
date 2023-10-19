@@ -30,7 +30,7 @@ class Table;
 /**
  * @defgroup Tuple
  * @brief Tuple 元组，表示一行数据，当前返回客户端时使用
- * @details 
+ * @details
  * tuple是一种可以嵌套的数据结构。
  * 比如select t1.a+t2.b from t1, t2;
  * 需要使用下面的结构表示：
@@ -41,36 +41,21 @@ class Table;
  *      /     \
  *   Row(t1) Row(t2)
  * @endcode
- * 
+ *
  */
 
 /**
  * @brief 元组的结构，包含哪些字段(这里成为Cell)，每个字段的说明
  * @ingroup Tuple
  */
-class TupleSchema 
+class TupleSchema
 {
 public:
-  void append_cell(const TupleCellSpec &cell)
-  {
-    cells_.push_back(cell);
-  }
-  void append_cell(const char *table, const char *field)
-  {
-    append_cell(TupleCellSpec(table, field));
-  }
-  void append_cell(const char *alias)
-  {
-    append_cell(TupleCellSpec(alias));
-  }
-  int cell_num() const
-  {
-    return static_cast<int>(cells_.size());
-  }
-  const TupleCellSpec &cell_at(int i) const
-  {
-    return cells_[i];
-  }
+  void                 append_cell(const TupleCellSpec &cell) { cells_.push_back(cell); }
+  void                 append_cell(const char *table, const char *field) { append_cell(TupleCellSpec(table, field)); }
+  void                 append_cell(const char *alias) { append_cell(TupleCellSpec(alias)); }
+  int                  cell_num() const { return static_cast<int>(cells_.size()); }
+  const TupleCellSpec &cell_at(int i) const { return cells_[i]; }
 
 private:
   std::vector<TupleCellSpec> cells_;
@@ -80,10 +65,10 @@ private:
  * @brief 元组的抽象描述
  * @ingroup Tuple
  */
-class Tuple 
+class Tuple
 {
 public:
-  Tuple() = default;
+  Tuple()          = default;
   virtual ~Tuple() = default;
 
   /**
@@ -94,15 +79,17 @@ public:
 
   /**
    * @brief 获取指定位置的Cell
-   * 
+   *
    * @param index 位置
    * @param[out] cell  返回的Cell
    */
   virtual RC cell_at(int index, Value &cell) const = 0;
 
+  virtual std::unique_ptr<Tuple> copy() const { return nullptr; }
+
   /**
    * @brief 根据cell的描述，获取cell的值
-   * 
+   *
    * @param spec cell的描述
    * @param[out] cell 返回的cell
    */
@@ -111,7 +98,7 @@ public:
   virtual std::string to_string() const
   {
     std::string str;
-    const int cell_num = this->cell_num();
+    const int   cell_num = this->cell_num();
     for (int i = 0; i < cell_num - 1; i++) {
       Value cell;
       cell_at(i, cell);
@@ -133,7 +120,7 @@ public:
  * @ingroup Tuple
  * @details 直接就是获取表中的一条记录
  */
-class RowTuple : public Tuple 
+class RowTuple : public Tuple
 {
 public:
   RowTuple() = default;
@@ -145,16 +132,13 @@ public:
     speces_.clear();
   }
 
-  void set_record(Record *record)
-  {
-    this->record_ = record;
-  }
+  void set_record(Record *record) { this->record_ = record; }
 
   [[nodiscard]] RowTuple clone() const
   {
     RowTuple tuple;
     tuple.record_ = record_;
-    tuple.table_ = table_;
+    tuple.table_  = table_;
     tuple.speces_.reserve(speces_.size());
     for (const FieldExpr *spec : speces_) {
       tuple.speces_.push_back(new FieldExpr(*spec));
@@ -171,10 +155,7 @@ public:
     }
   }
 
-  int cell_num() const override
-  {
-    return speces_.size();
-  }
+  int cell_num() const override { return speces_.size(); }
 
   RC cell_at(int index, Value &cell) const override
   {
@@ -183,7 +164,7 @@ public:
       return RC::INVALID_ARGUMENT;
     }
 
-    FieldExpr *field_expr = speces_[index];
+    FieldExpr       *field_expr = speces_[index];
     const FieldMeta *field_meta = field_expr->field().meta();
     cell.set_type(field_meta->type());
     cell.set_data(this->record_->data() + field_meta->offset(), field_meta->len());
@@ -200,7 +181,7 @@ public:
 
     for (size_t i = 0; i < speces_.size(); ++i) {
       const FieldExpr *field_expr = speces_[i];
-      const Field &field = field_expr->field();
+      const Field     &field      = field_expr->field();
       if (0 == strcmp(field_name, field.field_name())) {
         return cell_at(i, cell);
       }
@@ -220,19 +201,25 @@ public:
   }
 #endif
 
-  Record &record()
-  {
-    return *record_;
-  }
+  Record &record() { return *record_; }
 
-  const Record &record() const
+  const Record &record() const { return *record_; }
+
+  [[nodiscard]] std::unique_ptr<Tuple> copy() const override
   {
-    return *record_;
+    std::unique_ptr<RowTuple> tuple(new RowTuple());
+    tuple->record_ = new Record(record_->copy());
+    tuple->table_  = table_;
+    tuple->speces_.reserve(speces_.size());
+    for (const FieldExpr *spec : speces_) {
+      tuple->speces_.push_back(new FieldExpr(*spec));
+    }
+    return tuple;
   }
 
 private:
-  Record *record_ = nullptr;
-  const Table *table_ = nullptr;
+  Record                  *record_ = nullptr;
+  const Table             *table_  = nullptr;
   std::vector<FieldExpr *> speces_;
 };
 
@@ -243,7 +230,7 @@ private:
  * 投影也可以是很复杂的操作，比如某些字段需要做类型转换、重命名、表达式运算、函数计算等。
  * 当前的实现是比较简单的，只是选择部分字段，不做任何其他操作。
  */
-class ProjectTuple : public Tuple 
+class ProjectTuple : public Tuple
 {
 public:
   ProjectTuple() = default;
@@ -255,19 +242,10 @@ public:
     speces_.clear();
   }
 
-  void set_tuple(Tuple *tuple)
-  {
-    this->tuple_ = tuple;
-  }
+  void set_tuple(Tuple *tuple) { this->tuple_ = tuple; }
 
-  void add_cell_spec(TupleCellSpec *spec)
-  {
-    speces_.push_back(spec);
-  }
-  int cell_num() const override
-  {
-    return speces_.size();
-  }
+  void add_cell_spec(TupleCellSpec *spec) { speces_.push_back(spec); }
+  int  cell_num() const override { return speces_.size(); }
 
   RC cell_at(int index, Value &cell) const override
   {
@@ -282,10 +260,7 @@ public:
     return tuple_->find_cell(*spec, cell);
   }
 
-  RC find_cell(const TupleCellSpec &spec, Value &cell) const override
-  {
-    return tuple_->find_cell(spec, cell);
-  }
+  RC find_cell(const TupleCellSpec &spec, Value &cell) const override { return tuple_->find_cell(spec, cell); }
 
 #if 0
   RC cell_spec_at(int index, const TupleCellSpec *&spec) const override
@@ -299,25 +274,17 @@ public:
 #endif
 private:
   std::vector<TupleCellSpec *> speces_;
-  Tuple *tuple_ = nullptr;
+  Tuple                       *tuple_ = nullptr;
 };
 
-class ExpressionTuple : public Tuple 
+class ExpressionTuple : public Tuple
 {
 public:
-  ExpressionTuple(std::vector<std::unique_ptr<Expression>> &expressions)
-    : expressions_(expressions)
-  {
-  }
-  
-  virtual ~ExpressionTuple()
-  {
-  }
+  ExpressionTuple(std::vector<std::unique_ptr<Expression>> &expressions) : expressions_(expressions) {}
 
-  int cell_num() const override
-  {
-    return expressions_.size();
-  }
+  virtual ~ExpressionTuple() {}
+
+  int cell_num() const override { return expressions_.size(); }
 
   RC cell_at(int index, Value &cell) const override
   {
@@ -339,7 +306,6 @@ public:
     return RC::NOTFOUND;
   }
 
-
 private:
   const std::vector<std::unique_ptr<Expression>> &expressions_;
 };
@@ -348,21 +314,15 @@ private:
  * @brief 一些常量值组成的Tuple
  * @ingroup Tuple
  */
-class ValueListTuple : public Tuple 
+class ValueListTuple : public Tuple
 {
 public:
-  ValueListTuple() = default;
+  ValueListTuple()          = default;
   virtual ~ValueListTuple() = default;
 
-  void set_cells(const std::vector<Value> &cells)
-  {
-    cells_ = cells;
-  }
+  void set_cells(const std::vector<Value> &cells) { cells_ = cells; }
 
-  virtual int cell_num() const override
-  {
-    return static_cast<int>(cells_.size());
-  }
+  virtual int cell_num() const override { return static_cast<int>(cells_.size()); }
 
   virtual RC cell_at(int index, Value &cell) const override
   {
@@ -374,10 +334,7 @@ public:
     return RC::SUCCESS;
   }
 
-  virtual RC find_cell(const TupleCellSpec &spec, Value &cell) const override
-  {
-    return RC::INTERNAL;
-  }
+  virtual RC find_cell(const TupleCellSpec &spec, Value &cell) const override { return RC::INTERNAL; }
 
 private:
   std::vector<Value> cells_;
@@ -388,25 +345,16 @@ private:
  * @ingroup Tuple
  * @details 在join算子中使用
  */
-class JoinedTuple : public Tuple 
+class JoinedTuple : public Tuple
 {
 public:
-  JoinedTuple() = default;
+  JoinedTuple()          = default;
   virtual ~JoinedTuple() = default;
 
-  void set_left(Tuple *left)
-  {
-    left_ = left;
-  }
-  void set_right(Tuple *right)
-  {
-    right_ = right;
-  }
+  void set_left(Tuple *left) { left_ = left; }
+  void set_right(Tuple *right) { right_ = right; }
 
-  int cell_num() const override
-  {
-    return left_->cell_num() + right_->cell_num();
-  }
+  int cell_num() const override { return left_->cell_num() + right_->cell_num(); }
 
   RC cell_at(int index, Value &value) const override
   {
@@ -432,7 +380,15 @@ public:
     return right_->find_cell(spec, value);
   }
 
+  [[nodiscard]] std::unique_ptr<Tuple> copy() const override
+  {
+    std::unique_ptr<JoinedTuple> tuple(new JoinedTuple());
+    tuple->left_  = left_->copy().release();
+    tuple->right_ = right_->copy().release();
+    return tuple;
+  }
+
 private:
-  Tuple *left_ = nullptr;
+  Tuple *left_  = nullptr;
   Tuple *right_ = nullptr;
 };

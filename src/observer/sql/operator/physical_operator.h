@@ -40,7 +40,6 @@ enum class PhysicalOperatorType
   TABLE_SCAN,
   INDEX_SCAN,
   NESTED_LOOP_JOIN,
-  INNER_JOIN,
   EXPLAIN,
   PREDICATE,
   PROJECT,
@@ -49,6 +48,7 @@ enum class PhysicalOperatorType
   DELETE,
   INSERT,
   UPDATE,
+  ORDER_BY,
 };
 
 /**
@@ -71,20 +71,14 @@ public:
   virtual PhysicalOperatorType type() const = 0;
 
   virtual RC open(Trx *trx) = 0;
-  virtual RC next() = 0;
-  virtual RC close() = 0;
+  virtual RC next()         = 0;
+  virtual RC close()        = 0;
 
   virtual Tuple *current_tuple() = 0;
 
-  void add_child(std::unique_ptr<PhysicalOperator> oper)
-  {
-    children_.emplace_back(std::move(oper));
-  }
+  void add_child(std::unique_ptr<PhysicalOperator> oper) { children_.emplace_back(std::move(oper)); }
 
-  std::vector<std::unique_ptr<PhysicalOperator>> &children()
-  {
-    return children_;
-  }
+  std::vector<std::unique_ptr<PhysicalOperator>> &children() { return children_; }
 
 protected:
   std::vector<std::unique_ptr<PhysicalOperator>> children_;

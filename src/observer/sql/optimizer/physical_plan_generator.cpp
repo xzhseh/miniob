@@ -35,6 +35,8 @@ See the Mulan PSL v2 for more details. */
 #include "sql/operator/calc_logical_operator.h"
 #include "sql/operator/calc_physical_operator.h"
 #include "sql/operator/inner_join_physical_operator.h"
+#include "sql/operator/order_by_logical_operator.h"
+#include "sql/operator/order_by_physical_operator.h"
 #include "sql/expr/expression.h"
 #include "common/log/log.h"
 
@@ -75,6 +77,10 @@ RC PhysicalPlanGenerator::create(LogicalOperator &logical_operator, unique_ptr<P
 
     case LogicalOperatorType::JOIN: {
       return create_plan(static_cast<JoinLogicalOperator &>(logical_operator), oper);
+    } break;
+
+    case LogicalOperatorType::ORDER_BY: {
+      return create_plan(static_cast<OrderByLogicalOperator &>(logical_operator), oper);
     } break;
 
     default: {
@@ -329,4 +335,30 @@ RC PhysicalPlanGenerator::create_plan(CalcLogicalOperator &logical_oper, std::un
   CalcPhysicalOperator *calc_oper = new CalcPhysicalOperator(std::move(logical_oper.expressions()));
   oper.reset(calc_oper);
   return rc;
+}
+RC PhysicalPlanGenerator::create_plan(OrderByLogicalOperator &logical_oper, unique_ptr<PhysicalOperator> &oper)
+{
+  RC                                   rc          = RC::SUCCESS;
+  vector<unique_ptr<LogicalOperator>> &child_opers = logical_oper.children();
+  if (child_opers.size() != 1) {
+    LOG_WARN("order by operator should have 1 child, but have %d", child_opers.size());
+    return RC::INTERNAL;
+  }
+  OrderByPhysicalOperator *order_by_oper = new OrderByPhysicalOperator(logical_oper.order_by_exprs());
+
+  // In fact just one child
+  for (auto &child_oper : child_opers) {
+    unique_ptr<PhysicalOperator> child_physical_oper;
+    rc = create(*child_oper, child_physical_oper);
+    if (rc != RC::SUCCESS) {
+      LOG_WARN("failed to create physical child oper. rc=%s", strrc(rc));
+      return rc;
+    }
+
+    order_by_oper->add_child(std::move(child_physical_oper));
+
+    oper.reset(order_by_oper);
+    return rc;
+  }
+  return RC::SUCCESS;
 }

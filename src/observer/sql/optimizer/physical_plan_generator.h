@@ -29,16 +29,17 @@ class UpdateLogicalOperator;
 class ExplainLogicalOperator;
 class JoinLogicalOperator;
 class CalcLogicalOperator;
+class OrderByLogicalOperator;
 /**
  * @brief 物理计划生成器
  * @ingroup PhysicalOperator
  * @details 根据逻辑计划生成物理计划。
  * 不会做任何优化，完全根据本意生成物理计划。
  */
-class PhysicalPlanGenerator 
+class PhysicalPlanGenerator
 {
 public:
-  PhysicalPlanGenerator() = default;
+  PhysicalPlanGenerator()          = default;
   virtual ~PhysicalPlanGenerator() = default;
 
   RC create(LogicalOperator &logical_operator, std::unique_ptr<PhysicalOperator> &oper);
@@ -53,4 +54,5 @@ private:
   RC create_plan(ExplainLogicalOperator &logical_oper, std::unique_ptr<PhysicalOperator> &oper);
   RC create_plan(JoinLogicalOperator &logical_oper, std::unique_ptr<PhysicalOperator> &oper);
   RC create_plan(CalcLogicalOperator &logical_oper, std::unique_ptr<PhysicalOperator> &oper);
+  RC create_plan(OrderByLogicalOperator &logical_oper, std::unique_ptr<PhysicalOperator> &oper);
 };

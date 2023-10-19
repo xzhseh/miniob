@@ -24,6 +24,7 @@ See the Mulan PSL v2 for more details. */
 #include "sql/operator/join_logical_operator.h"
 #include "sql/operator/project_logical_operator.h"
 #include "sql/operator/explain_logical_operator.h"
+#include "sql/operator/order_by_logical_operator.h"
 #include "sql/stmt/stmt.h"
 #include "sql/stmt/calc_stmt.h"
 #include "sql/stmt/select_stmt.h"
@@ -157,17 +158,33 @@ RC LogicalPlanGenerator::create_plan(SelectStmt *select_stmt, unique_ptr<Logical
     LOG_WARN("failed to create predicate logical plan. rc=%s", strrc(rc));
     return rc;
   }
+  if (predicate_oper) {
+    predicate_oper->add_child(std::move(table_oper));
+  }
+
+  unique_ptr<LogicalOperator> order_by_op;
+  if (!select_stmt->order_by().empty()) {
+    std::vector<OrderByExpr> order_by_exprs;
+    for (auto &order_by_stmt : select_stmt->order_by()) {
+      unique_ptr<Expression> field_expr(new FieldExpr(order_by_stmt.field));
+      OrderByExpr            order_by_expr{std::move(field_expr), order_by_stmt.asc};
+      order_by_exprs.emplace_back(std::move(order_by_expr));
+    }
+    order_by_op = unique_ptr<LogicalOperator>(new OrderByLogicalOperator(std::move(order_by_exprs)));
+    if (predicate_oper) {
+      order_by_op->add_child(std::move(predicate_oper));
+    } else {
+      order_by_op->add_child(std::move(table_oper));
+    }
+  }
 
   unique_ptr<LogicalOperator> project_oper(new ProjectLogicalOperator(all_fields));
-  if (predicate_oper) {
-    if (table_oper) {
-      predicate_oper->add_child(std::move(table_oper));
-    }
+  if (order_by_op) {
+    project_oper->add_child(std::move(order_by_op));
+  } else if (predicate_oper) {
     project_oper->add_child(std::move(predicate_oper));
   } else {
-    if (table_oper) {
-      project_oper->add_child(std::move(table_oper));
-    }
+    project_oper->add_child(std::move(table_oper));
   }
 
   logical_operator.swap(project_oper);

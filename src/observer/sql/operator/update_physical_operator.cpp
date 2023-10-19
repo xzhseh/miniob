@@ -60,7 +60,7 @@ RC UpdatePhysicalOperator::next()
     }
     Record new_record;
     new_record.set_rid(old_record.rid());
-    new_record.set_data(data);
+    new_record.set_data(data, record_size);
 
     rc = table_->update_record(old_record, new_record);
     if (rc != RC::SUCCESS) {
