@@ -190,7 +190,7 @@ RC AggPhysicalOperator::next() {
     if (agg_value_map_.count(agg::AGG_AVG) == 1) {
         auto &v_t = agg_value_map_[agg::AGG_AVG];
         if (v_t.attr_type() == AttrType::INTS) {
-            v_t.set_int(v_t.get_int() / n);
+            v_t.set_float(v_t.get_int() * 1.0 / n);
         } else if (v_t.attr_type() == AttrType::FLOATS) {
             v_t.set_float(v_t.get_float() / n);
         } else {
