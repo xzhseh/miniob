@@ -2131,8 +2131,8 @@ yyreduce:
         (yyval.sql_node)->update.conditions.swap(*(yyvsp[0].condition_list));
         delete (yyvsp[0].condition_list);
       }
-      free((yyvsp[-6].string));
-      free((yyvsp[-4].string));
+      free (yyvsp[-6].string);
+      free (yyvsp[-4].string);
     }
 #line 2138 "yacc_sql.cpp"
     break;
@@ -2157,8 +2157,8 @@ yyreduce:
       node.attribute_name = (yyvsp[-3].string);
       node.value = *(yyvsp[-1].value);
       (yyval.update_value_list)->emplace_back(node);
-      delete (yyvsp[-3].string);
-      delete (yyvsp[-1].value);
+      free (yyvsp[-3].string);
+      free (yyvsp[-1].value);
     }
 #line 2164 "yacc_sql.cpp"
     break;
