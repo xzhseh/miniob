@@ -14,60 +14,44 @@ See the Mulan PSL v2 for more details. */
 
 #pragma once
 
-#include "storage/table/table.h"
 #include "storage/field/field_meta.h"
+#include "storage/table/table.h"
 
 /**
  * @brief 字段
  */
 class Field {
-public:
+ public:
   Field() = default;
-  Field(const Table *table, const FieldMeta *field) : table_(table), field_(field)
-  {}
+  Field(const Table *table, const FieldMeta *field) : table_(table), field_(field) {}
   Field(const Field &) = default;
 
-  const Table *table() const
-  {
-    return table_;
-  }
-  const FieldMeta *meta() const
-  {
-    return field_;
-  }
+  const Table *table() const { return table_; }
+  const FieldMeta *meta() const { return field_; }
 
-  AttrType attr_type() const
-  {
+  AttrType attr_type() const {
     assert(field_ != nullptr);
     return field_->type();
   }
 
-  const char *table_name() const
-  {
+  const char *table_name() const {
     assert(table_ != nullptr);
     return table_->name();
   }
-  const char *field_name() const
-  {
+  const char *field_name() const {
     assert(field_ != nullptr);
     return field_->name();
   }
 
-  void set_table(const Table *table)
-  {
-    this->table_ = table;
-  }
-  void set_field(const FieldMeta *field)
-  {
-    this->field_ = field;
-  }
+  void set_table(const Table *table) { this->table_ = table; }
+  void set_field(const FieldMeta *field) { this->field_ = field; }
 
   void set_int(Record &record, int value);
-  int  get_int(const Record &record);
+  int get_int(const Record &record);
 
   const char *get_data(const Record &record);
 
-private:
+ private:
   const Table *table_ = nullptr;
   const FieldMeta *field_ = nullptr;
 };
