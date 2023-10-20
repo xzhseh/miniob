@@ -135,14 +135,14 @@ RC SessionStage::handle_sql(SQLStageEvent *sql_event) {
   }
 
   /// Binder --> binding the node we get from the last stage with catalog / table infos
-  /// To generate the logical plan (statement)
+  /// To generate the statement / context
   rc = resolve_stage_.handle_request(sql_event);
   if (OB_FAIL(rc)) {
     LOG_TRACE("failed to do resolve. rc=%s", strrc(rc));
     return rc;
   }
 
-  /// Optimizer --> potentially generate the physical plan based on the logical plan
+  /// Planner / Optimizer --> potentially generate the logical / physical plan based on the statement
   rc = optimize_stage_.handle_request(sql_event);
   if (rc != RC::UNIMPLENMENT && rc != RC::SUCCESS) {
     LOG_TRACE("failed to do optimize. rc=%s", strrc(rc));

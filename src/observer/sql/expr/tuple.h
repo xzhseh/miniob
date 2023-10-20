@@ -245,6 +245,10 @@ public:
 
   void set_tuple(Tuple *tuple)
   {
+    std::cout << "[project tuple]: set_tuple" << std::endl;
+    for (const auto &s : speces_) {
+      std::cout << "field: " << s->field_name() << " table: " << s->table_name() << " alias: " << s->alias() << std::endl;
+    }
     this->tuple_ = tuple;
   }
 
@@ -364,7 +368,9 @@ public:
 
   virtual RC find_cell(const TupleCellSpec &spec, Value &cell) const override
   {
-    return RC::INTERNAL;
+    // cell = cells_[0];
+    // return RC::INTERNAL;
+    return cell_at(0, cell);
   }
 
 private:

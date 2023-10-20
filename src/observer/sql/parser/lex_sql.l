@@ -119,7 +119,7 @@ NOT                                     RETURN_TOKEN(NOT);
 MIN                                     RETURN_TOKEN(MIN);
 MAX                                     RETURN_TOKEN(MAX);
 AVG                                     RETURN_TOKEN(AVG);
-SUM                                     RETURN_TOKEN(SUM):
+SUM                                     RETURN_TOKEN(SUM);
 COUNT                                   RETURN_TOKEN(COUNT);
 {ID}                                    yylval->string=strdup(yytext); RETURN_TOKEN(ID);
 "("                                     RETURN_TOKEN(LBRACE);

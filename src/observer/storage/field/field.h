@@ -38,15 +38,18 @@ public:
 
   AttrType attr_type() const
   {
+    assert(field_ != nullptr);
     return field_->type();
   }
 
   const char *table_name() const
   {
+    assert(table_ != nullptr);
     return table_->name();
   }
   const char *field_name() const
   {
+    assert(field_ != nullptr);
     return field_->name();
   }
 

@@ -99,6 +99,11 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
         NE
         NOT
         LIKE
+        MIN
+        MAX
+        AVG
+        SUM
+        COUNT
 
 /** union 中定义各种数据类型，真实生成的代码也是union类型，所以不能有非POD类型的数据 **/
 %union {
@@ -118,6 +123,7 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
   char *                            string;
   int                               number;
   float                             floats;
+  enum agg                          agg;
 }
 
 %token <number> NUMBER
@@ -132,6 +138,7 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
 %type <value>               value
 %type <number>              number
 %type <comp>                comp_op
+%type <agg>                 agg
 %type <rel_attr>            rel_attr
 %type <attr_infos>          attr_def_list
 %type <attr_info>           attr_def
@@ -497,9 +504,20 @@ select_attr:
       RelAttrSqlNode attr;
       attr.relation_name  = "";
       attr.attribute_name = "*";
+      attr.aggregate_func = agg::NONE;
+      $$->emplace_back(attr);
+    }
+    | agg LBRACE '*' RBRACE {
+      /* AGG_FUNC(*) */
+      $$ = new std::vector<RelAttrSqlNode>;
+      RelAttrSqlNode attr;
+      attr.relation_name = "";
+      attr.attribute_name = "*";
+      attr.aggregate_func = $1;
       $$->emplace_back(attr);
     }
     | rel_attr attr_list {
+      /* Implicity AGG in `rel_attr` */
       if ($2 != nullptr) {
         $$ = $2;
       } else {
@@ -510,18 +528,54 @@ select_attr:
     }
     ;
 
+agg:
+    MIN {
+      $$ = agg::AGG_MIN;
+    }
+    | MAX {
+      $$ = agg::AGG_MAX;
+    }
+    | AVG {
+      $$ = agg::AGG_AVG;
+    }
+    | SUM {
+      $$ = agg::AGG_SUM;
+    }
+    | COUNT {
+      $$ = agg::AGG_COUNT;
+    }
+    ;
+
 rel_attr:
     ID {
       $$ = new RelAttrSqlNode;
+      $$->relation_name = "";
       $$->attribute_name = $1;
+      $$->aggregate_func = agg::NONE;
       free($1);
     }
     | ID DOT ID {
       $$ = new RelAttrSqlNode;
       $$->relation_name  = $1;
       $$->attribute_name = $3;
+      $$->aggregate_func = agg::NONE;
       free($1);
       free($3);
+    }
+    | agg LBRACE ID RBRACE {
+      $$ = new RelAttrSqlNode;
+      $$->relation_name = "";
+      $$->attribute_name = $3;
+      $$->aggregate_func = $1;
+      free($3);
+    }
+    | agg LBRACE ID DOT ID RBRACE {
+      $$ = new RelAttrSqlNode;
+      $$->relation_name = $3;
+      $$->attribute_name = $5;
+      $$->aggregate_func = $1;
+      free($3);
+      free($5);
     }
     ;
 

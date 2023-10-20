@@ -50,5 +50,6 @@ private:
   // 这里的表达式都是比较简单的比较运算，并且左右两边都是取字段表达式或值表达式
   // 不包含复杂的表达式运算，比如加减乘除、或者conjunction expression
   // 如果有多个表达式，他们的关系都是 AND
+  // Note that this is set in rewrite phase, via predicate push down
   std::vector<std::unique_ptr<Expression>> predicates_;
 };

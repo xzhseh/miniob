@@ -18,6 +18,7 @@ See the Mulan PSL v2 for more details. */
 #include <memory>
 
 #include "common/rc.h"
+#include "sql/stmt/agg_stmt.h"
 #include "sql/stmt/stmt.h"
 #include "storage/field/field.h"
 
@@ -47,17 +48,25 @@ public:
   {
     return tables_;
   }
+
   const std::vector<Field> &query_fields() const
   {
     return query_fields_;
   }
+
   FilterStmt *filter_stmt() const
   {
     return filter_stmt_;
+  }
+
+  AggStmt *agg_stmt() const
+  {
+    return agg_stmt_;
   }
 
 private:
   std::vector<Field> query_fields_;
   std::vector<Table *> tables_;
   FilterStmt *filter_stmt_ = nullptr;
+  AggStmt *agg_stmt_ = nullptr;
 };

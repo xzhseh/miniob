@@ -13,6 +13,7 @@ See the Mulan PSL v2 for more details. */
 //
 
 #include "sql/optimizer/logical_plan_generator.h"
+#include "sql/operator/agg_logical_operator.h"
 #include "sql/operator/logical_operator.h"
 #include "sql/operator/calc_logical_operator.h"
 #include "sql/operator/project_logical_operator.h"
@@ -33,6 +34,7 @@ See the Mulan PSL v2 for more details. */
 #include "sql/stmt/delete_stmt.h"
 #include "sql/stmt/explain_stmt.h"
 #include "sql/stmt/update_stmt.h"
+#include <memory>
 
 using namespace std;
 
@@ -136,22 +138,43 @@ RC LogicalPlanGenerator::create_plan(SelectStmt *select_stmt, unique_ptr<Logical
   }
 
   // TODO: Predicate push down? (or later)
-  unique_ptr<LogicalOperator> predicate_oper;
+  std::unique_ptr<LogicalOperator> predicate_oper;
   RC rc = create_plan(select_stmt->filter_stmt(), predicate_oper);
   if (rc != RC::SUCCESS) {
     LOG_WARN("failed to create predicate logical plan. rc=%s", strrc(rc));
     return rc;
   }
 
-  unique_ptr<LogicalOperator> project_oper(new ProjectLogicalOperator(all_fields));
+  // Create the aggregate logical operator
+  std::unique_ptr<LogicalOperator> agg_oper{nullptr};
+  if (select_stmt->agg_stmt() != nullptr) {
+    auto agg_keys = select_stmt->agg_stmt()->get_keys();
+    auto agg_types = select_stmt->agg_stmt()->get_types();
+    agg_oper = std::make_unique<AggLogicalOperator>(all_fields, agg_keys, agg_types);
+    assert(agg_oper != nullptr);
+  }
+
+  // Create the projection logical operator
+  // TODO: Refactor this part
+  std::unique_ptr<LogicalOperator> project_oper(new ProjectLogicalOperator(all_fields));
   if (predicate_oper) {
     if (table_oper) {
       predicate_oper->add_child(std::move(table_oper));
     }
-    project_oper->add_child(std::move(predicate_oper));
+    if (agg_oper) {
+      agg_oper->add_child(std::move(predicate_oper));
+      project_oper->add_child(std::move(agg_oper));
+    } else {
+      project_oper->add_child(std::move(predicate_oper));
+    }
   } else {
     if (table_oper) {
-      project_oper->add_child(std::move(table_oper));
+      if (agg_oper) {
+        agg_oper->add_child(std::move(table_oper));
+        project_oper->add_child(std::move(agg_oper));
+      } else {
+        project_oper->add_child(std::move(table_oper));
+      }
     }
   }
 

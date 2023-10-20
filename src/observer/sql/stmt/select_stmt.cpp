@@ -13,10 +13,12 @@ See the Mulan PSL v2 for more details. */
 //
 
 #include "sql/stmt/select_stmt.h"
+#include "sql/stmt/agg_stmt.h"
 #include "sql/stmt/filter_stmt.h"
 #include "common/log/log.h"
 #include "common/lang/string.h"
 #include "storage/db/db.h"
+#include "storage/field/field_meta.h"
 #include "storage/table/table.h"
 
 SelectStmt::~SelectStmt() {
@@ -34,6 +36,29 @@ static void wildcard_fields(Table *table, std::vector<Field> &field_metas) {
   for (int i = table_meta.sys_field_num(); i < field_num; i++) {
     field_metas.push_back(Field(table, table_meta.field(i)));
   }
+}
+
+static void agg_builder_inner(
+    std::vector<Field> &query_fields,
+    int agg_pos,
+    std::vector<std::pair<const FieldMeta *, int>> &aggregate_keys,
+    std::vector<agg> &aggregate_types,
+    const RelAttrSqlNode &relation_attr,
+    bool &agg_flag) {
+
+  if (relation_attr.aggregate_func == agg::NONE) {
+    // Do nothing if this is not a aggregation
+    return;
+  }
+
+  agg_flag = true;
+
+  assert(query_fields.size() > 0 && "The size of `query_fields` must greater than zero");
+  assert(relation_attr.aggregate_func != agg::NONE);
+
+  aggregate_keys.push_back({query_fields[agg_pos].meta(), query_fields.size() - agg_pos});
+  agg_pos = query_fields.size();
+  aggregate_types.push_back(relation_attr.aggregate_func);
 }
 
 RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt) {
@@ -68,6 +93,12 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt) {
   // collect query fields in `select` statement
   std::vector<Field> query_fields;
 
+  // For aggregation
+  std::vector<std::pair<const FieldMeta *, int>> aggregate_keys;
+  std::vector<agg> aggregate_types;
+  int agg_pos = 0;
+  bool agg_flag{false};
+
   for (int i = static_cast<int>(select_sql.attributes.size()) - 1; i >= 0; i--) {
     const RelAttrSqlNode &relation_attr = select_sql.attributes[i];
 
@@ -78,6 +109,9 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt) {
         // We basically need all the metadata from all the underlying tables
         wildcard_fields(table, query_fields);
       }
+
+      // Possibly aggregation on `*`
+      agg_builder_inner(query_fields, agg_pos, aggregate_keys, aggregate_types, relation_attr, agg_flag);
 
     } else if (!common::is_blank(relation_attr.relation_name.c_str())) {
       // If the table name is not null. (i.e., `select t1.c1 from t1;`)
@@ -93,6 +127,10 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt) {
         for (Table *table : tables) {
           wildcard_fields(table, query_fields);
         }
+
+        // Essentially the same as `*` cases for aggregation
+        agg_builder_inner(query_fields, agg_pos, aggregate_keys, aggregate_types, relation_attr, agg_flag);
+
       } else {
         auto iter = table_map.find(table_name);
         if (iter == table_map.end()) {
@@ -104,6 +142,7 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt) {
         if (0 == strcmp(field_name, "*")) {
           // i.e., `select t1.* from t1;`. Though this is essentially the same with `*`.
           wildcard_fields(table, query_fields);
+          agg_builder_inner(query_fields, agg_pos, aggregate_keys, aggregate_types, relation_attr, agg_flag);
         } else {
           const FieldMeta *field_meta = table->table_meta().field(field_name);
           if (nullptr == field_meta) {
@@ -112,6 +151,7 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt) {
           }
 
           query_fields.push_back(Field(table, field_meta));
+          agg_builder_inner(query_fields, agg_pos, aggregate_keys, aggregate_types, relation_attr, agg_flag);
         }
       }
     } else {
@@ -133,6 +173,7 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt) {
       }
 
       query_fields.push_back(Field(table, field_meta));
+      agg_builder_inner(query_fields, agg_pos, aggregate_keys, aggregate_types, relation_attr, agg_flag);
     }
   }
 
@@ -156,12 +197,22 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt) {
     return rc;
   }
 
+  // create aggregation statement
+  AggStmt *agg_stmt{nullptr};
+  if (agg_flag) {
+    agg_stmt = new AggStmt{aggregate_keys, aggregate_types};
+    assert(agg_stmt != nullptr && "`agg_stmt` must not be nullptr");
+  }
+
   // everything alright
   SelectStmt *select_stmt = new SelectStmt();
+
   // TODO add expression copy
   select_stmt->tables_.swap(tables);
   select_stmt->query_fields_.swap(query_fields);
   select_stmt->filter_stmt_ = filter_stmt;
+  select_stmt->agg_stmt_ = agg_stmt;
+
   stmt = select_stmt;
   return RC::SUCCESS;
 }

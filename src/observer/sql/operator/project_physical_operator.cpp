@@ -50,7 +50,9 @@ RC ProjectPhysicalOperator::close()
 }
 Tuple *ProjectPhysicalOperator::current_tuple()
 {
+  std::cout << "[project] Current children tuple: " << children_[0]->current_tuple()->to_string() << std::endl;
   tuple_.set_tuple(children_[0]->current_tuple());
+  std::cout << "[project] Current tuple: " << tuple_.to_string() << std::endl;
   return &tuple_;
 }
 

@@ -23,6 +23,39 @@ See the Mulan PSL v2 for more details. */
 
 class Expression;
 
+/// Aggregate functions
+enum agg {
+  NONE,
+  AGG_MIN,
+  AGG_MAX,
+  AGG_AVG,
+  AGG_SUM,
+  AGG_COUNT
+};
+
+inline std::string agg_to_string(agg a) {
+  std::string ret{""};
+  switch (a) {
+    case agg::AGG_MIN: {
+      ret = "MIN";
+    } break;
+    case agg::AGG_MAX: {
+      ret = "MAX";
+    } break;
+    case agg::AGG_AVG: {
+      ret = "AVG";
+    } break;
+    case agg::AGG_SUM: {
+      ret = "SUM";
+    } break;
+    case agg::AGG_COUNT: {
+      ret = "COUNT";
+    } break;
+    default: assert(false); // This is impossible
+  }
+  return ret;
+}
+
 /**
  * @defgroup SQLParser SQL Parser 
  */
@@ -35,8 +68,9 @@ class Expression;
  * Attr -> Attribute
  */
 struct RelAttrSqlNode {
-  std::string relation_name;   ///< relation name (may be NULL) 表名
-  std::string attribute_name;  ///< attribute name              属性名
+  std::string relation_name;   ///< relation / table name (may be NULL/EMPTY)
+  std::string attribute_name;  ///< attribute / column name
+  enum agg aggregate_func;  ///< aggregate function (may be NULL/EMPTY)
 };
 
 /**
