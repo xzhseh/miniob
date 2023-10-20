@@ -106,7 +106,6 @@ RC AggPhysicalOperator::next() {
     }
     RC rc = RC::SUCCESS;
     while ((rc = child_->next()) == RC::SUCCESS) {
-        std::cout << "hey!" << std::endl;
         Tuple *tuple = child_->current_tuple();
         // for (const auto &field_expr : exprs_) {
             for (int i = 0; i < aggregate_keys_.size(); ++i) {
@@ -147,8 +146,8 @@ RC AggPhysicalOperator::next() {
                             case agg::AGG_MIN: {
                                 auto v_t = agg_value_map_[agg::AGG_MIN];
                                 // FIXME: Ensure this
-                                std::cout << "[agg::min] Current v: " << v.to_string() << std::endl;
-                                std::cout << "[agg::min] Current v_t: " << v_t.to_string() << std::endl;
+                                // std::cout << "[agg::min] Current v: " << v.to_string() << std::endl;
+                                // std::cout << "[agg::min] Current v_t: " << v_t.to_string() << std::endl;
                                 if (v.compare(v_t) < 0) {
                                     agg_value_map_[agg::AGG_MIN] = v;
                                 }
@@ -156,8 +155,8 @@ RC AggPhysicalOperator::next() {
                             case agg::AGG_MAX: {
                                 auto v_t = agg_value_map_[agg::AGG_MAX];
                                 // FIXME: Ensure this
-                                std::cout << "[agg::max] Current v: " << v.to_string() << std::endl;
-                                std::cout << "[agg::max] Current v_t: " << v_t.to_string() << std::endl;
+                                // std::cout << "[agg::max] Current v: " << v.to_string() << std::endl;
+                                // std::cout << "[agg::max] Current v_t: " << v_t.to_string() << std::endl;
                                 if (v.compare(v_t) > 0) {
                                     agg_value_map_[agg::AGG_MAX] = v;
                                 }
@@ -170,8 +169,8 @@ RC AggPhysicalOperator::next() {
                             case agg::AGG_AVG: {
                                 // TODO: Refactor this
                                 auto v_t = agg_value_map_[agg::AGG_AVG];
-                                std::cout << "[agg::avg] Current v: " << v.to_string() << std::endl;
-                                std::cout << "[agg::avg] Current v_t: " << v_t.to_string() << std::endl;
+                                // std::cout << "[agg::avg] Current v: " << v.to_string() << std::endl;
+                                // std::cout << "[agg::avg] Current v_t: " << v_t.to_string() << std::endl;
                                 auto res = add_value(v, v_t);
                                 agg_value_map_[agg::AGG_AVG] = res;
                             } break;
@@ -203,7 +202,7 @@ RC AggPhysicalOperator::next() {
         ret.push_back(agg_value_map_[aggregate_types_[i]]);
     }
     tuple_.set_cells(ret);
-    std::cout << "[agg] Current tuple: " << tuple_.to_string() << std::endl;
+    // std::cout << "[agg] Current tuple: " << tuple_.to_string() << std::endl;
     if (rc == RC::RECORD_EOF) {
         rc = RC::SUCCESS;
     }

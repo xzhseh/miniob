@@ -257,9 +257,9 @@ public:
 
   void set_tuple(Tuple *tuple)
   {
-    std::cout << "[project tuple]: set_tuple" << std::endl;
+    // std::cout << "[project tuple]: set_tuple" << std::endl;
     for (const auto &s : speces_) {
-      std::cout << "field: " << s->field_name() << " table: " << s->table_name() << " alias: " << s->alias() << std::endl;
+      // std::cout << "field: " << s->field_name() << " table: " << s->table_name() << " alias: " << s->alias() << std::endl;
     }
     this->tuple_ = tuple;
   }
