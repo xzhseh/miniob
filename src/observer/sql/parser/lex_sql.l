@@ -46,7 +46,7 @@ while (0);
 extern int atoi();
 extern double atof();
 
-#define RETURN_TOKEN(token) LOG_DEBUG("%s", #token);return token
+#define RETURN_TOKEN(token) LOG_DEBUG("%s", #token); return token
 %}
 
 /* Prevent the need for linking with -lfl */
@@ -110,6 +110,7 @@ ROLLBACK                                RETURN_TOKEN(TRX_ROLLBACK);
 INT                                     RETURN_TOKEN(INT_T);
 CHAR                                    RETURN_TOKEN(STRING_T);
 FLOAT                                   RETURN_TOKEN(FLOAT_T);
+DATE                                    RETURN_TOKEN(DATE_T);
 LOAD                                    RETURN_TOKEN(LOAD);
 DATA                                    RETURN_TOKEN(DATA);
 INFILE                                  RETURN_TOKEN(INFILE);
@@ -121,6 +122,8 @@ MAX                                     RETURN_TOKEN(MAX);
 AVG                                     RETURN_TOKEN(AVG);
 SUM                                     RETURN_TOKEN(SUM);
 COUNT                                   RETURN_TOKEN(COUNT);
+INNER                                   RETURN_TOKEN(INNER);
+JOIN                                    RETURN_TOKEN(JOIN);
 {ID}                                    yylval->string=strdup(yytext); RETURN_TOKEN(ID);
 "("                                     RETURN_TOKEN(LBRACE);
 ")"                                     RETURN_TOKEN(RBRACE);
@@ -138,10 +141,11 @@ COUNT                                   RETURN_TOKEN(COUNT);
 "-" |
 "*" |
 "/"                                     { return yytext[0]; }
-\"[^"]*\"                               yylval->string = strdup(yytext); RETURN_TOKEN(SSS);
-'[^']*\'                                yylval->string = strdup(yytext); RETURN_TOKEN(SSS);
+\'[0-9]{4}-[0-9]{1,2}-[0-9]{1,2}\'      { yylval->string = strdup(yytext); RETURN_TOKEN(DATE_STR); }
+\"[^"]*\"                               { yylval->string = strdup(yytext); RETURN_TOKEN(SSS); }
+\'[^']*\'                                { yylval->string = strdup(yytext); RETURN_TOKEN(SSS); }
 
-.                                       LOG_DEBUG("Unknown character [%c]",yytext[0]); return yytext[0];
+.                                       LOG_DEBUG("Unknown character [%c]", yytext[0]); return yytext[0];
 %%
 
 void scan_string(const char *str, yyscan_t scanner) {

@@ -55,16 +55,19 @@ class DiskBufferPool;
  *         效率非常低，你有办法优化吗？
  * @endcode
  */
-struct BPFileHeader 
+struct BPFileHeader
 {
   int32_t page_count;       //! 当前文件一共有多少个页面
   int32_t allocated_pages;  //! 已经分配了多少个页面
-  char bitmap[0];           //! 页面分配位图, 第0个页面(就是当前页面)，总是1
+  char    bitmap[0];        //! 页面分配位图, 第0个页面(就是当前页面)，总是1
 
   /**
    * 能够分配的最大的页面个数，即bitmap的字节数 乘以8
    */
   static const int MAX_PAGE_NUM = (BP_PAGE_DATA_SIZE - sizeof(page_count) - sizeof(allocated_pages)) * 8;
+
+  // Max memory usage ,currently only 511 mb
+  [[maybe_unused]] static const int MAX_MEMORY_USAGE_MB = MAX_PAGE_NUM * BP_PAGE_SIZE / (1024 * 1024);
 
   std::string to_string() const;
 };
@@ -77,7 +80,7 @@ struct BPFileHeader
  * 这个管理器负责为所有的BufferPool提供页帧管理服务，也就是所有的BufferPool磁盘文件
  * 在访问时都使用这个管理器映射到内存。
  */
-class BPFrameManager 
+class BPFrameManager
 {
 public:
   BPFrameManager(const char *tag);
@@ -87,7 +90,7 @@ public:
 
   /**
    * @brief 获取指定的页面
-   * 
+   *
    * @param file_desc 文件描述符，也可以当做buffer pool文件的标识
    * @param page_num  页面号
    * @return Frame* 页帧指针
@@ -96,7 +99,7 @@ public:
 
   /**
    * @brief 列出所有指定文件的页面
-   * 
+   *
    * @param file_desc 文件描述符
    * @return std::list<Frame *> 页帧列表
    */
@@ -104,7 +107,7 @@ public:
 
   /**
    * @brief 分配一个新的页面
-   * 
+   *
    * @param file_desc 文件描述符
    * @param page_num 页面编号
    * @return Frame* 页帧指针
@@ -126,36 +129,28 @@ public:
    */
   int purge_frames(int count, std::function<RC(Frame *frame)> purger);
 
-  size_t frame_num() const
-  {
-    return frames_.count();
-  }
+  size_t frame_num() const { return frames_.count(); }
 
   /**
    * 测试使用。返回已经从内存申请的个数
    */
-  size_t total_frame_num() const
-  {
-    return allocator_.get_size();
-  }
+  size_t total_frame_num() const { return allocator_.get_size(); }
 
 private:
   Frame *get_internal(const FrameId &frame_id);
   RC     free_internal(const FrameId &frame_id, Frame *frame);
 
 private:
-  class BPFrameIdHasher {
+  class BPFrameIdHasher
+  {
   public:
-    size_t operator()(const FrameId &frame_id) const
-    {
-      return frame_id.hash();
-    }
+    size_t operator()(const FrameId &frame_id) const { return frame_id.hash(); }
   };
 
-  using FrameLruCache = common::LruCache<FrameId, Frame *, BPFrameIdHasher>;
+  using FrameLruCache  = common::LruCache<FrameId, Frame *, BPFrameIdHasher>;
   using FrameAllocator = common::MemPoolSimple<Frame>;
 
-  std::mutex lock_;
+  std::mutex     lock_;
   FrameLruCache  frames_;
   FrameAllocator allocator_;
 };
@@ -170,21 +165,21 @@ public:
   BufferPoolIterator();
   ~BufferPoolIterator();
 
-  RC init(DiskBufferPool &bp, PageNum start_page = 0);
-  bool has_next();
+  RC      init(DiskBufferPool &bp, PageNum start_page = 0);
+  bool    has_next();
   PageNum next();
-  RC reset();
+  RC      reset();
 
 private:
   common::Bitmap bitmap_;
-  PageNum current_page_num_ = -1;
+  PageNum        current_page_num_ = -1;
 };
 
 /**
  * @brief BufferPool的实现
  * @ingroup BufferPool
  */
-class DiskBufferPool 
+class DiskBufferPool
 {
 public:
   DiskBufferPool(BufferPoolManager &bp_manager, BPFrameManager &frame_manager);
@@ -219,7 +214,7 @@ public:
 
   /**
    * @brief 释放某个页面，将此页面设置为未分配状态
-   * 
+   *
    * @param page_num 待释放的页面
    */
   RC dispose_page(PageNum page_num);
@@ -233,7 +228,7 @@ public:
 
   /**
    * @brief 用于解除pageHandle对应页面的驻留缓冲区限制
-   * 
+   *
    * 在调用GetThisPage或AllocatePage函数将一个页面读入缓冲区后，
    * 该页面被设置为驻留缓冲区状态，以防止其在处理过程中被置换出去，
    * 因此在该页面使用完之后应调用此函数解除该限制，使得该页面此后可以正常地被淘汰出缓冲区
@@ -283,16 +278,17 @@ protected:
   RC flush_page_internal(Frame &frame);
 
 private:
-  BufferPoolManager &  bp_manager_;
-  BPFrameManager &     frame_manager_;
+  BufferPoolManager &bp_manager_;
+  BPFrameManager    &frame_manager_;
 
-  std::string          file_name_;
-  int                  file_desc_ = -1;
-  Frame *              hdr_frame_ = nullptr;
-  BPFileHeader *       file_header_ = nullptr;
-  std::set<PageNum>    disposed_pages_;
+  std::string       file_name_;
+  int               file_desc_   = -1;
+  Frame            *hdr_frame_   = nullptr;
+  BPFileHeader     *file_header_ = nullptr;
+  std::set<PageNum> disposed_pages_;
 
-  common::Mutex        lock_;
+  common::Mutex lock_;
+
 private:
   friend class BufferPoolIterator;
 };
@@ -301,7 +297,7 @@ private:
  * @brief BufferPool的管理类
  * @ingroup BufferPool
  */
-class BufferPoolManager 
+class BufferPoolManager
 {
 public:
   BufferPoolManager(int memory_size = 0);
@@ -314,13 +310,13 @@ public:
   RC flush_page(Frame &frame);
 
 public:
-  static void set_instance(BufferPoolManager *bpm); // TODO 优化全局变量的表示方法
+  static void               set_instance(BufferPoolManager *bpm);  // TODO 优化全局变量的表示方法
   static BufferPoolManager &instance();
 
 private:
   BPFrameManager frame_manager_{"BufPool"};
 
-  common::Mutex  lock_;
+  common::Mutex                                     lock_;
   std::unordered_map<std::string, DiskBufferPool *> buffer_pools_;
-  std::unordered_map<int, DiskBufferPool *> fd_buffer_pools_;
+  std::unordered_map<int, DiskBufferPool *>         fd_buffer_pools_;
 };

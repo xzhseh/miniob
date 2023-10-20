@@ -20,6 +20,7 @@ See the Mulan PSL v2 for more details. */
 #include "event/session_event.h"
 #include "sql/executor/sql_result.h"
 #include "session/session.h"
+#include "sql/parser/value.h"
 #include "sql/stmt/set_variable_stmt.h"
 
 /**
@@ -67,6 +68,8 @@ private:
       bool_value = var_value.get_int() != 0;
     } else if (var_value.attr_type() == AttrType::FLOATS) {
       bool_value = var_value.get_float() != 0.0;
+    } else if (var_value.attr_type() == AttrType::DATE) {
+      bool_value = var_value.get_date() != 0;
     } else if (var_value.attr_type() == AttrType::CHARS) {
 
       std::string true_strings[] = {

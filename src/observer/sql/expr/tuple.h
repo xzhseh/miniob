@@ -150,6 +150,18 @@ public:
     this->record_ = record;
   }
 
+  [[nodiscard]] RowTuple clone() const
+  {
+    RowTuple tuple;
+    tuple.record_ = record_;
+    tuple.table_ = table_;
+    tuple.speces_.reserve(speces_.size());
+    for (const FieldExpr *spec : speces_) {
+      tuple.speces_.push_back(new FieldExpr(*spec));
+    }
+    return tuple;
+  }
+
   void set_schema(const Table *table, const std::vector<FieldMeta> *fields)
   {
     table_ = table;

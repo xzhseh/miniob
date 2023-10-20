@@ -38,6 +38,7 @@ See the Mulan PSL v2 for more details. */
 #include "sql/operator/join_physical_operator.h"
 #include "sql/operator/calc_logical_operator.h"
 #include "sql/operator/calc_physical_operator.h"
+#include "sql/operator/inner_join_physical_operator.h"
 #include "sql/expr/expression.h"
 #include "common/log/log.h"
 
@@ -46,7 +47,6 @@ using namespace std;
 /// Physical plan factory
 RC PhysicalPlanGenerator::create(LogicalOperator &logical_operator, unique_ptr<PhysicalOperator> &oper) {
   RC rc = RC::SUCCESS;
-
   switch (logical_operator.type()) {
     case LogicalOperatorType::CALC: {
       return create_plan(static_cast<CalcLogicalOperator &>(logical_operator), oper);
@@ -91,7 +91,9 @@ RC PhysicalPlanGenerator::create(LogicalOperator &logical_operator, unique_ptr<P
       return RC::INVALID_ARGUMENT;
     }
   }
-  return rc;
+
+  // This is impossible
+  assert(false);
 }
 
 RC PhysicalPlanGenerator::create_plan(TableGetLogicalOperator &table_get_oper, unique_ptr<PhysicalOperator> &oper)
@@ -100,17 +102,17 @@ RC PhysicalPlanGenerator::create_plan(TableGetLogicalOperator &table_get_oper, u
   // 看看是否有可以用于索引查找的表达式
   Table *table = table_get_oper.table();
 
-  Index *index = nullptr;
+  Index     *index      = nullptr;
   ValueExpr *value_expr = nullptr;
   for (auto &expr : predicates) {
     if (expr->type() == ExprType::COMPARISON) {
       auto comparison_expr = static_cast<ComparisonExpr *>(expr.get());
-      // 简单处理，就找等值查询
+      // 简单处理，仅找等值查询 (May be future expanded)
       if (comparison_expr->comp() != EQUAL_TO) {
         continue;
       }
 
-      unique_ptr<Expression> &left_expr = comparison_expr->left();
+      unique_ptr<Expression> &left_expr  = comparison_expr->left();
       unique_ptr<Expression> &right_expr = comparison_expr->right();
       // 左右比较的一边最少是一个值
       if (left_expr->type() != ExprType::VALUE && right_expr->type() != ExprType::VALUE) {
@@ -133,7 +135,7 @@ RC PhysicalPlanGenerator::create_plan(TableGetLogicalOperator &table_get_oper, u
       }
 
       const Field &field = field_expr->field();
-      index = table->find_index_by_field(field.field_name());
+      index              = table->find_index_by_field(field.field_name());
       if (nullptr != index) {
         break;
       }
@@ -144,11 +146,14 @@ RC PhysicalPlanGenerator::create_plan(TableGetLogicalOperator &table_get_oper, u
     ASSERT(value_expr != nullptr, "got an index but value expr is null ?");
 
     const Value &value = value_expr->get_value();
+
+    if (value.attr_type() == DATE && value.get_date() == -1) {
+      return RC::INVALID_ARGUMENT;
+    }
+
     IndexScanPhysicalOperator *index_scan_oper = new IndexScanPhysicalOperator(
-          table, index, table_get_oper.readonly(), 
-          &value, true /*left_inclusive*/, 
-          &value, true /*right_inclusive*/);
-          
+        table, index, table_get_oper.readonly(), &value, true /*left_inclusive*/, &value, true /*right_inclusive*/);
+
     index_scan_oper->set_predicates(std::move(predicates));
     oper = unique_ptr<PhysicalOperator>(index_scan_oper);
     LOG_TRACE("use index scan");
@@ -170,7 +175,7 @@ RC PhysicalPlanGenerator::create_plan(PredicateLogicalOperator &pred_oper, uniqu
   LogicalOperator &child_oper = *children_opers.front();
 
   unique_ptr<PhysicalOperator> child_phy_oper;
-  RC rc = create(child_oper, child_phy_oper);
+  RC                           rc = create(child_oper, child_phy_oper);
   if (rc != RC::SUCCESS) {
     LOG_WARN("failed to create child operator of predicate operator. rc=%s", strrc(rc));
     return rc;
@@ -194,7 +199,7 @@ RC PhysicalPlanGenerator::create_plan(ProjectLogicalOperator &project_oper, uniq
   RC rc = RC::SUCCESS;
   if (!child_opers.empty()) {
     LogicalOperator *child_oper = child_opers.front().get();
-    rc = create(*child_oper, child_phy_oper);
+    rc                          = create(*child_oper, child_phy_oper);
     if (rc != RC::SUCCESS) {
       LOG_WARN("failed to create project logical operator's child physical operator. rc=%s", strrc(rc));
       return rc;
@@ -202,7 +207,7 @@ RC PhysicalPlanGenerator::create_plan(ProjectLogicalOperator &project_oper, uniq
   }
 
   ProjectPhysicalOperator *project_operator = new ProjectPhysicalOperator;
-  const vector<Field> &project_fields = project_oper.fields();
+  const vector<Field>     &project_fields   = project_oper.fields();
   for (const Field &field : project_fields) {
     project_operator->add_projection(field.table(), field.meta());
   }
@@ -219,8 +224,8 @@ RC PhysicalPlanGenerator::create_plan(ProjectLogicalOperator &project_oper, uniq
 
 RC PhysicalPlanGenerator::create_plan(InsertLogicalOperator &insert_oper, unique_ptr<PhysicalOperator> &oper)
 {
-  Table *table = insert_oper.table();
-  vector<Value> &values = insert_oper.values();
+  Table                  *table           = insert_oper.table();
+  vector<Value>          &values          = insert_oper.values();
   InsertPhysicalOperator *insert_phy_oper = new InsertPhysicalOperator(table, std::move(values));
   oper.reset(insert_phy_oper);
   return RC::SUCCESS;
@@ -234,14 +239,15 @@ RC PhysicalPlanGenerator::create_plan(UpdateLogicalOperator &update_oper, std::u
   RC rc = RC::SUCCESS;
   if (!child_opers.empty()) {
     LogicalOperator *child_oper = child_opers.front().get();
-    rc = create(*child_oper, child_physical_oper);
+    rc                          = create(*child_oper, child_physical_oper);
     if (rc != RC::SUCCESS) {
       LOG_WARN("failed to create physical operator. rc=%s", strrc(rc));
       return rc;
     }
   }
 
-  oper = unique_ptr<PhysicalOperator>(new UpdatePhysicalOperator(update_oper.table(), update_oper.value(), update_oper.value_offset()));
+  oper = unique_ptr<PhysicalOperator>(
+      new UpdatePhysicalOperator(update_oper.table(), update_oper.values(), update_oper.field_meta()));
 
   if (child_physical_oper) {
     oper->add_child(std::move(child_physical_oper));
@@ -257,7 +263,7 @@ RC PhysicalPlanGenerator::create_plan(DeleteLogicalOperator &delete_oper, unique
   RC rc = RC::SUCCESS;
   if (!child_opers.empty()) {
     LogicalOperator *child_oper = child_opers.front().get();
-    rc = create(*child_oper, child_physical_oper);
+    rc                          = create(*child_oper, child_physical_oper);
     if (rc != RC::SUCCESS) {
       LOG_WARN("failed to create physical operator. rc=%s", strrc(rc));
       return rc;
@@ -276,7 +282,7 @@ RC PhysicalPlanGenerator::create_plan(ExplainLogicalOperator &explain_oper, uniq
 {
   vector<unique_ptr<LogicalOperator>> &child_opers = explain_oper.children();
 
-  RC rc = RC::SUCCESS;
+  RC                           rc = RC::SUCCESS;
   unique_ptr<PhysicalOperator> explain_physical_oper(new ExplainPhysicalOperator);
   for (unique_ptr<LogicalOperator> &child_oper : child_opers) {
     unique_ptr<PhysicalOperator> child_physical_oper;
@@ -303,7 +309,15 @@ RC PhysicalPlanGenerator::create_plan(JoinLogicalOperator &join_oper, unique_ptr
     return RC::INTERNAL;
   }
 
-  unique_ptr<PhysicalOperator> join_physical_oper(new NestedLoopJoinPhysicalOperator);
+  unique_ptr<PhysicalOperator> join_physical_oper;
+  LOG_WARN("Create the nested loop join operator");
+  if (join_oper.expressions().size() == 1) {
+    join_physical_oper =
+        unique_ptr<PhysicalOperator>(new NestedLoopJoinPhysicalOperator(std::move(join_oper.expressions().front())));
+  } else {
+    join_physical_oper = unique_ptr<PhysicalOperator>(new NestedLoopJoinPhysicalOperator(nullptr));
+  }
+
   for (auto &child_oper : child_opers) {
     unique_ptr<PhysicalOperator> child_physical_oper;
     rc = create(*child_oper, child_physical_oper);
@@ -321,7 +335,7 @@ RC PhysicalPlanGenerator::create_plan(JoinLogicalOperator &join_oper, unique_ptr
 
 RC PhysicalPlanGenerator::create_plan(CalcLogicalOperator &logical_oper, std::unique_ptr<PhysicalOperator> &oper)
 {
-  RC rc = RC::SUCCESS;
+  RC                    rc        = RC::SUCCESS;
   CalcPhysicalOperator *calc_oper = new CalcPhysicalOperator(std::move(logical_oper.expressions()));
   oper.reset(calc_oper);
   return rc;

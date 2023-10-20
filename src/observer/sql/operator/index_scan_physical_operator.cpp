@@ -100,21 +100,23 @@ RC IndexScanPhysicalOperator::next()
   return rc;
 }
 
-RC IndexScanPhysicalOperator::close()
-{
+RC IndexScanPhysicalOperator::close() {
+  // FIXME: Ensure this
+  if (index_scanner_ == nullptr) {
+    return RC::SUCCESS;
+  }
+  // assert(index_scanner_ != nullptr && "`index_scanner_` must not be nullptr");
   index_scanner_->destroy();
   index_scanner_ = nullptr;
   return RC::SUCCESS;
 }
 
-Tuple *IndexScanPhysicalOperator::current_tuple()
-{
+Tuple *IndexScanPhysicalOperator::current_tuple() {
   tuple_.set_record(&current_record_);
   return &tuple_;
 }
 
-void IndexScanPhysicalOperator::set_predicates(std::vector<std::unique_ptr<Expression>> &&exprs)
-{
+void IndexScanPhysicalOperator::set_predicates(std::vector<std::unique_ptr<Expression>> &&exprs) {
   predicates_ = std::move(exprs);
 }
 

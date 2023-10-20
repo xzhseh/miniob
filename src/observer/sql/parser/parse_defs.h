@@ -57,7 +57,7 @@ inline std::string agg_to_string(agg a) {
 }
 
 /**
- * @defgroup SQLParser SQL Parser 
+ * @defgroup SQLParser SQL Parser
  */
 
 /**
@@ -149,6 +149,15 @@ struct InsertSqlNode
 };
 
 /**
+ * @brief 描述一个join语句
+ */
+struct JoinSqlNode
+{
+  std::string                   relation_name;  ///< Relation to join
+  std::vector<ConditionSqlNode> conditions;     ///< Join conditions
+};
+
+/**
  * @brief 描述一个delete语句
  * @ingroup SQLParser
  */
@@ -158,15 +167,21 @@ struct DeleteSqlNode
   std::vector<ConditionSqlNode> conditions;
 };
 
+struct UpdateValueNode
+{
+  std::string attribute_name;  ///< 更新的字段
+  Value       value;           ///< 更新的值
+};
+
+;
 /**
  * @brief 描述一个update语句
  * @ingroup SQLParser
  */
 struct UpdateSqlNode
 {
-  std::string                   relation_name;         ///< Relation to update
-  std::string                   attribute_name;        ///< 更新的字段，仅支持一个字段
-  Value                         value;                 ///< 更新的值，仅支持一个字段
+  std::string                   relation_name;  ///< Relation to update
+  std::vector<UpdateValueNode>  update_values;  ///< 更新的值
   std::vector<ConditionSqlNode> conditions;
 };
 
@@ -179,9 +194,9 @@ struct UpdateSqlNode
  */
 struct AttrInfoSqlNode
 {
-  AttrType    type;       ///< Type of attribute
-  std::string name;       ///< Attribute name
-  size_t      length;     ///< Length of attribute
+  AttrType    type;    ///< Type of attribute
+  std::string name;    ///< Attribute name
+  size_t      length;  ///< Length of attribute
 };
 
 /**
@@ -191,8 +206,8 @@ struct AttrInfoSqlNode
  */
 struct CreateTableSqlNode
 {
-  std::string                  relation_name;         ///< Relation name
-  std::vector<AttrInfoSqlNode> attr_infos;            ///< attributes
+  std::string                  relation_name;  ///< Relation name
+  std::vector<AttrInfoSqlNode> attr_infos;     ///< attributes
 };
 
 /**
@@ -304,7 +319,7 @@ enum SqlCommandFlag
   SCF_SYNC,
   SCF_SHOW_TABLES,
   SCF_DESC_TABLE,
-  SCF_BEGIN,        ///< 事务开始语句，可以在这里扩展只读事务
+  SCF_BEGIN,  ///< 事务开始语句，可以在这里扩展只读事务
   SCF_COMMIT,
   SCF_CLOG_SYNC,
   SCF_ROLLBACK,
@@ -312,7 +327,7 @@ enum SqlCommandFlag
   SCF_HELP,
   SCF_EXIT,
   SCF_EXPLAIN,
-  SCF_SET_VARIABLE, ///< 设置变量
+  SCF_SET_VARIABLE,  ///< 设置变量
 };
 
 /**
@@ -322,21 +337,21 @@ enum SqlCommandFlag
  */
 class ParsedSqlNode {
 public:
-  enum SqlCommandFlag       flag;
-  ErrorSqlNode              error;
-  CalcSqlNode               calc;
-  SelectSqlNode             selection;
-  InsertSqlNode             insertion;
-  DeleteSqlNode             deletion;
-  UpdateSqlNode             update;
-  CreateTableSqlNode        create_table;
-  DropTableSqlNode          drop_table;
-  CreateIndexSqlNode        create_index;
-  DropIndexSqlNode          drop_index;
-  DescTableSqlNode          desc_table;
-  LoadDataSqlNode           load_data;
-  ExplainSqlNode            explain;
-  SetVariableSqlNode        set_variable;
+  enum SqlCommandFlag flag;
+  ErrorSqlNode        error;
+  CalcSqlNode         calc;
+  SelectSqlNode       selection;
+  InsertSqlNode       insertion;
+  DeleteSqlNode       deletion;
+  UpdateSqlNode       update;
+  CreateTableSqlNode  create_table;
+  DropTableSqlNode    drop_table;
+  CreateIndexSqlNode  create_index;
+  DropIndexSqlNode    drop_index;
+  DescTableSqlNode    desc_table;
+  LoadDataSqlNode     load_data;
+  ExplainSqlNode      explain;
+  SetVariableSqlNode  set_variable;
 
 public:
   ParsedSqlNode();
@@ -349,11 +364,8 @@ public:
  */
 class ParsedSqlResult {
 public:
-  void add_sql_node(std::unique_ptr<ParsedSqlNode> sql_node);
-  std::vector<std::unique_ptr<ParsedSqlNode>> &sql_nodes() {
-    return sql_nodes_;
-  }
-
+  void                                         add_sql_node(std::unique_ptr<ParsedSqlNode> sql_node);
+  std::vector<std::unique_ptr<ParsedSqlNode>> &sql_nodes() { return sql_nodes_; }
 private:
   std::vector<std::unique_ptr<ParsedSqlNode>> sql_nodes_;  ///< 这里记录SQL命令。虽然看起来支持多个，但是当前仅处理一个
 };
