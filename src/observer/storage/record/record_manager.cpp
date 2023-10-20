@@ -304,6 +304,7 @@ RC   RecordPageHandler::update_record(const Record *rec)
     frame_->mark_dirty();
     return RC::SUCCESS;
   }
+  return RC::SUCCESS;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

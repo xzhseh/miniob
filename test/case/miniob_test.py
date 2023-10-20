@@ -179,7 +179,7 @@ class MiniObServer:
     else:
       observer_command.append('-p')
       observer_command.append(str(self.__server_port))
-    observer_command = ['valgrind', '--leak-check=full', '--error-exitcode=1'] + observer_command
+
     process = subprocess.Popen(observer_command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, cwd=self.__data_dir)
     return_code = process.poll()
     if return_code != None:

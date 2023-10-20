@@ -6,6 +6,7 @@ CREATE UNIQUE INDEX id1 on unique_table2(id2);
 INSERT INTO unique_table2 VALUES (2,2,1,1);
 INSERT INTO unique_table2 VALUES (2,3,1,1);
 
+
 SELECT * FROM unique_table2;
 
 UPDATE unique_table2 SET id1 = 1, id2 = 4 WHERE id2 = 2;

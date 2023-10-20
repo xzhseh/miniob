@@ -110,10 +110,6 @@ public:
       comparator.init(types[i], lengths[i]);
       attr_comparators_.push_back(comparator);
     }
-    unique_ = unique;
-  }
-  void set_rid(bool has_rid) {
-    has_rid_ = has_rid;
   }
   const std::vector<AttrComparator>& attr_comparators() const
   {
@@ -131,18 +127,26 @@ public:
       }
       attr_offset += attr_comparators_[i].attr_length();
     }
-    if (result != 0 || (result == 0 && unique_) || !has_rid_) {
-      return result;
-    }
     const RID *rid1 = (const RID *)(v1 + attr_offset);
     const RID *rid2 = (const RID *)(v2 + attr_offset);
     return RID::compare(rid1, rid2);
   }
+  int compare_not_with_rid(const char *v1, const char *v2) const
+  {
+    int attr_offset = 0;
+    int result = 0;
+    for(int i = 0; i < attr_comparators_.size(); i++) {
+      result = attr_comparators_[i](v1 + attr_offset, v2 + attr_offset);
+      if(result != 0) {
+        return result;
+      }
+      attr_offset += attr_comparators_[i].attr_length();
+    } 
+    return result;
+  }
 
 private:
   std::vector<AttrComparator> attr_comparators_;
-  bool has_rid_ = true;
-  bool unique_;
 };
 
 /**
@@ -250,8 +254,8 @@ struct IndexFileHeader
   PageNum root_page;          ///< 根节点在磁盘中的页号
   int32_t internal_max_size;  ///< 内部节点最大的键值对数
   int32_t leaf_max_size;      ///< 叶子节点最大的键值对数
+  int32_t attr_total_length;
   std::vector<int32_t> attr_lengths;        ///< 键值的长度
-  std::vector<int32_t> attr_offsets;
   int32_t key_length;         ///< attr length + sizeof(RID)
   std::vector<AttrType> attr_types;         ///< 键值的类型
 
@@ -541,7 +545,10 @@ public:
   RC get_entry(const char *user_key, int key_len, std::list<RID> &rids);
 
   RC sync();
+  
+  void *alloc();
 
+  void free(void *buf);
   /**
    * Check whether current B+ tree is invalid or not.
    * @return true means current tree is valid, return false means current tree is invalid.
@@ -599,7 +606,7 @@ protected:
   RC adjust_root(LatchMemo &latch_memo, Frame *root_frame);
 
 private:
-  common::MemPoolItem::unique_ptr make_key(const char *user_key, const RID &rid, bool pass_by_record = true);
+  common::MemPoolItem::unique_ptr make_key(const char *user_key, const RID &rid);
   void free_key(char *key);
 
 protected:

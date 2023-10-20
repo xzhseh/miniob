@@ -41,7 +41,10 @@ public:
       int right_len, bool right_inclusive) override;
 
   RC sync() override;
-
+private:
+  char *make_user_key(const char *record);
+  void free_user_key(char *user_key);
+  int user_key_len();
 private:
   bool inited_ = false;
   BplusTreeHandler index_handler_;
@@ -54,7 +57,7 @@ private:
 class BplusTreeIndexScanner : public IndexScanner 
 {
 public:
-  BplusTreeIndexScanner(BplusTreeHandler &tree_handle);
+  explicit BplusTreeIndexScanner(BplusTreeHandler &tree_handle);
   ~BplusTreeIndexScanner() noexcept override;
 
   RC next_entry(RID *rid) override;
