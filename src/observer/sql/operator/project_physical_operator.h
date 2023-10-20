@@ -14,6 +14,7 @@ See the Mulan PSL v2 for more details. */
 
 #pragma once
 
+#include "sql/expr/tuple.h"
 #include "sql/operator/physical_operator.h"
 
 /**
@@ -52,4 +53,5 @@ public:
 
 private:
   ProjectTuple tuple_;
+  bool agg_flag_{false};
 };

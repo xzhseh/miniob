@@ -364,10 +364,17 @@ RC PhysicalPlanGenerator::create_plan(AggLogicalOperator &logical_oper, std::uni
   auto all_keys = logical_oper.get_all_keys();
 
   // Construct exprs
+  // std::vector<FieldExpr> exprs(agg_keys.size());
   std::vector<FieldExpr> exprs(all_keys.size());
 
   for (int i = 0; i < all_keys.size(); ++i) {
-    exprs.push_back({all_keys[i]});
+  // for (int i = 0; i < agg_keys.size(); ++i) {
+    exprs.push_back(all_keys[i]);
+    // for (const auto &f : all_keys) {
+    //   if (f.meta() == agg_keys[i].first) {
+    //     exprs.push_back(all_keys[i]);
+    //   }
+    // }
   }
 
   // Construct the physical operator

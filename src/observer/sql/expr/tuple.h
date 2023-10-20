@@ -264,6 +264,10 @@ public:
     this->tuple_ = tuple;
   }
 
+  Tuple *get_tuple() {
+    return tuple_;
+  }
+
   void add_cell_spec(TupleCellSpec *spec)
   {
     speces_.push_back(spec);

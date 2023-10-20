@@ -40,7 +40,7 @@ static void wildcard_fields(Table *table, std::vector<Field> &field_metas) {
 
 static void agg_builder_inner(
     std::vector<Field> &query_fields,
-    int agg_pos,
+    int &agg_pos,
     std::vector<std::pair<const FieldMeta *, int>> &aggregate_keys,
     std::vector<agg> &aggregate_types,
     const RelAttrSqlNode &relation_attr,
@@ -101,6 +101,10 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt) {
 
   for (int i = static_cast<int>(select_sql.attributes.size()) - 1; i >= 0; i--) {
     const RelAttrSqlNode &relation_attr = select_sql.attributes[i];
+    if (!relation_attr.agg_valid_flag) {
+      // Invalid syntax
+      return RC::INVALID_ARGUMENT;
+    }
 
     if (common::is_blank(relation_attr.relation_name.c_str()) &&
         0 == strcmp(relation_attr.attribute_name.c_str(), "*")) {
@@ -175,6 +179,11 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt) {
       query_fields.push_back(Field(table, field_meta));
       agg_builder_inner(query_fields, agg_pos, aggregate_keys, aggregate_types, relation_attr, agg_flag);
     }
+  }
+
+  if (agg_flag) {
+    // Need to reverse the query_fields
+    query_fields = {query_fields.rbegin(), query_fields.rend()};
   }
 
   LOG_INFO("got %d tables in from stmt and %d fields in query stmt", tables.size(), query_fields.size());

@@ -13,6 +13,7 @@ See the Mulan PSL v2 for more details. */
 //
 
 #include "common/log/log.h"
+#include "sql/expr/tuple.h"
 #include "sql/operator/project_physical_operator.h"
 #include "storage/record/record.h"
 #include "storage/table/table.h"
@@ -51,6 +52,11 @@ RC ProjectPhysicalOperator::close()
 Tuple *ProjectPhysicalOperator::current_tuple()
 {
   std::cout << "[project] Current children tuple: " << children_[0]->current_tuple()->to_string() << std::endl;
+  if (dynamic_cast<ValueListTuple *>(children_[0]->current_tuple()) != nullptr) {
+    // The child is of type aggregation, produce the value tuple
+    return  children_[0]->current_tuple();
+  }
+
   tuple_.set_tuple(children_[0]->current_tuple());
   std::cout << "[project] Current tuple: " << tuple_.to_string() << std::endl;
   return &tuple_;

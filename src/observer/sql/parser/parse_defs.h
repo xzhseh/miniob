@@ -71,6 +71,7 @@ struct RelAttrSqlNode {
   std::string relation_name;   ///< relation / table name (may be NULL/EMPTY)
   std::string attribute_name;  ///< attribute / column name
   enum agg aggregate_func;  ///< aggregate function (may be NULL/EMPTY)
+  bool agg_valid_flag{true}; /// Whether the parsed aggregate syntax is valid
 };
 
 /**

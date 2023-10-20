@@ -615,7 +615,8 @@ select_attr:
       attr.aggregate_func = agg::NONE;
       $$->emplace_back(attr);
     }
-    | agg LBRACE '*' RBRACE {
+    // TODO: Add the syntax for cases like `select agg(c1), count(*) from t1;`
+    | agg LBRACE '*' RBRACE attr_list {
       /* AGG_FUNC(*) */
       $$ = new std::vector<RelAttrSqlNode>;
       RelAttrSqlNode attr;
@@ -623,6 +624,12 @@ select_attr:
       attr.attribute_name = "*";
       attr.aggregate_func = $1;
       $$->emplace_back(attr);
+      if ($5 != nullptr) {
+        for (const auto &e : *$5) {
+          $$->emplace_back(e);
+        }
+      }
+      delete $5;
     }
     | rel_attr attr_list {
       /* Implicity AGG in `rel_attr` */
@@ -633,6 +640,19 @@ select_attr:
       }
       $$->emplace_back(*$1);
       delete $1;
+    }
+    // FIXME: Memory leak
+    | agg LBRACE rel_attr COMMA rel_attr RBRACE {
+      $$ = new std::vector<RelAttrSqlNode>;
+      RelAttrSqlNode attr;
+      attr.agg_valid_flag = false;
+      $$->emplace_back(attr);
+    }
+    | agg LBRACE '*' COMMA rel_attr RBRACE {
+      $$ = new std::vector<RelAttrSqlNode>;
+      RelAttrSqlNode attr;
+      attr.agg_valid_flag = false;
+      $$->emplace_back(attr);
     }
     ;
 
@@ -684,6 +704,12 @@ rel_attr:
       $$->aggregate_func = $1;
       free($3);
       free($5);
+    }
+    // Invalid syntax, miniob requires the output to be FAILURE
+    // So we must at least parse the syntax here 😅
+    | agg LBRACE RBRACE {
+      $$ = new RelAttrSqlNode;
+      $$->agg_valid_flag = false;
     }
     ;
 

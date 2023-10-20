@@ -67,7 +67,7 @@ RC ExecuteStage::handle_request_with_physical_operator(SQLStageEvent *sql_event)
     case StmtType::SELECT: {
       SelectStmt *select_stmt = static_cast<SelectStmt *>(stmt);
 
-      // FIXME: Refactor this
+      // FIXME: Refactor this (This is currently hard-coded for aggregation case)
       if (select_stmt->agg_stmt() != nullptr) {
         // Construct the schema based on the agg_stmt
         // rather than the query_fields at present

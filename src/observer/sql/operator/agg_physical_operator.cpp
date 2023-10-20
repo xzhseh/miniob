@@ -73,7 +73,14 @@ void set_initial_value_for_map(std::unordered_map<agg, Value> &m, AttrType t, ag
                         ret = v;
                     } else {
                         // SUM / AVG
-                        v.set_float(0);
+                        ret.set_float(0);
+                    }
+                    break;
+                case AttrType::CHARS:
+                    if (a_t == agg::AGG_MIN || a_t == agg::AGG_MAX) {
+                        ret = v;
+                    } else {
+                        assert(false); // Not yet supported
                     }
                     break;
                 default: assert(false); // Not yet supported
@@ -91,9 +98,12 @@ RC AggPhysicalOperator::next() {
     }
     RC rc = RC::SUCCESS;
     while ((rc = child_->next()) == RC::SUCCESS) {
+        std::cout << "hey!" << std::endl;
         Tuple *tuple = child_->current_tuple();
-        for (const auto &field_expr : exprs_) {
+        // for (const auto &field_expr : exprs_) {
             for (int i = 0; i < aggregate_keys_.size(); ++i) {
+                for (const auto &field_expr : exprs_) {
+            // for (int i = 0; i < aggregate_types_.size(); ++i) {
                 auto &[field_meta, n] = aggregate_keys_[i];
                 if (field_expr.field().meta() == field_meta) {
                     assert(n >= 1);
@@ -152,12 +162,16 @@ RC AggPhysicalOperator::next() {
                             case agg::AGG_AVG: {
                                 // TODO: Refactor this
                                 auto v_t = agg_value_map_[agg::AGG_AVG];
+                                std::cout << "[agg::avg] Current v: " << v.to_string() << std::endl;
+                                std::cout << "[agg::avg] Current v_t: " << v_t.to_string() << std::endl;
                                 auto res = add_value(v, v_t);
                                 agg_value_map_[agg::AGG_AVG] = res;
                             } break;
                             default: assert(false); // This is impossible
                         }
                     }
+                    // TODO: Please note this
+                    break;
                 }
             }
         }
