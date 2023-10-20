@@ -132,7 +132,7 @@ RC PhysicalPlanGenerator::create_plan(TableGetLogicalOperator &table_get_oper, u
     }
   }
   // 先移除这个
-  if (false) {
+  if (nullptr != index) {
     ASSERT(value_expr != nullptr, "got an index but value expr is null ?");
 
     const Value &value = value_expr->get_value();
