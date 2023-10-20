@@ -82,8 +82,7 @@ void SessionStage::handle_event(StageEvent *event)
   return;
 }
 
-void SessionStage::handle_request(StageEvent *event)
-{
+void SessionStage::handle_request(StageEvent *event) {
   SessionEvent *sev = dynamic_cast<SessionEvent *>(event);
   if (nullptr == sev) {
     LOG_ERROR("Cannot cat event to sessionEvent");
@@ -98,7 +97,6 @@ void SessionStage::handle_request(StageEvent *event)
   Session::set_current_session(sev->session());
   sev->session()->set_current_request(sev);
   SQLStageEvent sql_event(sev, sql);
-
   // (void) handle_sql(&sql_event);
 
   // FIXME: Ensure this
@@ -135,29 +133,35 @@ RC SessionStage::handle_sql(SQLStageEvent *sql_event) {
     return rc;
   }
 
+  /// Frontend parsing --> output a `ParsedSqlResult` containing the SQL query
   rc = parse_stage_.handle_request(sql_event);
   if (OB_FAIL(rc)) {
     LOG_TRACE("failed to do parse. rc=%s", strrc(rc));
     return rc;
   }
 
+  /// Binder --> binding the node we get from the last stage with catalog / table infos
+  /// To generate the statement / context
   rc = resolve_stage_.handle_request(sql_event);
   if (OB_FAIL(rc)) {
     LOG_TRACE("failed to do resolve. rc=%s", strrc(rc));
     return rc;
   }
 
+  /// Planner / Optimizer --> potentially generate the logical / physical plan based on the statement
   rc = optimize_stage_.handle_request(sql_event);
   if (rc != RC::UNIMPLENMENT && rc != RC::SUCCESS) {
     LOG_TRACE("failed to do optimize. rc=%s", strrc(rc));
     return rc;
   }
 
+  /// Execution --> sql execution via volcano model
   rc = execute_stage_.handle_request(sql_event);
   if (OB_FAIL(rc)) {
     LOG_TRACE("failed to do execute. rc=%s", strrc(rc));
     return rc;
   }
 
+  /// Hopefully, gracefully return
   return rc;
 }

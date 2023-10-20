@@ -49,6 +49,7 @@ enum class PhysicalOperatorType
   DELETE,
   INSERT,
   UPDATE,
+  AGG,
 };
 
 /**

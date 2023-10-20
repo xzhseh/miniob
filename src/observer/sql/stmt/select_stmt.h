@@ -18,6 +18,7 @@ See the Mulan PSL v2 for more details. */
 #include <memory>
 
 #include "common/rc.h"
+#include "sql/stmt/agg_stmt.h"
 #include "sql/stmt/stmt.h"
 #include "storage/field/field.h"
 
@@ -35,14 +36,12 @@ struct JoinStmt{
  * @brief 表示select语句
  * @ingroup Statement
  */
-class SelectStmt : public Stmt 
-{
+class SelectStmt : public Stmt {
 public:
   SelectStmt() = default;
   ~SelectStmt() override;
 
-  StmtType type() const override
-  {
+  StmtType type() const override {
     return StmtType::SELECT;
   }
 
@@ -54,17 +53,25 @@ public:
   {
     return tables_;
   }
+
   const std::vector<Field> &query_fields() const
   {
     return query_fields_;
   }
+  
   const std::vector<JoinStmt> &join_stmts() const
   {
     return join_stmts_;
   }
+  
   FilterStmt *filter_stmt() const
   {
     return filter_stmt_;
+  }
+
+  AggStmt *agg_stmt() const
+  {
+    return agg_stmt_;
   }
 
 private:
@@ -72,4 +79,5 @@ private:
   std::vector<Table *> tables_;
   std::vector<JoinStmt> join_stmts_;
   FilterStmt *filter_stmt_ = nullptr;
+  AggStmt *agg_stmt_ = nullptr;
 };

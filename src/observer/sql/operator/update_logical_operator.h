@@ -3,7 +3,7 @@
 #include "sql/operator/logical_operator.h"
 
 /**
- * @brief 逻辑算子，用于执行updaet语句
+ * @brief 逻辑算子，用于执行update语句
  * @ingroup LogicalOperator
  */
 class UpdateLogicalOperator : public LogicalOperator

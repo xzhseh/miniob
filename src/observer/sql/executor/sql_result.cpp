@@ -62,8 +62,7 @@ RC SqlResult::close()
   return rc;
 }
 
-RC SqlResult::next_tuple(Tuple *&tuple)
-{
+RC SqlResult::next_tuple(Tuple *&tuple) {
   RC rc = operator_->next();
   if (rc != RC::SUCCESS) {
     return rc;

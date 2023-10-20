@@ -30,8 +30,7 @@ See the Mulan PSL v2 for more details. */
  * @brief 逻辑算子类型
  * 
  */
-enum class LogicalOperatorType 
-{
+enum class LogicalOperatorType {
   CALC,
   TABLE_GET,  ///< 从表中获取数据
   PREDICATE,  ///< 过滤，就是谓词
@@ -41,14 +40,14 @@ enum class LogicalOperatorType
   DELETE,     ///< 删除，删除可能会有子查询
   EXPLAIN,    ///< 查看执行计划
   UPDATE,     ///< 更新
+  AGG,        ///< aggregation
 };
 
 /**
  * @brief 逻辑算子描述当前执行计划要做什么
  * @details 可以看OptimizeStage中相关的代码
  */
-class LogicalOperator 
-{
+class LogicalOperator {
 public:
   LogicalOperator() = default;
   virtual ~LogicalOperator();

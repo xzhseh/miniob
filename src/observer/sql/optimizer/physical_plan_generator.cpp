@@ -14,6 +14,10 @@ See the Mulan PSL v2 for more details. */
 
 #include <utility>
 
+#include "sql/operator/agg_logical_operator.h"
+#include "sql/operator/agg_physical_operator.h"
+#include "sql/operator/logical_operator.h"
+#include "sql/operator/physical_operator.h"
 #include "sql/optimizer/physical_plan_generator.h"
 #include "sql/operator/table_get_logical_operator.h"
 #include "sql/operator/table_scan_physical_operator.h"
@@ -40,8 +44,9 @@ See the Mulan PSL v2 for more details. */
 
 using namespace std;
 
-RC PhysicalPlanGenerator::create(LogicalOperator &logical_operator, unique_ptr<PhysicalOperator> &oper)
-{
+/// Physical plan factory
+RC PhysicalPlanGenerator::create(LogicalOperator &logical_operator, unique_ptr<PhysicalOperator> &oper) {
+  RC rc = RC::SUCCESS;
   switch (logical_operator.type()) {
     case LogicalOperatorType::CALC: {
       return create_plan(static_cast<CalcLogicalOperator &>(logical_operator), oper);
@@ -62,6 +67,7 @@ RC PhysicalPlanGenerator::create(LogicalOperator &logical_operator, unique_ptr<P
     case LogicalOperatorType::INSERT: {
       return create_plan(static_cast<InsertLogicalOperator &>(logical_operator), oper);
     } break;
+
     case LogicalOperatorType::UPDATE: {
       return create_plan(static_cast<UpdateLogicalOperator &>(logical_operator), oper);
     }
@@ -75,6 +81,10 @@ RC PhysicalPlanGenerator::create(LogicalOperator &logical_operator, unique_ptr<P
 
     case LogicalOperatorType::JOIN: {
       return create_plan(static_cast<JoinLogicalOperator &>(logical_operator), oper);
+    } break;
+
+    case LogicalOperatorType::AGG: {
+      return create_plan(static_cast<AggLogicalOperator &>(logical_operator), oper);
     } break;
 
     default: {
@@ -220,8 +230,8 @@ RC PhysicalPlanGenerator::create_plan(InsertLogicalOperator &insert_oper, unique
   oper.reset(insert_phy_oper);
   return RC::SUCCESS;
 }
-RC PhysicalPlanGenerator::create_plan(UpdateLogicalOperator &update_oper, std::unique_ptr<PhysicalOperator> &oper)
-{
+
+RC PhysicalPlanGenerator::create_plan(UpdateLogicalOperator &update_oper, std::unique_ptr<PhysicalOperator> &oper) {
   vector<unique_ptr<LogicalOperator>> &child_opers = update_oper.children();
 
   unique_ptr<PhysicalOperator> child_physical_oper;
@@ -328,5 +338,56 @@ RC PhysicalPlanGenerator::create_plan(CalcLogicalOperator &logical_oper, std::un
   RC                    rc        = RC::SUCCESS;
   CalcPhysicalOperator *calc_oper = new CalcPhysicalOperator(std::move(logical_oper.expressions()));
   oper.reset(calc_oper);
+  return rc;
+}
+
+RC PhysicalPlanGenerator::create_plan(AggLogicalOperator &logical_oper, std::unique_ptr<PhysicalOperator> &oper) {
+  RC rc = RC::SUCCESS;
+
+  // The logical operator for child
+  std::vector<std::unique_ptr<LogicalOperator>> &childs = logical_oper.children();
+
+  assert(childs.size() == 1 && "aggregate operator should have exactly 1 child");
+
+  // Create the physical plan for child
+  std::unique_ptr<PhysicalOperator> child_physical_oper{nullptr};
+  rc = create(*childs[0], child_physical_oper);
+  if (rc != RC::SUCCESS) {
+    LOG_WARN("[AggPhysicalOperator]: failed to create physical child oper. rc=%s", strrc(rc));
+    return rc;
+  }
+  assert(child_physical_oper != nullptr);
+
+  // Get the relevant data
+  auto agg_keys = logical_oper.get_agg_keys();
+  auto agg_types = logical_oper.get_agg_types();
+  auto all_keys = logical_oper.get_all_keys();
+
+  // Construct exprs
+  // std::vector<FieldExpr> exprs(agg_keys.size());
+  std::vector<FieldExpr> exprs(all_keys.size());
+
+  for (int i = 0; i < all_keys.size(); ++i) {
+  // for (int i = 0; i < agg_keys.size(); ++i) {
+    exprs.push_back(all_keys[i]);
+    // for (const auto &f : all_keys) {
+    //   if (f.meta() == agg_keys[i].first) {
+    //     exprs.push_back(all_keys[i]);
+    //   }
+    // }
+  }
+
+  // Construct the physical operator
+  AggPhysicalOperator *agg_oper = new AggPhysicalOperator{
+    agg_keys,
+    agg_types,
+    exprs,
+  };
+
+  agg_oper->add_child(std::move(child_physical_oper));
+
+  // Reset the input operator
+  oper.reset(agg_oper);
+
   return rc;
 }
