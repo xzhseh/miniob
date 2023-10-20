@@ -631,6 +631,16 @@ select_attr:
       }
       delete $5;
     }
+    | rel_attr COMMA agg LBRACE '*' RBRACE {
+      /* AGG_FUNC(*) */
+      $$ = new std::vector<RelAttrSqlNode>;
+      RelAttrSqlNode attr;
+      attr.relation_name = "";
+      attr.attribute_name = "*";
+      attr.aggregate_func = $3;
+      $$->emplace_back(attr);
+      $$->emplace_back(*$1);
+    }
     | rel_attr attr_list {
       /* Implicity AGG in `rel_attr` */
       if ($2 != nullptr) {

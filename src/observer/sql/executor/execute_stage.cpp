@@ -78,6 +78,7 @@ RC ExecuteStage::handle_request_with_physical_operator(SQLStageEvent *sql_event)
           auto &[f, n] = keys[i];
           auto name = (n > 1) ? "*" : f->name();
           const std::string s = std::string(agg_to_string(types[i])) + "(" + name + ")";
+          std::cout << "current s: " << s << std::endl;
           schema.append_cell(s.c_str());
         }
         break;
