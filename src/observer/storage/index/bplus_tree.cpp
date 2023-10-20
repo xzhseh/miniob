@@ -1353,7 +1353,7 @@ RC BplusTreeHandler::create_new_tree(const char *key, const RID *rid)
   return rc;
 }
 
-MemPoolItem::unique_ptr BplusTreeHandler::make_key(const char *user_key, const RID &rid)
+MemPoolItem::unique_ptr BplusTreeHandler::make_key(const char *user_key, const RID &rid, bool pass_by_record)
 {
   MemPoolItem::unique_ptr key = mem_pool_item_->alloc_unique_ptr();
   if (key == nullptr) {
@@ -1363,7 +1363,7 @@ MemPoolItem::unique_ptr BplusTreeHandler::make_key(const char *user_key, const R
   int ofs = 0;
   const auto& attr_lengths = file_header_.attr_lengths;
   for(size_t i = 0; i < attr_lengths.size(); i++) {
-    memcpy(static_cast<char *>(key.get()) + ofs, user_key + file_header_.attr_offsets[i], attr_lengths[i]);
+    memcpy(static_cast<char *>(key.get()) + ofs, user_key + file_header_.attr_offsets[i] * static_cast<int>(pass_by_record), attr_lengths[i]);
     ofs += attr_lengths[i];
   }
   
@@ -1690,7 +1690,8 @@ RC BplusTreeScanner::open(const char *left_user_key, int left_len, bool left_inc
 
   // 校验输入的键值是否是合法范围
   if (left_user_key && right_user_key) {
-    const int result = tree_handler_.key_comparator_(left_user_key, right_user_key, false);
+    const auto &attr_comparator = tree_handler_.key_comparator_.attr_comparators()[0];
+    const int result = attr_comparator(left_user_key, right_user_key);
     if (result > 0 ||  // left < right
                        // left == right but is (left,right)/[left,right) or (left,right]
         (result == 0 && (left_inclusive == false || right_inclusive == false))) {
@@ -1709,10 +1710,10 @@ RC BplusTreeScanner::open(const char *left_user_key, int left_len, bool left_inc
   } else {
 
     char *fixed_left_key = const_cast<char *>(left_user_key);
-    // if(tree_handler_.file_header_.attr_offsets.size() != 1) {
-    //   LOG_ERROR("not support multi-index");
-    //   exit(2);
-    // }
+    if(tree_handler_.file_header_.attr_offsets.size() != 1) {
+      LOG_ERROR("not support multi-index");
+      exit(2);
+    }
     if (tree_handler_.file_header_.attr_types[0] == CHARS) {
       bool should_inclusive_after_fix = false;
       rc = fix_user_key(left_user_key, left_len, true /*greater*/, &fixed_left_key, &should_inclusive_after_fix);
@@ -1728,9 +1729,9 @@ RC BplusTreeScanner::open(const char *left_user_key, int left_len, bool left_inc
 
     MemPoolItem::unique_ptr left_pkey;
     if (left_inclusive) {
-      left_pkey = tree_handler_.make_key(fixed_left_key, *RID::min());
+      left_pkey = tree_handler_.make_key(fixed_left_key, *RID::min(), false);
     } else {
-      left_pkey = tree_handler_.make_key(fixed_left_key, *RID::max());
+      left_pkey = tree_handler_.make_key(fixed_left_key, *RID::max(), false);
     }
 
     const char *left_key = (const char *)left_pkey.get();
@@ -1793,9 +1794,9 @@ RC BplusTreeScanner::open(const char *left_user_key, int left_len, bool left_inc
       }
     }
     if (right_inclusive) {
-      right_key_ = tree_handler_.make_key(fixed_right_key, *RID::max());
+      right_key_ = tree_handler_.make_key(fixed_right_key, *RID::max(), false);
     } else {
-      right_key_ = tree_handler_.make_key(fixed_right_key, *RID::min());
+      right_key_ = tree_handler_.make_key(fixed_right_key, *RID::min(), false);
     }
 
     if (fixed_right_key != right_user_key) {

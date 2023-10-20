@@ -112,13 +112,15 @@ public:
     }
     unique_ = unique;
   }
-
+  void set_rid(bool has_rid) {
+    has_rid_ = has_rid;
+  }
   const std::vector<AttrComparator>& attr_comparators() const
   {
     return attr_comparators_;
   }
 
-  int operator()(const char *v1, const char *v2, bool has_rid = true) const
+  int operator()(const char *v1, const char *v2) const
   {
     int attr_offset = 0;
     int result = 0;
@@ -129,7 +131,7 @@ public:
       }
       attr_offset += attr_comparators_[i].attr_length();
     }
-    if (result != 0 || (result == 0 && unique_) || !has_rid) {
+    if (result != 0 || (result == 0 && unique_) || !has_rid_) {
       return result;
     }
     const RID *rid1 = (const RID *)(v1 + attr_offset);
@@ -139,6 +141,7 @@ public:
 
 private:
   std::vector<AttrComparator> attr_comparators_;
+  bool has_rid_ = true;
   bool unique_;
 };
 
@@ -596,7 +599,7 @@ protected:
   RC adjust_root(LatchMemo &latch_memo, Frame *root_frame);
 
 private:
-  common::MemPoolItem::unique_ptr make_key(const char *user_key, const RID &rid);
+  common::MemPoolItem::unique_ptr make_key(const char *user_key, const RID &rid, bool pass_by_record = true);
   void free_key(char *key);
 
 protected:
