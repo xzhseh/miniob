@@ -44,10 +44,12 @@ static void agg_builder_inner(
     std::vector<std::pair<const FieldMeta *, int>> &aggregate_keys,
     std::vector<agg> &aggregate_types,
     const RelAttrSqlNode &relation_attr,
-    bool &agg_flag) {
+    bool &agg_flag,
+    bool &non_agg_flag) {
 
   if (relation_attr.aggregate_func == agg::NONE) {
     // Do nothing if this is not a aggregation
+    non_agg_flag = true;
     return;
   }
 
@@ -98,6 +100,7 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt) {
   std::vector<agg> aggregate_types;
   int agg_pos = 0;
   bool agg_flag{false};
+  bool non_agg_flag{false};
 
   for (int i = static_cast<int>(select_sql.attributes.size()) - 1; i >= 0; i--) {
     const RelAttrSqlNode &relation_attr = select_sql.attributes[i];
@@ -115,7 +118,7 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt) {
       }
 
       // Possibly aggregation on `*`
-      agg_builder_inner(query_fields, agg_pos, aggregate_keys, aggregate_types, relation_attr, agg_flag);
+      agg_builder_inner(query_fields, agg_pos, aggregate_keys, aggregate_types, relation_attr, agg_flag, non_agg_flag);
 
     } else if (!common::is_blank(relation_attr.relation_name.c_str())) {
       // If the table name is not null. (i.e., `select t1.c1 from t1;`)
@@ -133,7 +136,7 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt) {
         }
 
         // Essentially the same as `*` cases for aggregation
-        agg_builder_inner(query_fields, agg_pos, aggregate_keys, aggregate_types, relation_attr, agg_flag);
+        agg_builder_inner(query_fields, agg_pos, aggregate_keys, aggregate_types, relation_attr, agg_flag, non_agg_flag);
 
       } else {
         auto iter = table_map.find(table_name);
@@ -146,7 +149,7 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt) {
         if (0 == strcmp(field_name, "*")) {
           // i.e., `select t1.* from t1;`. Though this is essentially the same with `*`.
           wildcard_fields(table, query_fields);
-          agg_builder_inner(query_fields, agg_pos, aggregate_keys, aggregate_types, relation_attr, agg_flag);
+          agg_builder_inner(query_fields, agg_pos, aggregate_keys, aggregate_types, relation_attr, agg_flag, non_agg_flag);
         } else {
           const FieldMeta *field_meta = table->table_meta().field(field_name);
           if (nullptr == field_meta) {
@@ -155,7 +158,7 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt) {
           }
 
           query_fields.push_back(Field(table, field_meta));
-          agg_builder_inner(query_fields, agg_pos, aggregate_keys, aggregate_types, relation_attr, agg_flag);
+          agg_builder_inner(query_fields, agg_pos, aggregate_keys, aggregate_types, relation_attr, agg_flag, non_agg_flag);
         }
       }
     } else {
@@ -177,8 +180,12 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt) {
       }
 
       query_fields.push_back(Field(table, field_meta));
-      agg_builder_inner(query_fields, agg_pos, aggregate_keys, aggregate_types, relation_attr, agg_flag);
+      agg_builder_inner(query_fields, agg_pos, aggregate_keys, aggregate_types, relation_attr, agg_flag, non_agg_flag);
     }
+  }
+
+  if (agg_flag && non_agg_flag) {
+    return RC::INVALID_ARGUMENT;
   }
 
   if (agg_flag) {
