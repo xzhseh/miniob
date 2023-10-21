@@ -3,22 +3,20 @@
 #pragma once
 
 #include "sql/operator/agg_physical_operator.h"
-#include "sql/expr/tuple.h"
-#include "sql/parser/value.h"
 #include <climits>
 #include <unordered_map>
+#include "sql/expr/tuple.h"
+#include "sql/parser/value.h"
 
-RC AggPhysicalOperator::open(Trx *trx)
-{
+RC AggPhysicalOperator::open(Trx *trx) {
   RC rc = RC::SUCCESS;
   assert(children_.size() == 1 && "aggregate operator should have exactly one child");
   child_ = children_[0].get();
-  rc     = child_->open(trx);
+  rc = child_->open(trx);
   return rc;
 }
 
-RC AggPhysicalOperator::close()
-{
+RC AggPhysicalOperator::close() {
   RC rc = RC::SUCCESS;
   assert(next_flag && "`next_flag` should be true");
   if (child_ != nullptr) {
@@ -28,8 +26,7 @@ RC AggPhysicalOperator::close()
 }
 
 /// FIXME: Refactor this
-Value add_value(Value &lhs, Value &rhs)
-{
+Value add_value(Value &lhs, Value &rhs) {
   Value ret;
   if (lhs.attr_type() == AttrType::INTS) {
     switch (rhs.attr_type()) {
@@ -40,14 +37,16 @@ Value add_value(Value &lhs, Value &rhs)
         // INT + FLOAT is impossible even for AVG / SUM
         assert(false);
       } break;
-      default: assert(false);  // Unsupported
+      default:
+        assert(false);  // Unsupported
     }
   } else if (lhs.attr_type() == AttrType::FLOATS) {
     switch (rhs.attr_type()) {
       case AttrType::FLOATS: {
         ret.set_float(lhs.get_float() + rhs.get_float());
       } break;
-      default: assert(false);  // Unsupported
+      default:
+        assert(false);  // Unsupported
     }
   } else {
     // Not yet supported
@@ -56,8 +55,7 @@ Value add_value(Value &lhs, Value &rhs)
   return ret;
 }
 
-void set_initial_value_for_map(std::unordered_map<agg, Value> &m, AttrType t, agg a_t, Value v)
-{
+void set_initial_value_for_map(std::unordered_map<agg, Value> &m, AttrType t, agg a_t, Value v) {
   if (m.count(a_t) == 0) {
     Value ret;
     if (a_t == agg::AGG_COUNT) {
@@ -95,7 +93,8 @@ void set_initial_value_for_map(std::unordered_map<agg, Value> &m, AttrType t, ag
             assert(false);
           }
           break;
-        default: assert(false);  // Not yet supported
+        default:
+          assert(false);  // Not yet supported
       }
     }
     m[a_t] = ret;
@@ -104,15 +103,14 @@ void set_initial_value_for_map(std::unordered_map<agg, Value> &m, AttrType t, ag
 
 /// Basically we will extract all possible tuples from the child operator
 /// And make the basic aggregation at present
-RC AggPhysicalOperator::next()
-{
+RC AggPhysicalOperator::next() {
   bool g_null_flag{false};
   if (next_flag) {
     return RC::RECORD_EOF;
   }
   RC rc = RC::SUCCESS;
   while ((rc = child_->next()) == RC::SUCCESS) {
-    bool   null_flag{false};
+    bool null_flag{false};
     Tuple *tuple = child_->current_tuple();
     // for (const auto &field_expr : exprs_) {
     for (int i = 0; i < aggregate_keys_.size(); ++i) {
@@ -145,7 +143,7 @@ RC AggPhysicalOperator::next()
             set_initial_value_for_map(agg_value_map_, v.attr_type(), aggregate_types_[i], v);
             // FIXME: Ensure the sequence of this and the `set_initial_value_for_map`
             if (Value::check_null(v)) {
-              null_flag   = true;
+              null_flag = true;
               g_null_flag = true;
               break;
             }
@@ -178,8 +176,8 @@ RC AggPhysicalOperator::next()
                 }
               } break;
               case agg::AGG_SUM: {
-                auto v_t                     = agg_value_map_[agg::AGG_SUM];
-                auto res                     = add_value(v, v_t);
+                auto v_t = agg_value_map_[agg::AGG_SUM];
+                auto res = add_value(v, v_t);
                 agg_value_map_[agg::AGG_SUM] = res;
               } break;
               case agg::AGG_AVG: {
@@ -187,10 +185,11 @@ RC AggPhysicalOperator::next()
                 auto v_t = agg_value_map_[agg::AGG_AVG];
                 // std::cout << "[agg::avg] Current v: " << v.to_string() << std::endl;
                 // std::cout << "[agg::avg] Current v_t: " << v_t.to_string() << std::endl;
-                auto res                     = add_value(v, v_t);
+                auto res = add_value(v, v_t);
                 agg_value_map_[agg::AGG_AVG] = res;
               } break;
-              default: assert(false);  // This is impossible
+              default:
+                assert(false);  // This is impossible
             }
           }
           // TODO: Please note this

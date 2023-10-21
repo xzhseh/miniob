@@ -27,36 +27,33 @@ namespace common {
 class SharedMutex;
 }
 
-enum class LatchMemoType
-{
+enum class LatchMemoType {
   NONE,
   SHARED,
   EXCLUSIVE,
   PIN,
 };
 
-struct LatchMemoItem
-{
+struct LatchMemoItem {
   LatchMemoItem() = default;
   LatchMemoItem(LatchMemoType type, Frame *frame);
   LatchMemoItem(LatchMemoType type, common::SharedMutex *lock);
 
-  LatchMemoType        type  = LatchMemoType::NONE;
-  Frame               *frame = nullptr;
-  common::SharedMutex *lock  = nullptr;
+  LatchMemoType type = LatchMemoType::NONE;
+  Frame *frame = nullptr;
+  common::SharedMutex *lock = nullptr;
 };
 
-class LatchMemo final
-{
-public:
+class LatchMemo final {
+ public:
   /**
    * @brief 当前遇到的场景都是针对单个BufferPool的，不过从概念上讲，不一定做这个限制
    */
   LatchMemo(DiskBufferPool *buffer_pool);
   ~LatchMemo();
 
-  RC   get_page(PageNum page_num, Frame *&frame);
-  RC   allocate_page(Frame *&frame);
+  RC get_page(PageNum page_num, Frame *&frame);
+  RC allocate_page(Frame *&frame);
   void dispose_page(PageNum page_num);
   void latch(Frame *frame, LatchMemoType type);
   void xlatch(Frame *frame);
@@ -72,11 +69,11 @@ public:
 
   int memo_point() const { return static_cast<int>(items_.size()); }
 
-private:
+ private:
   void release_item(LatchMemoItem &item);
 
-private:
-  DiskBufferPool           *buffer_pool_ = nullptr;
+ private:
+  DiskBufferPool *buffer_pool_ = nullptr;
   std::deque<LatchMemoItem> items_;
-  std::vector<PageNum>      disposed_pages_;
+  std::vector<PageNum> disposed_pages_;
 };

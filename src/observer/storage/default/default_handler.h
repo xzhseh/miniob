@@ -13,21 +13,20 @@ See the Mulan PSL v2 for more details. */
 //
 #pragma once
 
-#include <string>
 #include <map>
+#include <string>
 
 #include "storage/db/db.h"
 
 class Trx;
 
-class DefaultHandler
-{
-public:
+class DefaultHandler {
+ public:
   DefaultHandler();
 
   virtual ~DefaultHandler() noexcept;
 
-  RC   init(const char *base_dir);
+  RC init(const char *base_dir);
   void destroy();
 
   /**
@@ -81,8 +80,8 @@ public:
    * @param attributes
    * @return
    */
-  RC create_table(
-      const char *dbname, const char *relation_name, int attribute_count, const AttrInfoSqlNode *attributes);
+  RC create_table(const char *dbname, const char *relation_name, int attribute_count,
+                  const AttrInfoSqlNode *attributes);
 
   /**
    * 销毁名为relName的表以及在该表上建立的所有索引
@@ -91,18 +90,18 @@ public:
    */
   RC drop_table(const char *dbname, const char *relation_name);
 
-public:
-  Db    *find_db(const char *dbname) const;
+ public:
+  Db *find_db(const char *dbname) const;
   Table *find_table(const char *dbname, const char *table_name) const;
 
   RC sync();
 
-public:
-  static void            set_default(DefaultHandler *handler);
+ public:
+  static void set_default(DefaultHandler *handler);
   static DefaultHandler &get_default();
 
-private:
-  std::string                 base_dir_;
-  std::string                 db_dir_;
+ private:
+  std::string base_dir_;
+  std::string db_dir_;
   std::map<std::string, Db *> opened_dbs_;
 };  // class Handler

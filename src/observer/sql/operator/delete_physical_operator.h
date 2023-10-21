@@ -23,9 +23,8 @@ class DeleteStmt;
  * @brief 物理算子，删除
  * @ingroup PhysicalOperator
  */
-class DeletePhysicalOperator : public PhysicalOperator
-{
-public:
+class DeletePhysicalOperator : public PhysicalOperator {
+ public:
   DeletePhysicalOperator(Table *table) : table_(table) {}
 
   virtual ~DeletePhysicalOperator() = default;
@@ -38,7 +37,7 @@ public:
 
   Tuple *current_tuple() override { return nullptr; }
 
-private:
+ private:
   Table *table_ = nullptr;
-  Trx   *trx_   = nullptr;
+  Trx *trx_ = nullptr;
 };

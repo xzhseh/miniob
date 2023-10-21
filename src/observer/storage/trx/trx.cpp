@@ -14,20 +14,19 @@ See the Mulan PSL v2 for more details. */
 
 #include <atomic>
 
-#include "storage/trx/trx.h"
-#include "storage/table/table.h"
-#include "storage/record/record_manager.h"
-#include "storage/field/field_meta.h"
-#include "common/log/log.h"
 #include "common/lang/string.h"
+#include "common/log/log.h"
 #include "storage/field/field.h"
+#include "storage/field/field_meta.h"
+#include "storage/record/record_manager.h"
+#include "storage/table/table.h"
 #include "storage/trx/mvcc_trx.h"
+#include "storage/trx/trx.h"
 #include "storage/trx/vacuous_trx.h"
 
 static TrxKit *global_trxkit = nullptr;
 
-TrxKit *TrxKit::create(const char *name)
-{
+TrxKit *TrxKit::create(const char *name) {
   if (common::is_blank(name) || 0 == strcasecmp(name, "vacuous")) {
     return new VacuousTrxKit();
   }
@@ -40,8 +39,7 @@ TrxKit *TrxKit::create(const char *name)
   return nullptr;
 }
 
-RC TrxKit::init_global(const char *name)
-{
+RC TrxKit::init_global(const char *name) {
   ASSERT(global_trxkit == nullptr, "init global trx kit twice");
   TrxKit *trx_kit = create(name);
   if (nullptr == trx_kit) {

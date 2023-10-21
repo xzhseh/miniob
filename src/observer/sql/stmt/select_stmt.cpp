@@ -13,16 +13,15 @@ See the Mulan PSL v2 for more details. */
 //
 
 #include "sql/stmt/select_stmt.h"
+#include "common/lang/string.h"
+#include "common/log/log.h"
 #include "sql/stmt/agg_stmt.h"
 #include "sql/stmt/filter_stmt.h"
-#include "common/log/log.h"
-#include "common/lang/string.h"
 #include "storage/db/db.h"
 #include "storage/field/field_meta.h"
 #include "storage/table/table.h"
 
-SelectStmt::~SelectStmt()
-{
+SelectStmt::~SelectStmt() {
   if (nullptr != filter_stmt_) {
     delete filter_stmt_;
     filter_stmt_ = nullptr;
@@ -31,20 +30,18 @@ SelectStmt::~SelectStmt()
 
 /// Basically push all metadata from the specified table to the current `field_metas`
 /// Use case: `select count(*) from t1 where t1.c1 = 1;`
-static void wildcard_fields(Table *table, std::vector<Field> &field_metas)
-{
+static void wildcard_fields(Table *table, std::vector<Field> &field_metas) {
   const TableMeta &table_meta = table->table_meta();
-  const int        field_num  = table_meta.field_num();
+  const int field_num = table_meta.field_num();
   for (int i = table_meta.sys_field_num(); i < field_num; i++) {
     field_metas.push_back(Field(table, table_meta.field(i)));
   }
 }
 
 static void agg_builder_inner(std::vector<Field> &query_fields, int &agg_pos,
-    std::vector<std::pair<const FieldMeta *, int>> &aggregate_keys, std::vector<agg> &aggregate_types,
-    const RelAttrSqlNode &relation_attr, bool &agg_flag, bool &non_agg_flag)
-{
-
+                              std::vector<std::pair<const FieldMeta *, int>> &aggregate_keys,
+                              std::vector<agg> &aggregate_types, const RelAttrSqlNode &relation_attr, bool &agg_flag,
+                              bool &non_agg_flag) {
   if (relation_attr.aggregate_func == agg::NONE) {
     // Do nothing if this is not a aggregation
     non_agg_flag = true;
@@ -62,8 +59,7 @@ static void agg_builder_inner(std::vector<Field> &query_fields, int &agg_pos,
 }
 
 /// TODO: We definitely need to refactor this part, the current implementation is so embarrassed 😅
-RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt)
-{
+RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt) {
   assert(stmt == nullptr && "`stmt` must be nullptr at the beginning");
 
   if (db == nullptr) {
@@ -72,7 +68,7 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt)
   }
 
   // collect tables in `from` statement
-  std::vector<Table *>                     tables;
+  std::vector<Table *> tables;
   std::unordered_map<std::string, Table *> table_map;
 
   for (size_t i = 0; i < select_sql.relations.size(); i++) {
@@ -97,10 +93,10 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt)
 
   // For aggregation
   std::vector<std::pair<const FieldMeta *, int>> aggregate_keys;
-  std::vector<agg>                               aggregate_types;
-  int                                            agg_pos = 0;
-  bool                                           agg_flag{false};
-  bool                                           non_agg_flag{false};
+  std::vector<agg> aggregate_types;
+  int agg_pos = 0;
+  bool agg_flag{false};
+  bool non_agg_flag{false};
 
   for (int i = static_cast<int>(select_sql.attributes.size()) - 1; i >= 0; i--) {
     const RelAttrSqlNode &relation_attr = select_sql.attributes[i];
@@ -175,7 +171,7 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt)
 
       assert(tables.size() == 1);
 
-      Table           *table      = tables[0];
+      Table *table = tables[0];
       const FieldMeta *field_meta = table->table_meta().field(relation_attr.attribute_name.c_str());
       if (nullptr == field_meta) {
         LOG_WARN("no such field. field=%s.%s.%s", db->name(), table->name(), relation_attr.attribute_name.c_str());
@@ -203,7 +199,7 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt)
     default_table = tables[0];
   }
 
-  auto conditions    = select_sql.conditions.data();
+  auto conditions = select_sql.conditions.data();
   auto condition_num = select_sql.conditions.size();
   // Check every equal-to condition ,then range the tables
   // To check if we can do any join operation
@@ -212,14 +208,14 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt)
     if (conditions[i].comp == CompOp::EQUAL_TO) {
       if (conditions[i].left_is_attr && conditions[i].right_is_attr) {
         // Range the tables
-        std::string left_table_name  = conditions[i].left_attr.relation_name;
+        std::string left_table_name = conditions[i].left_attr.relation_name;
         std::string right_table_name = conditions[i].right_attr.relation_name;
         if (left_table_name != right_table_name) {
           // Join operation
           FilterUnit *filter_unit = nullptr;
-          RC          rc = FilterStmt::create_filter_unit(db, default_table, &table_map, conditions[i], filter_unit);
-          auto        filter_obj_left  = filter_unit->left().field;
-          auto        filter_obj_right = filter_unit->right().field;
+          RC rc = FilterStmt::create_filter_unit(db, default_table, &table_map, conditions[i], filter_unit);
+          auto filter_obj_left = filter_unit->left().field;
+          auto filter_obj_right = filter_unit->right().field;
           if (rc != RC::SUCCESS) {
             LOG_WARN("failed to create filter unit. condition index=%d", i);
             return rc;
@@ -234,12 +230,12 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt)
 
   // create filter statement in `where` statement
   FilterStmt *filter_stmt = nullptr;
-  RC          rc          = FilterStmt::create(db,
-      default_table,
-      &table_map,
-      select_sql.conditions.data(),
-      static_cast<int>(select_sql.conditions.size()),
-      filter_stmt);
+  RC rc = FilterStmt::create(db,
+                             default_table,
+                             &table_map,
+                             select_sql.conditions.data(),
+                             static_cast<int>(select_sql.conditions.size()),
+                             filter_stmt);
   if (rc != RC::SUCCESS) {
     LOG_WARN("cannot construct filter stmt");
     return rc;
@@ -259,8 +255,8 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt)
   select_stmt->tables_.swap(tables);
   select_stmt->query_fields_.swap(query_fields);
   select_stmt->filter_stmt_ = filter_stmt;
-  select_stmt->agg_stmt_    = agg_stmt;
-  select_stmt->join_stmts_  = join_stmts;
-  stmt                      = select_stmt;
+  select_stmt->agg_stmt_ = agg_stmt;
+  select_stmt->join_stmts_ = join_stmts;
+  stmt = select_stmt;
   return RC::SUCCESS;
 }

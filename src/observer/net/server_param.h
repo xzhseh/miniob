@@ -21,15 +21,14 @@ See the Mulan PSL v2 for more details. */
  * @brief 服务端启动参数
  * @ingroup Communicator
  */
-class ServerParam
-{
-public:
+class ServerParam {
+ public:
   ServerParam();
 
   ServerParam(const ServerParam &other) = default;
-  ~ServerParam()                        = default;
+  ~ServerParam() = default;
 
-public:
+ public:
   // accpet client's address, default is INADDR_ANY, means accept every address
   long listen_addr;
 

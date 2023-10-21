@@ -24,9 +24,8 @@ class InsertStmt;
  * @brief 插入物理算子
  * @ingroup PhysicalOperator
  */
-class InsertPhysicalOperator : public PhysicalOperator
-{
-public:
+class InsertPhysicalOperator : public PhysicalOperator {
+ public:
   InsertPhysicalOperator(Table *table, std::vector<Value> &&values);
 
   virtual ~InsertPhysicalOperator() = default;
@@ -39,7 +38,7 @@ public:
 
   Tuple *current_tuple() override { return nullptr; }
 
-private:
-  Table             *table_ = nullptr;
+ private:
+  Table *table_ = nullptr;
   std::vector<Value> values_;
 };

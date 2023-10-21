@@ -14,9 +14,9 @@ See the Mulan PSL v2 for more details. */
 
 #include <stdarg.h>
 
+#include "event/session_event.h"
 #include "event/sql_debug.h"
 #include "session/session.h"
-#include "event/session_event.h"
 
 using namespace std;
 
@@ -26,8 +26,7 @@ void SqlDebug::clear_debug_info() { debug_infos_.clear(); }
 
 const list<string> &SqlDebug::get_debug_infos() const { return debug_infos_; }
 
-void sql_debug(const char *fmt, ...)
-{
+void sql_debug(const char *fmt, ...) {
   Session *session = Session::current_session();
   if (nullptr == session) {
     return;
@@ -41,7 +40,7 @@ void sql_debug(const char *fmt, ...)
   SqlDebug &sql_debug = request->sql_debug();
 
   const int buffer_size = 4096;
-  char     *str         = new char[buffer_size];
+  char *str = new char[buffer_size];
 
   va_list ap;
   va_start(ap, fmt);

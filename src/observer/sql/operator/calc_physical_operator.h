@@ -14,15 +14,13 @@ See the Mulan PSL v2 for more details. */
 
 #pragma once
 
-#include "sql/operator/physical_operator.h"
 #include "sql/expr/tuple.h"
+#include "sql/operator/physical_operator.h"
 
-class CalcPhysicalOperator : public PhysicalOperator
-{
-public:
+class CalcPhysicalOperator : public PhysicalOperator {
+ public:
   CalcPhysicalOperator(std::vector<std::unique_ptr<Expression>> &&expressions)
-      : expressions_(std::move(expressions)), tuple_(expressions_)
-  {}
+      : expressions_(std::move(expressions)), tuple_(expressions_) {}
 
   virtual ~CalcPhysicalOperator() = default;
 
@@ -32,8 +30,7 @@ public:
   std::string param() const override { return ""; }
 
   RC open(Trx *trx) override { return RC::SUCCESS; }
-  RC next() override
-  {
+  RC next() override {
     RC rc = RC::SUCCESS;
     if (emitted_) {
       rc = RC::RECORD_EOF;
@@ -59,8 +56,8 @@ public:
 
   const std::vector<std::unique_ptr<Expression>> &expressions() const { return expressions_; }
 
-private:
+ private:
   std::vector<std::unique_ptr<Expression>> expressions_;
-  ExpressionTuple                          tuple_;
-  bool                                     emitted_ = false;
+  ExpressionTuple tuple_;
+  bool emitted_ = false;
 };

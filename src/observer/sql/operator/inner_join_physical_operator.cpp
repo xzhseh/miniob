@@ -5,20 +5,18 @@
 #include "inner_join_physical_operator.h"
 
 InnerJoinOperator::InnerJoinOperator(std::unique_ptr<Expression> join_condition)
-    : join_condition_(std::move(join_condition))
-{
+    : join_condition_(std::move(join_condition)) {
   ASSERT(join_condition_->value_type() == BOOLEANS, "predicate's expression should be BOOLEAN type");
 }
 
-RC InnerJoinOperator::open(Trx *trx)
-{
+RC InnerJoinOperator::open(Trx *trx) {
   if (children_.size() != 2) {
     LOG_WARN("inner operator should have 2 children");
     return RC::INTERNAL;
   }
 
-  RC rc  = RC::SUCCESS;
-  left_  = children_[0].get();
+  RC rc = RC::SUCCESS;
+  left_ = children_[0].get();
   right_ = children_[1].get();
 
   trx_ = trx;
@@ -33,8 +31,7 @@ RC InnerJoinOperator::open(Trx *trx)
   return rc;
 }
 
-RC InnerJoinOperator::next()
-{
+RC InnerJoinOperator::next() {
   RC rc = RC::SUCCESS;
 
   std::vector<Tuple *> left_tuples;

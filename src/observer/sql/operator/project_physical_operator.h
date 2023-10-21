@@ -21,9 +21,8 @@ See the Mulan PSL v2 for more details. */
  * @brief 选择/投影物理算子
  * @ingroup PhysicalOperator
  */
-class ProjectPhysicalOperator : public PhysicalOperator
-{
-public:
+class ProjectPhysicalOperator : public PhysicalOperator {
+ public:
   ProjectPhysicalOperator() {}
 
   virtual ~ProjectPhysicalOperator() = default;
@@ -41,7 +40,7 @@ public:
 
   Tuple *current_tuple() override;
 
-private:
+ private:
   ProjectTuple tuple_;
-  bool         agg_flag_{false};
+  bool agg_flag_{false};
 };

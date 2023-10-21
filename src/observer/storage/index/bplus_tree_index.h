@@ -14,16 +14,15 @@ See the Mulan PSL v2 for more details. */
 
 #pragma once
 
-#include "storage/index/index.h"
 #include "storage/index/bplus_tree.h"
+#include "storage/index/index.h"
 
 /**
  * @brief B+树索引
  * @ingroup Index
  */
-class BplusTreeIndex : public Index
-{
-public:
+class BplusTreeIndex : public Index {
+ public:
   BplusTreeIndex() = default;
   virtual ~BplusTreeIndex() noexcept;
 
@@ -38,12 +37,12 @@ public:
    * 扫描指定范围的数据
    */
   IndexScanner *create_scanner(const char *left_key, int left_len, bool left_inclusive, const char *right_key,
-      int right_len, bool right_inclusive) override;
+                               int right_len, bool right_inclusive) override;
 
   RC sync() override;
 
-private:
-  bool             inited_ = false;
+ private:
+  bool inited_ = false;
   BplusTreeHandler index_handler_;
 };
 
@@ -51,9 +50,8 @@ private:
  * @brief B+树索引扫描器
  * @ingroup Index
  */
-class BplusTreeIndexScanner : public IndexScanner
-{
-public:
+class BplusTreeIndexScanner : public IndexScanner {
+ public:
   BplusTreeIndexScanner(BplusTreeHandler &tree_handle);
   ~BplusTreeIndexScanner() noexcept override;
 
@@ -61,8 +59,8 @@ public:
   RC destroy() override;
 
   RC open(const char *left_key, int left_len, bool left_inclusive, const char *right_key, int right_len,
-      bool right_inclusive);
+          bool right_inclusive);
 
-private:
+ private:
   BplusTreeScanner tree_scanner_;
 };

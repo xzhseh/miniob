@@ -15,11 +15,11 @@ See the Mulan PSL v2 for more details. */
 #pragma once
 
 #include "common/rc.h"
-#include "sql/operator/string_list_physical_operator.h"
-#include "event/sql_event.h"
 #include "event/session_event.h"
-#include "sql/executor/sql_result.h"
+#include "event/sql_event.h"
 #include "session/session.h"
+#include "sql/executor/sql_result.h"
+#include "sql/operator/string_list_physical_operator.h"
 #include "storage/db/db.h"
 
 /**
@@ -27,15 +27,13 @@ See the Mulan PSL v2 for more details. */
  * @ingroup Executor
  * @note 与CreateIndex类似，不处理并发
  */
-class ShowTablesExecutor
-{
-public:
-  ShowTablesExecutor()          = default;
+class ShowTablesExecutor {
+ public:
+  ShowTablesExecutor() = default;
   virtual ~ShowTablesExecutor() = default;
 
-  RC execute(SQLStageEvent *sql_event)
-  {
-    SqlResult    *sql_result    = sql_event->session_event()->sql_result();
+  RC execute(SQLStageEvent *sql_event) {
+    SqlResult *sql_result = sql_event->session_event()->sql_result();
     SessionEvent *session_event = sql_event->session_event();
 
     Db *db = session_event->session()->get_current_db();

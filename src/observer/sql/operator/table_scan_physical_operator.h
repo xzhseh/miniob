@@ -14,9 +14,9 @@ See the Mulan PSL v2 for more details. */
 
 #pragma once
 
+#include "common/rc.h"
 #include "sql/operator/physical_operator.h"
 #include "storage/record/record_manager.h"
-#include "common/rc.h"
 
 class Table;
 
@@ -24,9 +24,8 @@ class Table;
  * @brief 表扫描物理算子
  * @ingroup PhysicalOperator
  */
-class TableScanPhysicalOperator : public PhysicalOperator
-{
-public:
+class TableScanPhysicalOperator : public PhysicalOperator {
+ public:
   TableScanPhysicalOperator(Table *table, bool readonly) : table_(table), readonly_(readonly) {}
 
   virtual ~TableScanPhysicalOperator() = default;
@@ -43,15 +42,15 @@ public:
 
   void set_predicates(std::vector<std::unique_ptr<Expression>> &&exprs);
 
-private:
+ private:
   RC filter(RowTuple &tuple, bool &result);
 
-private:
-  Table                                   *table_    = nullptr;
-  Trx                                     *trx_      = nullptr;
-  bool                                     readonly_ = false;
-  RecordFileScanner                        record_scanner_;
-  Record                                   current_record_;
-  RowTuple                                 tuple_;
+ private:
+  Table *table_ = nullptr;
+  Trx *trx_ = nullptr;
+  bool readonly_ = false;
+  RecordFileScanner record_scanner_;
+  Record current_record_;
+  RowTuple tuple_;
   std::vector<std::unique_ptr<Expression>> predicates_;  // TODO chang predicate to table tuple filter
 };

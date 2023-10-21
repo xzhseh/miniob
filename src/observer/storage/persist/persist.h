@@ -13,20 +13,19 @@ See the Mulan PSL v2 for more details. */
 //
 #pragma once
 
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <fcntl.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <string>
 
 #include "common/rc.h"
 
-class PersistHandler
-{
-public:
+class PersistHandler {
+ public:
   PersistHandler();
   ~PersistHandler();
 
@@ -60,7 +59,7 @@ public:
   /** 将文件描述符移动到指定位置 */
   RC seek(uint64_t offset);
 
-private:
+ private:
   std::string file_name_;
-  int         file_desc_ = -1;
+  int file_desc_ = -1;
 };

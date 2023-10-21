@@ -16,34 +16,33 @@ See the Mulan PSL v2 for more details. */
 
 #include <pthread.h>
 #include <string.h>
-#include <string>
+#include <atomic>
 #include <mutex>
 #include <set>
-#include <atomic>
+#include <string>
 
-#include "storage/buffer/page.h"
-#include "common/log/log.h"
 #include "common/lang/mutex.h"
+#include "common/log/log.h"
 #include "common/types.h"
+#include "storage/buffer/page.h"
 
 /**
  * @brief 页帧标识符
  * @ingroup BufferPool
  */
-class FrameId
-{
-public:
+class FrameId {
+ public:
   FrameId(int file_desc, PageNum page_num);
-  bool    equal_to(const FrameId &other) const;
-  bool    operator==(const FrameId &other) const;
-  size_t  hash() const;
-  int     file_desc() const;
+  bool equal_to(const FrameId &other) const;
+  bool operator==(const FrameId &other) const;
+  size_t hash() const;
+  int file_desc() const;
   PageNum page_num() const;
 
   friend std::string to_string(const FrameId &frame_id);
 
-private:
-  int     file_desc_;
+ private:
+  int file_desc_;
   PageNum page_num_;
 };
 
@@ -59,11 +58,9 @@ private:
  * 为了防止在使用过程中页面被淘汰，这里使用了pin count，当页面被使用时，pin count会增加，
  * 当页面不再使用时，pin count会减少。当pin count为0时，页面可以被淘汰。
  */
-class Frame
-{
-public:
-  ~Frame()
-  {
+class Frame {
+ public:
+  ~Frame() {
     // LOG_DEBUG("deallocate frame. this=%p, lbt=%s", this, common::lbt());
   }
 
@@ -77,14 +74,14 @@ public:
 
   void clear_page() { memset(&page_, 0, sizeof(page_)); }
 
-  int     file_desc() const { return file_desc_; }
-  void    set_file_desc(int fd) { file_desc_ = fd; }
-  Page   &page() { return page_; }
+  int file_desc() const { return file_desc_; }
+  void set_file_desc(int fd) { file_desc_ = fd; }
+  Page &page() { return page_; }
   PageNum page_num() const { return page_.page_num; }
-  void    set_page_num(PageNum page_num) { page_.page_num = page_num; }
+  void set_page_num(PageNum page_num) { page_.page_num = page_num; }
   FrameId frame_id() const { return FrameId(file_desc_, page_.page_num); }
-  LSN     lsn() const { return page_.lsn; }
-  void    set_lsn(LSN lsn) { page_.lsn = lsn; }
+  LSN lsn() const { return page_.lsn; }
+  void set_lsn(LSN lsn) { page_.lsn = lsn; }
 
   /// 刷新访问时间 TODO touch is better?
   void access();
@@ -129,22 +126,22 @@ public:
 
   friend std::string to_string(const Frame &frame);
 
-private:
+ private:
   friend class BufferPool;
 
-  bool             dirty_ = false;
+  bool dirty_ = false;
   std::atomic<int> pin_count_{0};
-  unsigned long    acc_time_  = 0;
-  int              file_desc_ = -1;
-  Page             page_;
+  unsigned long acc_time_ = 0;
+  int file_desc_ = -1;
+  Page page_;
 
   /// 在非并发编译时，加锁解锁动作将什么都不做
   common::RecursiveSharedMutex lock_;
 
   /// 使用一些手段来做测试，提前检测出头疼的死锁问题
   /// 如果编译时没有增加调试选项，这些代码什么都不做
-  common::DebugMutex                debug_lock_;
-  intptr_t                          write_locker_          = 0;
-  int                               write_recursive_count_ = 0;
+  common::DebugMutex debug_lock_;
+  intptr_t write_locker_ = 0;
+  int write_recursive_count_ = 0;
   std::unordered_map<intptr_t, int> read_lockers_;
 };

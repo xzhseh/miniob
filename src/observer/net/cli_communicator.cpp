@@ -13,14 +13,14 @@ See the Mulan PSL v2 for more details. */
 //
 
 #include "net/cli_communicator.h"
-#include "net/buffered_writer.h"
-#include "common/log/log.h"
 #include "common/lang/string.h"
+#include "common/log/log.h"
 #include "event/session_event.h"
+#include "net/buffered_writer.h"
 
 #ifdef USE_READLINE
-#include "readline/readline.h"
 #include "readline/history.h"
+#include "readline/readline.h"
 #endif
 
 #define MAX_MEM_BUFFER_SIZE 8192
@@ -29,11 +29,10 @@ See the Mulan PSL v2 for more details. */
 using namespace common;
 
 #ifdef USE_READLINE
-const std::string HISTORY_FILE            = std::string(getenv("HOME")) + "/.miniob.history";
-time_t            last_history_write_time = 0;
+const std::string HISTORY_FILE = std::string(getenv("HOME")) + "/.miniob.history";
+time_t last_history_write_time = 0;
 
-char *my_readline(const char *prompt)
-{
+char *my_readline(const char *prompt) {
   int size = history_length;
   if (size == 0) {
     read_history(HISTORY_FILE.c_str());
@@ -56,8 +55,7 @@ char *my_readline(const char *prompt)
   return line;
 }
 #else   // USE_READLINE
-char *my_readline(const char *prompt)
-{
+char *my_readline(const char *prompt) {
   char *buffer = (char *)malloc(MAX_MEM_BUFFER_SIZE);
   if (nullptr == buffer) {
     LOG_WARN("failed to alloc line buffer");
@@ -80,15 +78,13 @@ char *my_readline(const char *prompt)
    'strncasecmp("exit", cmd, 4)' means that obclient read command string from terminal, truncate it to 4 chars from
    the beginning, then compare the result with 'exit', if they match, exit the obclient.
 */
-bool is_exit_command(const char *cmd)
-{
+bool is_exit_command(const char *cmd) {
   return 0 == strncasecmp("exit", cmd, 4) || 0 == strncasecmp("bye", cmd, 3) || 0 == strncasecmp("\\q", cmd, 2);
 }
 
-char *read_command()
-{
-  const char *prompt_str    = "miniob > ";
-  char       *input_command = nullptr;
+char *read_command() {
+  const char *prompt_str = "miniob > ";
+  char *input_command = nullptr;
   for (input_command = my_readline(prompt_str); common::is_blank(input_command);
        input_command = my_readline(prompt_str)) {
     free(input_command);
@@ -97,8 +93,7 @@ char *read_command()
   return input_command;
 }
 
-RC CliCommunicator::init(int fd, Session *session, const std::string &addr)
-{
+RC CliCommunicator::init(int fd, Session *session, const std::string &addr) {
   RC rc = PlainCommunicator::init(fd, session, addr);
   if (OB_FAIL(rc)) {
     LOG_WARN("fail to init communicator", strrc(rc));
@@ -121,9 +116,8 @@ RC CliCommunicator::init(int fd, Session *session, const std::string &addr)
   return rc;
 }
 
-RC CliCommunicator::read_event(SessionEvent *&event)
-{
-  event         = nullptr;
+RC CliCommunicator::read_event(SessionEvent *&event) {
+  event = nullptr;
   char *command = read_command();
 
   if (is_exit_command(command)) {
@@ -138,9 +132,8 @@ RC CliCommunicator::read_event(SessionEvent *&event)
   return RC::SUCCESS;
 }
 
-RC CliCommunicator::write_result(SessionEvent *event, bool &need_disconnect)
-{
-  RC rc           = PlainCommunicator::write_result(event, need_disconnect);
+RC CliCommunicator::write_result(SessionEvent *event, bool &need_disconnect) {
+  RC rc = PlainCommunicator::write_result(event, need_disconnect);
   need_disconnect = false;
   return rc;
 }

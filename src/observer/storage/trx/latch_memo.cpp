@@ -13,18 +13,16 @@ See the Mulan PSL v2 for more details. */
 //
 
 #include "storage/trx/latch_memo.h"
-#include "storage/buffer/frame.h"
-#include "storage/buffer/disk_buffer_pool.h"
 #include "common/lang/mutex.h"
+#include "storage/buffer/disk_buffer_pool.h"
+#include "storage/buffer/frame.h"
 
-LatchMemoItem::LatchMemoItem(LatchMemoType type, Frame *frame)
-{
-  this->type  = type;
+LatchMemoItem::LatchMemoItem(LatchMemoType type, Frame *frame) {
+  this->type = type;
   this->frame = frame;
 }
 
-LatchMemoItem::LatchMemoItem(LatchMemoType type, common::SharedMutex *lock)
-{
+LatchMemoItem::LatchMemoItem(LatchMemoType type, common::SharedMutex *lock) {
   this->type = type;
   this->lock = lock;
 }
@@ -35,8 +33,7 @@ LatchMemo::LatchMemo(DiskBufferPool *buffer_pool) : buffer_pool_(buffer_pool) {}
 
 LatchMemo::~LatchMemo() { this->release(); }
 
-RC LatchMemo::get_page(PageNum page_num, Frame *&frame)
-{
+RC LatchMemo::get_page(PageNum page_num, Frame *&frame) {
   frame = nullptr;
 
   RC rc = buffer_pool_->get_this_page(page_num, &frame);
@@ -48,8 +45,7 @@ RC LatchMemo::get_page(PageNum page_num, Frame *&frame)
   return RC::SUCCESS;
 }
 
-RC LatchMemo::allocate_page(Frame *&frame)
-{
+RC LatchMemo::allocate_page(Frame *&frame) {
   frame = nullptr;
 
   RC rc = buffer_pool_->allocate_page(&frame);
@@ -63,8 +59,7 @@ RC LatchMemo::allocate_page(Frame *&frame)
 
 void LatchMemo::dispose_page(PageNum page_num) { disposed_pages_.emplace_back(page_num); }
 
-void LatchMemo::latch(Frame *frame, LatchMemoType type)
-{
+void LatchMemo::latch(Frame *frame, LatchMemoType type) {
   switch (type) {
     case LatchMemoType::EXCLUSIVE: {
       frame->write_latch();
@@ -84,8 +79,7 @@ void LatchMemo::xlatch(Frame *frame) { this->latch(frame, LatchMemoType::EXCLUSI
 
 void LatchMemo::slatch(Frame *frame) { this->latch(frame, LatchMemoType::SHARED); }
 
-bool LatchMemo::try_slatch(Frame *frame)
-{
+bool LatchMemo::try_slatch(Frame *frame) {
   bool ret = frame->try_read_latch();
   if (ret) {
     items_.emplace_back(LatchMemoType::SHARED, frame);
@@ -93,21 +87,18 @@ bool LatchMemo::try_slatch(Frame *frame)
   return ret;
 }
 
-void LatchMemo::xlatch(common::SharedMutex *lock)
-{
+void LatchMemo::xlatch(common::SharedMutex *lock) {
   lock->lock();
   items_.emplace_back(LatchMemoType::EXCLUSIVE, lock);
   LOG_DEBUG("lock root success");
 }
 
-void LatchMemo::slatch(common::SharedMutex *lock)
-{
+void LatchMemo::slatch(common::SharedMutex *lock) {
   lock->lock_shared();
   items_.emplace_back(LatchMemoType::SHARED, lock);
 }
 
-void LatchMemo::release_item(LatchMemoItem &item)
-{
+void LatchMemo::release_item(LatchMemoItem &item) {
   switch (item.type) {
     case LatchMemoType::EXCLUSIVE: {
       if (item.frame != nullptr) {
@@ -134,8 +125,7 @@ void LatchMemo::release_item(LatchMemoItem &item)
   }
 }
 
-void LatchMemo::release()
-{
+void LatchMemo::release() {
   int point = static_cast<int>(items_.size());
   release_to(point);
 
@@ -145,12 +135,11 @@ void LatchMemo::release()
   disposed_pages_.clear();
 }
 
-void LatchMemo::release_to(int point)
-{
+void LatchMemo::release_to(int point) {
   ASSERT(point >= 0 && point <= static_cast<int>(items_.size()),
-      "invalid memo point. point=%d, items size=%d",
-      point,
-      static_cast<int>(items_.size()));
+         "invalid memo point. point=%d, items size=%d",
+         point,
+         static_cast<int>(items_.size()));
 
   auto iter = items_.begin();
   for (int i = point - 1; i >= 0; i--, ++iter) {

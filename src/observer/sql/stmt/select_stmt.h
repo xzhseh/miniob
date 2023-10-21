@@ -14,8 +14,8 @@ See the Mulan PSL v2 for more details. */
 
 #pragma once
 
-#include <vector>
 #include <memory>
+#include <vector>
 
 #include "common/rc.h"
 #include "sql/stmt/agg_stmt.h"
@@ -27,8 +27,7 @@ class FilterStmt;
 class Db;
 class Table;
 
-struct JoinStmt
-{
+struct JoinStmt {
   Field left_field;
   Field right_field;
 };
@@ -37,18 +36,17 @@ struct JoinStmt
  * @brief 表示select语句
  * @ingroup Statement
  */
-class SelectStmt : public Stmt
-{
-public:
+class SelectStmt : public Stmt {
+ public:
   SelectStmt() = default;
   ~SelectStmt() override;
 
   StmtType type() const override { return StmtType::SELECT; }
 
-public:
+ public:
   static RC create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt);
 
-public:
+ public:
   const std::vector<Table *> &tables() const { return tables_; }
 
   const std::vector<Field> &query_fields() const { return query_fields_; }
@@ -59,10 +57,10 @@ public:
 
   AggStmt *agg_stmt() const { return agg_stmt_; }
 
-private:
-  std::vector<Field>    query_fields_;
-  std::vector<Table *>  tables_;
+ private:
+  std::vector<Field> query_fields_;
+  std::vector<Table *> tables_;
   std::vector<JoinStmt> join_stmts_;
-  FilterStmt           *filter_stmt_ = nullptr;
-  AggStmt              *agg_stmt_    = nullptr;
+  FilterStmt *filter_stmt_ = nullptr;
+  AggStmt *agg_stmt_ = nullptr;
 };

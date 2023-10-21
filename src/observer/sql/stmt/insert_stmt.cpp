@@ -19,11 +19,9 @@ See the Mulan PSL v2 for more details. */
 #include "storage/table/table.h"
 
 InsertStmt::InsertStmt(Table *table, const Value *values, int value_amount)
-    : table_(table), values_(values), value_amount_(value_amount)
-{}
+    : table_(table), values_(values), value_amount_(value_amount) {}
 
-RC InsertStmt::create(Db *db, InsertSqlNode &inserts, Stmt *&stmt)
-{
+RC InsertStmt::create(Db *db, InsertSqlNode &inserts, Stmt *&stmt) {
   const char *table_name = inserts.relation_name.c_str();
   if (nullptr == db || nullptr == table_name || inserts.values.empty()) {
     LOG_WARN("invalid argument. db=%p, table_name=%p, value_num=%d",
@@ -40,10 +38,10 @@ RC InsertStmt::create(Db *db, InsertSqlNode &inserts, Stmt *&stmt)
 
   // check the fields number
 
-  std::vector<Value> &values     = inserts.values;
-  const int           value_num  = static_cast<int>(inserts.values.size());
-  const TableMeta    &table_meta = table->table_meta();
-  const int           field_num  = table_meta.field_num() - table_meta.sys_field_num();
+  std::vector<Value> &values = inserts.values;
+  const int value_num = static_cast<int>(inserts.values.size());
+  const TableMeta &table_meta = table->table_meta();
+  const int field_num = table_meta.field_num() - table_meta.sys_field_num();
   if (field_num != value_num) {
     LOG_WARN("schema mismatch. value num=%d, field num in schema=%d", value_num, field_num);
     return RC::SCHEMA_FIELD_MISSING;
@@ -53,8 +51,8 @@ RC InsertStmt::create(Db *db, InsertSqlNode &inserts, Stmt *&stmt)
   const int sys_field_num = table_meta.sys_field_num();
   for (int i = 0; i < value_num; i++) {
     const FieldMeta *field_meta = table_meta.field(i + sys_field_num);
-    const AttrType   field_type = field_meta->type();
-    const AttrType   value_type = values[i].attr_type();
+    const AttrType field_type = field_meta->type();
+    const AttrType value_type = values[i].attr_type();
 
     bool null_flag{false};
 
@@ -87,7 +85,8 @@ RC InsertStmt::create(Db *db, InsertSqlNode &inserts, Stmt *&stmt)
         case CHARS: {
           values[i].set_string("xzhseh");
         } break;
-        default: assert(false);
+        default:
+          assert(false);
       }
 
       assert(values[i].is_null() && "`values[i]` should persist the `is_null_` property");

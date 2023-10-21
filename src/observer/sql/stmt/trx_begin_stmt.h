@@ -23,16 +23,14 @@ See the Mulan PSL v2 for more details. */
  * @brief 事务的Begin 语句，现在什么成员都没有
  * @ingroup Statement
  */
-class TrxBeginStmt : public Stmt
-{
-public:
+class TrxBeginStmt : public Stmt {
+ public:
   TrxBeginStmt() {}
   virtual ~TrxBeginStmt() = default;
 
   StmtType type() const override { return StmtType::BEGIN; }
 
-  static RC create(Stmt *&stmt)
-  {
+  static RC create(Stmt *&stmt) {
     stmt = new TrxBeginStmt();
     return RC::SUCCESS;
   }
