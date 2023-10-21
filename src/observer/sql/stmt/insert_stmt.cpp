@@ -56,6 +56,8 @@ RC InsertStmt::create(Db *db, InsertSqlNode &inserts, Stmt *&stmt) {
 
     bool null_flag{false};
 
+    /// NOTE: DO NOT CHANGE/REFACTOR THE CODE BELOW, strange bugs will occur for big-order-by
+    /// refer: https://github.com/xzhseh/miniob/pull/23/commits/122869e2f9fd6d88e0b58456fead14aae1fbe1ea
     if (values[i].is_null()) {
       if (!field_meta->is_null()) {
         // If not null is either implicitly / explicitly enabled
