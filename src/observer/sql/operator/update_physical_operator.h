@@ -11,10 +11,12 @@ class UpdateStmt;
  * @brief 物理算子，更新
  * @ingroup PhysicalOperator
  */
-class UpdatePhysicalOperator : public PhysicalOperator {
- public:
+class UpdatePhysicalOperator : public PhysicalOperator
+{
+public:
   UpdatePhysicalOperator(Table *table, std::vector<Value> values, std::vector<FieldMeta> field_meta)
-      : table_(table), values_(std::move(values)), field_metas_(std::move(field_meta)) {}
+      : table_(table), values_(std::move(values)), field_metas_(std::move(field_meta))
+  {}
 
   virtual ~UpdatePhysicalOperator() = default;
 
@@ -26,9 +28,9 @@ class UpdatePhysicalOperator : public PhysicalOperator {
 
   Tuple *current_tuple() override { return nullptr; }
 
- private:
-  Table *table_ = nullptr;
-  std::vector<Value> values_;
+private:
+  Table                 *table_ = nullptr;
+  std::vector<Value>     values_;
   std::vector<FieldMeta> field_metas_;
-  Trx *trx_ = nullptr;
+  Trx                   *trx_ = nullptr;
 };

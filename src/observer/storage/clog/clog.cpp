@@ -15,11 +15,11 @@ See the Mulan PSL v2 for more details. */
 #include <sstream>
 #include <vector>
 
-#include "common/global_context.h"
-#include "common/io/io.h"
 #include "common/log/log.h"
 #include "storage/clog/clog.h"
+#include "common/global_context.h"
 #include "storage/trx/trx.h"
+#include "common/io/io.h"
 
 using namespace std;
 using namespace common;
@@ -29,24 +29,24 @@ using namespace common;
  */
 const char *CLOG_FILE_NAME = "clog";
 
-const char *clog_type_name(CLogType type) {
+const char *clog_type_name(CLogType type)
+{
 #define DEFINE_CLOG_TYPE(name) \
-  case CLogType::name:         \
-    return #name;
+  case CLogType::name: return #name;
   switch (type) {
     DEFINE_CLOG_TYPE_ENUM;
-    default:
-      return "unknown clog type";
+    default: return "unknown clog type";
   }
 #undef DEFINE_CLOG_TYPE
 }
 
-int32_t clog_type_to_integer(CLogType type) { return static_cast<int32_t>(type); }
+int32_t  clog_type_to_integer(CLogType type) { return static_cast<int32_t>(type); }
 CLogType clog_type_from_integer(int32_t value) { return static_cast<CLogType>(value); }
 
 ////////////////////////////////////////////////////////////////////////////////
 
-string CLogRecordHeader::to_string() const {
+string CLogRecordHeader::to_string() const
+{
   stringstream ss;
   ss << "lsn:" << lsn_ << ", trx_id:" << trx_id_ << ", type:" << clog_type_name(clog_type_from_integer(type_)) << "("
      << type_ << ")"
@@ -56,7 +56,8 @@ string CLogRecordHeader::to_string() const {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-string CLogRecordCommitData::to_string() const {
+string CLogRecordCommitData::to_string() const
+{
   stringstream ss;
   ss << "commit_xid:" << commit_xid_;
   return ss.str();
@@ -66,12 +67,14 @@ string CLogRecordCommitData::to_string() const {
 
 const int32_t CLogRecordData::HEADER_SIZE = sizeof(CLogRecordData) - sizeof(CLogRecordData::data_);
 
-CLogRecordData::~CLogRecordData() {
+CLogRecordData::~CLogRecordData()
+{
   if (data_ == nullptr) {
     delete[] data_;
   }
 }
-string CLogRecordData::to_string() const {
+string CLogRecordData::to_string() const
+{
   stringstream ss;
   ss << "table_id:" << table_id_ << ", rid:{" << rid_.to_string() << "}"
      << ", len:" << data_len_ << ", offset:" << data_offset_;
@@ -82,39 +85,42 @@ string CLogRecordData::to_string() const {
 
 int _align8(int size) { return size / 8 * 8 + ((size % 8 == 0) ? 0 : 8); }
 
-CLogRecord *CLogRecord::build_mtr_record(CLogType type, int32_t trx_id) {
-  CLogRecord *log_record = new CLogRecord();
-  CLogRecordHeader &header = log_record->header_;
-  header.trx_id_ = trx_id;
-  header.type_ = clog_type_to_integer(type);
+CLogRecord *CLogRecord::build_mtr_record(CLogType type, int32_t trx_id)
+{
+  CLogRecord       *log_record = new CLogRecord();
+  CLogRecordHeader &header     = log_record->header_;
+  header.trx_id_               = trx_id;
+  header.type_                 = clog_type_to_integer(type);
   return log_record;
 }
 
-CLogRecord *CLogRecord::build_commit_record(int32_t trx_id, int32_t commit_xid) {
-  CLogRecord *log_record = new CLogRecord();
-  CLogRecordHeader &header = log_record->header_;
-  header.type_ = clog_type_to_integer(CLogType::MTR_COMMIT);
-  header.trx_id_ = trx_id;
-  header.logrec_len_ = sizeof(CLogRecordCommitData);
+CLogRecord *CLogRecord::build_commit_record(int32_t trx_id, int32_t commit_xid)
+{
+  CLogRecord       *log_record = new CLogRecord();
+  CLogRecordHeader &header     = log_record->header_;
+  header.type_                 = clog_type_to_integer(CLogType::MTR_COMMIT);
+  header.trx_id_               = trx_id;
+  header.logrec_len_           = sizeof(CLogRecordCommitData);
 
   CLogRecordCommitData &commit_record = log_record->commit_record();
-  commit_record.commit_xid_ = commit_xid;
+  commit_record.commit_xid_           = commit_xid;
   return log_record;
 }
 
 CLogRecord *CLogRecord::build_data_record(CLogType type, int32_t trx_id, int32_t table_id, const RID &rid,
-                                          int32_t data_len, int32_t data_offset, const char *data) {
-  CLogRecord *log_record = new CLogRecord();
-  CLogRecordHeader &header = log_record->header_;
-  header.trx_id_ = trx_id;
-  header.type_ = clog_type_to_integer(type);
-  header.logrec_len_ = CLogRecordData::HEADER_SIZE + data_len;
+    int32_t data_len, int32_t data_offset, const char *data)
+{
+  CLogRecord       *log_record = new CLogRecord();
+  CLogRecordHeader &header     = log_record->header_;
+  header.trx_id_               = trx_id;
+  header.type_                 = clog_type_to_integer(type);
+  header.logrec_len_           = CLogRecordData::HEADER_SIZE + data_len;
 
   CLogRecordData &data_record = log_record->data_record();
-  data_record.table_id_ = table_id;
-  data_record.rid_ = rid;
-  data_record.data_len_ = data_len;
-  data_record.data_offset_ = data_offset;
+  data_record.table_id_       = table_id;
+  data_record.rid_            = rid;
+  data_record.data_len_       = data_len;
+  data_record.data_offset_    = data_offset;
 
   if (data_len > 0) {
     data_record.data_ = new char[data_len];
@@ -129,9 +135,10 @@ CLogRecord *CLogRecord::build_data_record(CLogType type, int32_t trx_id, int32_t
   return log_record;
 }
 
-CLogRecord *CLogRecord::build(const CLogRecordHeader &header, char *data) {
+CLogRecord *CLogRecord::build(const CLogRecordHeader &header, char *data)
+{
   CLogRecord *log_record = new CLogRecord();
-  log_record->header_ = header;
+  log_record->header_    = header;
 
   if (header.logrec_len_ <= 0) {
     return log_record;
@@ -139,9 +146,9 @@ CLogRecord *CLogRecord::build(const CLogRecordHeader &header, char *data) {
 
   if (header.type_ == clog_type_to_integer(CLogType::MTR_COMMIT)) {
     ASSERT(header.logrec_len_ == sizeof(CLogRecordCommitData),
-           "invalid length of mtr commit. expect %d, got %d",
-           sizeof(CLogRecordCommitData),
-           header.logrec_len_);
+        "invalid length of mtr commit. expect %d, got %d",
+        sizeof(CLogRecordCommitData),
+        header.logrec_len_);
 
     CLogRecordCommitData &commit_record = log_record->commit_record();
     memcpy(reinterpret_cast<void *>(&commit_record), data, sizeof(CLogRecordCommitData));
@@ -152,7 +159,7 @@ CLogRecord *CLogRecord::build(const CLogRecordHeader &header, char *data) {
     CLogRecordData &data_record = log_record->data_record();
     memcpy(reinterpret_cast<void *>(&data_record), data, CLogRecordData::HEADER_SIZE);
     if (header.logrec_len_ > CLogRecordData::HEADER_SIZE) {
-      int data_len = header.logrec_len_ - CLogRecordData::HEADER_SIZE;
+      int data_len      = header.logrec_len_ - CLogRecordData::HEADER_SIZE;
       data_record.data_ = new char[data_len];
       memcpy(data_record.data_, data + CLogRecordData::HEADER_SIZE, data_len);
     }
@@ -162,7 +169,8 @@ CLogRecord *CLogRecord::build(const CLogRecordHeader &header, char *data) {
 
 CLogRecord::~CLogRecord() {}
 
-string CLogRecord::to_string() const {
+string CLogRecord::to_string() const
+{
   if (header_.logrec_len_ <= 0) {
     return header_.to_string();
   } else if (header_.type_ == clog_type_to_integer(CLogType::MTR_COMMIT)) {
@@ -179,7 +187,8 @@ CLogBuffer::CLogBuffer() {}
 
 CLogBuffer::~CLogBuffer() {}
 
-RC CLogBuffer::append_log_record(CLogRecord *log_record) {
+RC CLogBuffer::append_log_record(CLogRecord *log_record)
+{
   if (nullptr == log_record) {
     return RC::INVALID_ARGUMENT;
   }
@@ -196,8 +205,9 @@ RC CLogBuffer::append_log_record(CLogRecord *log_record) {
   return RC::SUCCESS;
 }
 
-RC CLogBuffer::flush_buffer(CLogFile &log_file) {
-  RC rc = RC::SUCCESS;
+RC CLogBuffer::flush_buffer(CLogFile &log_file)
+{
+  RC  rc    = RC::SUCCESS;
   int count = 0;
   while (!log_records_.empty()) {
     lock_.lock();
@@ -214,9 +224,9 @@ RC CLogBuffer::flush_buffer(CLogFile &log_file) {
     rc = write_log_record(log_file, log_record.get());
     // 当前无法处理日志写不完整的情况，所以直接粗暴退出
     ASSERT(rc == RC::SUCCESS,
-           "failed to write log record. log_record=%s, rc=%s",
-           log_record->to_string().c_str(),
-           strrc(rc));
+        "failed to write log record. log_record=%s, rc=%s",
+        log_record->to_string().c_str(),
+        strrc(rc));
 
     lock_.unlock();
     total_size_ -= log_record->logrec_len();
@@ -227,10 +237,11 @@ RC CLogBuffer::flush_buffer(CLogFile &log_file) {
   return log_file.sync();
 }
 
-RC CLogBuffer::write_log_record(CLogFile &log_file, CLogRecord *log_record) {
+RC CLogBuffer::write_log_record(CLogFile &log_file, CLogRecord *log_record)
+{
   // TODO 看起来每种类型的日志自己实现 serialize 接口更好一点
   const CLogRecordHeader &header = log_record->header();
-  RC rc = log_file.write(reinterpret_cast<const char *>(&header), sizeof(header));
+  RC                      rc     = log_file.write(reinterpret_cast<const char *>(&header), sizeof(header));
   if (rc != RC::SUCCESS) {
     LOG_WARN("failed to write log record header. size=%d, rc=%s", sizeof(header), strrc(rc));
     return rc;
@@ -243,8 +254,8 @@ RC CLogBuffer::write_log_record(CLogFile &log_file, CLogRecord *log_record) {
     } break;
 
     case CLogType::MTR_COMMIT: {
-      rc = log_file.write(reinterpret_cast<const char *>(&log_record->commit_record()),
-                          log_record->header().logrec_len_);
+      rc = log_file.write(
+          reinterpret_cast<const char *>(&log_record->commit_record()), log_record->header().logrec_len_);
     } break;
 
     default: {
@@ -267,11 +278,12 @@ RC CLogBuffer::write_log_record(CLogFile &log_file, CLogRecord *log_record) {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-RC CLogFile::init(const char *path) {
+RC CLogFile::init(const char *path)
+{
   RC rc = RC::SUCCESS;
 
   std::string clog_file_path = std::string(path) + common::FILE_PATH_SPLIT_STR + CLOG_FILE_NAME;
-  int fd = ::open(clog_file_path.c_str(), O_RDWR | O_APPEND | O_CREAT, S_IRUSR | S_IWUSR);
+  int         fd             = ::open(clog_file_path.c_str(), O_RDWR | O_APPEND | O_CREAT, S_IRUSR | S_IWUSR);
   if (fd < 0) {
     rc = RC::IOERR_OPEN;
     LOG_WARN("failed to open clog file. filename=%s, error=%s", clog_file_path.c_str(), strerror(errno));
@@ -279,12 +291,13 @@ RC CLogFile::init(const char *path) {
   }
 
   filename_ = clog_file_path;
-  fd_ = fd;
+  fd_       = fd;
   LOG_INFO("open clog file success. file=%s, fd=%d", filename_.c_str(), fd_);
   return rc;
 }
 
-CLogFile::~CLogFile() {
+CLogFile::~CLogFile()
+{
   if (fd_ >= 0) {
     LOG_INFO("close clog file. file=%s, fd=%d", filename_.c_str(), fd_);
     ::close(fd_);
@@ -292,7 +305,8 @@ CLogFile::~CLogFile() {
   }
 }
 
-RC CLogFile::write(const char *data, int len) {
+RC CLogFile::write(const char *data, int len)
+{
   int ret = writen(fd_, data, len);
   if (0 != ret) {
     LOG_WARN("failed to write data to file. filename=%s, data len=%d, error=%s", filename_.c_str(), len, strerror(ret));
@@ -301,7 +315,8 @@ RC CLogFile::write(const char *data, int len) {
   return RC::SUCCESS;
 }
 
-RC CLogFile::read(char *data, int len) {
+RC CLogFile::read(char *data, int len)
+{
   int ret = readn(fd_, data, len);
   if (ret != 0) {
     if (ret == -1) {
@@ -315,7 +330,8 @@ RC CLogFile::read(char *data, int len) {
   return RC::SUCCESS;
 }
 
-RC CLogFile::sync() {
+RC CLogFile::sync()
+{
   int ret = fsync(fd_);
   if (ret != 0) {
     LOG_WARN("failed to sync file. file=%s, error=%s", filename_.c_str(), strerror(errno));
@@ -324,7 +340,8 @@ RC CLogFile::sync() {
   return RC::SUCCESS;
 }
 
-RC CLogFile::offset(int64_t &off) const {
+RC CLogFile::offset(int64_t &off) const
+{
   off_t pos = lseek(fd_, 0, SEEK_CUR);
   if (pos == -1) {
     LOG_WARN("failed to seek. error=%s", strerror(errno));
@@ -336,19 +353,21 @@ RC CLogFile::offset(int64_t &off) const {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-RC CLogRecordIterator::init(CLogFile &log_file) {
+RC CLogRecordIterator::init(CLogFile &log_file)
+{
   log_file_ = &log_file;
   return RC::SUCCESS;
 }
 
 bool CLogRecordIterator::valid() const { return nullptr != log_record_; }
 
-RC CLogRecordIterator::next() {
+RC CLogRecordIterator::next()
+{
   delete log_record_;
   log_record_ = nullptr;
 
   CLogRecordHeader header;
-  RC rc = log_file_->read(reinterpret_cast<char *>(&header), sizeof(header));
+  RC               rc = log_file_->read(reinterpret_cast<char *>(&header), sizeof(header));
   if (rc != RC::SUCCESS) {
     if (log_file_->eof()) {
       return RC::RECORD_EOF;
@@ -358,11 +377,11 @@ RC CLogRecordIterator::next() {
     return rc;
   }
 
-  char *data = nullptr;
+  char   *data        = nullptr;
   int32_t record_size = header.logrec_len_;
   if (record_size > 0) {
     data = new char[record_size];
-    rc = log_file_->read(data, record_size);
+    rc   = log_file_->read(data, record_size);
     if (OB_FAIL(rc)) {
       if (log_file_->eof()) {
         // TODO 遇到了没有写完整数据的log，应该truncate一部分数据, 但是现在不管
@@ -384,13 +403,15 @@ const CLogRecord &CLogRecordIterator::log_record() { return *log_record_; }
 
 ////////////////////////////////////////////////////////////////////////////////
 
-RC CLogManager::init(const char *path) {
+RC CLogManager::init(const char *path)
+{
   log_buffer_ = new CLogBuffer();
-  log_file_ = new CLogFile();
+  log_file_   = new CLogFile();
   return log_file_->init(path);
 }
 
-CLogManager::~CLogManager() {
+CLogManager::~CLogManager()
+{
   if (log_buffer_) {
     delete log_buffer_;
     log_buffer_ = nullptr;
@@ -403,7 +424,8 @@ CLogManager::~CLogManager() {
 }
 
 RC CLogManager::append_log(CLogType type, int32_t trx_id, int32_t table_id, const RID &rid, int32_t data_len,
-                           int32_t data_offset, const char *data) {
+    int32_t data_offset, const char *data)
+{
   CLogRecord *log_record = CLogRecord::build_data_record(type, trx_id, table_id, rid, data_len, data_offset, data);
   if (nullptr == log_record) {
     LOG_WARN("failed to create log record");
@@ -412,11 +434,13 @@ RC CLogManager::append_log(CLogType type, int32_t trx_id, int32_t table_id, cons
   return append_log(log_record);
 }
 
-RC CLogManager::begin_trx(int32_t trx_id) {
+RC CLogManager::begin_trx(int32_t trx_id)
+{
   return append_log(CLogRecord::build_mtr_record(CLogType::MTR_BEGIN, trx_id));
 }
 
-RC CLogManager::commit_trx(int32_t trx_id, int32_t commit_xid) {
+RC CLogManager::commit_trx(int32_t trx_id, int32_t commit_xid)
+{
   RC rc = append_log(CLogRecord::build_commit_record(trx_id, commit_xid));
   if (rc != RC::SUCCESS) {
     LOG_WARN("failed to append trx commit log. trx id=%d, rc=%s", trx_id, strrc(rc));
@@ -427,11 +451,13 @@ RC CLogManager::commit_trx(int32_t trx_id, int32_t commit_xid) {
   return rc;
 }
 
-RC CLogManager::rollback_trx(int32_t trx_id) {
+RC CLogManager::rollback_trx(int32_t trx_id)
+{
   return append_log(CLogRecord::build_mtr_record(CLogType::MTR_ROLLBACK, trx_id));
 }
 
-RC CLogManager::append_log(CLogRecord *log_record) {
+RC CLogManager::append_log(CLogRecord *log_record)
+{
   if (nullptr == log_record) {
     return RC::INVALID_ARGUMENT;
   }
@@ -440,9 +466,10 @@ RC CLogManager::append_log(CLogRecord *log_record) {
 
 RC CLogManager::sync() { return log_buffer_->flush_buffer(*log_file_); }
 
-RC CLogManager::recover(Db *db) {
+RC CLogManager::recover(Db *db)
+{
   CLogRecordIterator log_record_iterator;
-  RC rc = log_record_iterator.init(*log_file_);
+  RC                 rc = log_record_iterator.init(*log_file_);
   if (OB_FAIL(rc)) {
     LOG_WARN("failed to init log record iterator. rc=%s", strrc(rc));
     return rc;
@@ -484,9 +511,9 @@ RC CLogManager::recover(Db *db) {
       default: {
         Trx *trx = GCTX.trx_kit_->find_trx(log_record.trx_id());
         ASSERT(trx != nullptr,
-               "cannot find such trx. trx id=%d, log_record={%s}",
-               log_record.trx_id(),
-               log_record.to_string().c_str());
+            "cannot find such trx. trx id=%d, log_record={%s}",
+            log_record.trx_id(),
+            log_record.to_string().c_str());
 
         rc = trx->redo(db, log_record);
         if (rc != RC::SUCCESS) {

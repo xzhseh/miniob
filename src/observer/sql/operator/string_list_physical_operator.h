@@ -22,21 +22,24 @@ See the Mulan PSL v2 for more details. */
  * @ingroup PhysicalOperator
  * @details 用于将字符串列表转换为物理算子,为了方便实现的接口，比如help命令
  */
-class StringListPhysicalOperator : public PhysicalOperator {
- public:
+class StringListPhysicalOperator : public PhysicalOperator
+{
+public:
   StringListPhysicalOperator() {}
 
   virtual ~StringListPhysicalOperator() = default;
 
   template <typename InputIt>
-  void append(InputIt begin, InputIt end) {
+  void append(InputIt begin, InputIt end)
+  {
     strings_.emplace_back(begin, end);
   }
 
   void append(std::initializer_list<std::string> init) { strings_.emplace_back(init); }
 
   template <typename T>
-  void append(const T &v) {
+  void append(const T &v)
+  {
     strings_.emplace_back(1, v);
   }
 
@@ -44,9 +47,10 @@ class StringListPhysicalOperator : public PhysicalOperator {
 
   RC open(Trx *) override { return RC::SUCCESS; }
 
-  RC next() override {
+  RC next() override
+  {
     if (!started_) {
-      started_ = true;
+      started_  = true;
       iterator_ = strings_.begin();
     } else if (iterator_ != strings_.end()) {
       ++iterator_;
@@ -54,19 +58,22 @@ class StringListPhysicalOperator : public PhysicalOperator {
     return iterator_ == strings_.end() ? RC::RECORD_EOF : RC::SUCCESS;
   }
 
-  virtual RC close() override {
+  virtual RC close() override
+  {
     iterator_ = strings_.end();
     return RC::SUCCESS;
   }
 
-  virtual Tuple *current_tuple() override {
+  virtual Tuple *current_tuple() override
+  {
     if (iterator_ == strings_.end()) {
       return nullptr;
     }
 
-    const StringList &string_list = *iterator_;
+    const StringList  &string_list = *iterator_;
     std::vector<Value> cells;
     for (const std::string &s : string_list) {
+
       Value value;
       value.set_string(s.c_str());
       cells.push_back(value);
@@ -75,11 +82,11 @@ class StringListPhysicalOperator : public PhysicalOperator {
     return &tuple_;
   }
 
- private:
-  using StringList = std::vector<std::string>;
+private:
+  using StringList     = std::vector<std::string>;
   using StringListList = std::vector<StringList>;
-  StringListList strings_;
+  StringListList           strings_;
   StringListList::iterator iterator_;
-  bool started_ = false;
-  ValueListTuple tuple_;
+  bool                     started_ = false;
+  ValueListTuple           tuple_;
 };

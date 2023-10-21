@@ -27,9 +27,10 @@ class SQLStageEvent;
  * @brief 执行器
  * @ingroup Executor
  */
-class CommandExecutor {
- public:
-  CommandExecutor() = default;
+class CommandExecutor
+{
+public:
+  CommandExecutor()          = default;
   virtual ~CommandExecutor() = default;
 
   RC execute(SQLStageEvent *sql_event);

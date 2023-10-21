@@ -24,9 +24,10 @@ See the Mulan PSL v2 for more details. */
  * 当前把调试信息都放在了session上，可以随着SQL语句输出。
  * 但是现在还不支持与输出调试信息与行数据同步输出。
  */
-class SqlDebug {
- public:
-  SqlDebug() = default;
+class SqlDebug
+{
+public:
+  SqlDebug()          = default;
   virtual ~SqlDebug() = default;
 
   void add_debug_info(const std::string &debug_info);
@@ -34,7 +35,7 @@ class SqlDebug {
 
   const std::list<std::string> &get_debug_infos() const;
 
- private:
+private:
   std::list<std::string> debug_infos_;
 };
 

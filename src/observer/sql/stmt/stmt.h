@@ -52,22 +52,22 @@ class Db;
   DEFINE_ENUM_ITEM(PREDICATE)    \
   DEFINE_ENUM_ITEM(SET_VARIABLE)
 
-enum class StmtType {
+enum class StmtType
+{
 #define DEFINE_ENUM_ITEM(name) name,
   DEFINE_ENUM()
 #undef DEFINE_ENUM_ITEM
 };
 
 /// Stringify the statement type enum
-inline const char *stmt_type_name(StmtType type) {
+inline const char *stmt_type_name(StmtType type)
+{
   switch (type) {
 #define DEFINE_ENUM_ITEM(name) \
-  case StmtType::name:         \
-    return #name;
+  case StmtType::name: return #name;
     DEFINE_ENUM()
 #undef DEFINE_ENUM_ITEM
-    default:
-      return "unknown";
+    default: return "unknown";
   }
 }
 
@@ -77,15 +77,16 @@ inline const char *stmt_type_name(StmtType type) {
  * @details SQL解析后的语句，再进一步解析成Stmt，使用内部的数据结构来表示。
  * 比如table_name，解析成具体的 Table对象，attr/field name解析成Field对象。
  */
-class Stmt {
- public:
-  Stmt() = default;
+class Stmt
+{
+public:
+  Stmt()          = default;
   virtual ~Stmt() = default;
 
   virtual StmtType type() const = 0;
 
- public:
+public:
   static RC create_stmt(Db *db, ParsedSqlNode &sql_node, Stmt *&stmt);
 
- private:
+private:
 };

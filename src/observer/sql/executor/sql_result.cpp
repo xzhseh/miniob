@@ -12,17 +12,18 @@ See the Mulan PSL v2 for more details. */
 // Created by WangYunlai on 2022/11/18.
 //
 
-#include "sql/executor/sql_result.h"
-#include "common/log/log.h"
 #include "common/rc.h"
+#include "sql/executor/sql_result.h"
 #include "session/session.h"
 #include "storage/trx/trx.h"
+#include "common/log/log.h"
 
 SqlResult::SqlResult(Session *session) : session_(session) {}
 
 void SqlResult::set_tuple_schema(const TupleSchema &schema) { tuple_schema_ = schema; }
 
-RC SqlResult::open() {
+RC SqlResult::open()
+{
   if (nullptr == operator_) {
     return RC::INVALID_ARGUMENT;
   }
@@ -32,7 +33,8 @@ RC SqlResult::open() {
   return operator_->open(trx);
 }
 
-RC SqlResult::close() {
+RC SqlResult::close()
+{
   if (nullptr == operator_) {
     return RC::INVALID_ARGUMENT;
   }
@@ -56,7 +58,8 @@ RC SqlResult::close() {
   return rc;
 }
 
-RC SqlResult::next_tuple(Tuple *&tuple) {
+RC SqlResult::next_tuple(Tuple *&tuple)
+{
   RC rc = operator_->next();
   if (rc != RC::SUCCESS) {
     return rc;
@@ -66,7 +69,8 @@ RC SqlResult::next_tuple(Tuple *&tuple) {
   return rc;
 }
 
-void SqlResult::set_operator(std::unique_ptr<PhysicalOperator> oper) {
+void SqlResult::set_operator(std::unique_ptr<PhysicalOperator> oper)
+{
   ASSERT(operator_ == nullptr, "current operator is not null. Result is not closed?");
   operator_ = std::move(oper);
 }

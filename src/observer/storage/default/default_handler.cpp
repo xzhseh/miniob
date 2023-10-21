@@ -16,19 +16,20 @@ See the Mulan PSL v2 for more details. */
 
 #include <string>
 
-#include "common/lang/string.h"
-#include "common/log/log.h"
 #include "common/os/path.h"
-#include "session/session.h"
-#include "storage/clog/clog.h"
-#include "storage/common/condition_filter.h"
-#include "storage/index/bplus_tree.h"
+#include "common/log/log.h"
+#include "common/lang/string.h"
 #include "storage/record/record_manager.h"
+#include "storage/index/bplus_tree.h"
 #include "storage/table/table.h"
+#include "storage/common/condition_filter.h"
+#include "storage/clog/clog.h"
+#include "session/session.h"
 
 static DefaultHandler *default_handler = nullptr;
 
-void DefaultHandler::set_default(DefaultHandler *handler) {
+void DefaultHandler::set_default(DefaultHandler *handler)
+{
   if (default_handler != nullptr && handler != nullptr) {
     LOG_ERROR("default handler is setted");
     abort();
@@ -42,7 +43,8 @@ DefaultHandler::DefaultHandler() {}
 
 DefaultHandler::~DefaultHandler() noexcept { destroy(); }
 
-RC DefaultHandler::init(const char *base_dir) {
+RC DefaultHandler::init(const char *base_dir)
+{
   // 检查目录是否存在，或者创建
   std::string tmp(base_dir);
   tmp += "/db";
@@ -52,7 +54,7 @@ RC DefaultHandler::init(const char *base_dir) {
   }
 
   base_dir_ = base_dir;
-  db_dir_ = tmp + "/";
+  db_dir_   = tmp + "/";
 
   const char *sys_db = "sys";
 
@@ -75,7 +77,8 @@ RC DefaultHandler::init(const char *base_dir) {
   return RC::SUCCESS;
 }
 
-void DefaultHandler::destroy() {
+void DefaultHandler::destroy()
+{
   sync();
 
   for (const auto &iter : opened_dbs_) {
@@ -84,7 +87,8 @@ void DefaultHandler::destroy() {
   opened_dbs_.clear();
 }
 
-RC DefaultHandler::create_db(const char *dbname) {
+RC DefaultHandler::create_db(const char *dbname)
+{
   if (nullptr == dbname || common::is_blank(dbname)) {
     LOG_WARN("Invalid db name");
     return RC::INVALID_ARGUMENT;
@@ -106,7 +110,8 @@ RC DefaultHandler::create_db(const char *dbname) {
 
 RC DefaultHandler::drop_db(const char *dbname) { return RC::INTERNAL; }
 
-RC DefaultHandler::open_db(const char *dbname) {
+RC DefaultHandler::open_db(const char *dbname)
+{
   if (nullptr == dbname || common::is_blank(dbname)) {
     LOG_WARN("Invalid db name");
     return RC::INVALID_ARGUMENT;
@@ -122,8 +127,8 @@ RC DefaultHandler::open_db(const char *dbname) {
   }
 
   // open db
-  Db *db = new Db();
-  RC ret = RC::SUCCESS;
+  Db *db  = new Db();
+  RC  ret = RC::SUCCESS;
   if ((ret = db->init(dbname, dbpath.c_str())) != RC::SUCCESS) {
     LOG_ERROR("Failed to open db: %s. error=%s", dbname, strrc(ret));
     delete db;
@@ -137,8 +142,9 @@ RC DefaultHandler::close_db(const char *dbname) { return RC::UNIMPLENMENT; }
 
 RC DefaultHandler::execute(const char *sql) { return RC::UNIMPLENMENT; }
 
-RC DefaultHandler::create_table(const char *dbname, const char *relation_name, int attribute_count,
-                                const AttrInfoSqlNode *attributes) {
+RC DefaultHandler::create_table(
+    const char *dbname, const char *relation_name, int attribute_count, const AttrInfoSqlNode *attributes)
+{
   Db *db = find_db(dbname);
   if (db == nullptr) {
     return RC::SCHEMA_DB_NOT_OPENED;
@@ -148,7 +154,8 @@ RC DefaultHandler::create_table(const char *dbname, const char *relation_name, i
 
 RC DefaultHandler::drop_table(const char *dbname, const char *relation_name) { return RC::UNIMPLENMENT; }
 
-Db *DefaultHandler::find_db(const char *dbname) const {
+Db *DefaultHandler::find_db(const char *dbname) const
+{
   std::map<std::string, Db *>::const_iterator iter = opened_dbs_.find(dbname);
   if (iter == opened_dbs_.end()) {
     return nullptr;
@@ -156,7 +163,8 @@ Db *DefaultHandler::find_db(const char *dbname) const {
   return iter->second;
 }
 
-Table *DefaultHandler::find_table(const char *dbname, const char *table_name) const {
+Table *DefaultHandler::find_table(const char *dbname, const char *table_name) const
+{
   if (dbname == nullptr || table_name == nullptr) {
     LOG_WARN("Invalid argument. dbname=%p, table_name=%p", dbname, table_name);
     return nullptr;
@@ -169,11 +177,12 @@ Table *DefaultHandler::find_table(const char *dbname, const char *table_name) co
   return db->find_table(table_name);
 }
 
-RC DefaultHandler::sync() {
+RC DefaultHandler::sync()
+{
   RC rc = RC::SUCCESS;
   for (const auto &db_pair : opened_dbs_) {
     Db *db = db_pair.second;
-    rc = db->sync();
+    rc     = db->sync();
     if (rc != RC::SUCCESS) {
       LOG_ERROR("Failed to sync db. name=%s, rc=%d:%s", db->name(), rc, strrc(rc));
       return rc;

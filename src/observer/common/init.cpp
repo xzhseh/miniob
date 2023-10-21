@@ -14,8 +14,8 @@ See the Mulan PSL v2 for more details. */
 
 #include "common/init.h"
 
-#include "common/conf/ini.h"
 #include "common/ini_setting.h"
+#include "common/conf/ini.h"
 #include "common/lang/string.h"
 #include "common/log/log.h"
 #include "common/os/path.h"
@@ -24,7 +24,6 @@ See the Mulan PSL v2 for more details. */
 #include "common/os/signal.h"
 #include "common/seda/init.h"
 #include "common/seda/stage_factory.h"
-#include "global_context.h"
 #include "session/session.h"
 #include "session/session_stage.h"
 #include "sql/executor/execute_stage.h"
@@ -36,23 +35,27 @@ See the Mulan PSL v2 for more details. */
 #include "storage/buffer/disk_buffer_pool.h"
 #include "storage/default/default_handler.h"
 #include "storage/trx/trx.h"
+#include "global_context.h"
 
 using namespace common;
 
-bool *&_get_init() {
-  static bool util_init = false;
+bool *&_get_init()
+{
+  static bool  util_init   = false;
   static bool *util_init_p = &util_init;
   return util_init_p;
 }
 
 bool get_init() { return *_get_init(); }
 
-void set_init(bool value) {
+void set_init(bool value)
+{
   *_get_init() = value;
   return;
 }
 
-void sig_handler(int sig) {
+void sig_handler(int sig)
+{
   // Signal handler will be add in the next step.
   //  Add action to shutdown
 
@@ -61,7 +64,8 @@ void sig_handler(int sig) {
   return;
 }
 
-int init_log(ProcessParam *process_cfg, Ini &properties) {
+int init_log(ProcessParam *process_cfg, Ini &properties)
+{
   const std::string &proc_name = process_cfg->get_process_name();
   try {
     // we had better alloc one lock to do so, but simplify the logic
@@ -71,14 +75,14 @@ int init_log(ProcessParam *process_cfg, Ini &properties) {
 
     auto log_context_getter = []() { return reinterpret_cast<intptr_t>(Session::current_session()); };
 
-    const std::string log_section_name = "LOG";
-    std::map<std::string, std::string> log_section = properties.get(log_section_name);
+    const std::string                  log_section_name = "LOG";
+    std::map<std::string, std::string> log_section      = properties.get(log_section_name);
 
     std::string log_file_name;
 
     // get log file name
-    std::string key = "LOG_FILE_NAME";
-    std::map<std::string, std::string>::iterator it = log_section.find(key);
+    std::string                                  key = "LOG_FILE_NAME";
+    std::map<std::string, std::string>::iterator it  = log_section.find(key);
     if (it == log_section.end()) {
       log_file_name = proc_name + ".log";
       std::cout << "Not set log file name, use default " << log_file_name << std::endl;
@@ -89,8 +93,8 @@ int init_log(ProcessParam *process_cfg, Ini &properties) {
     log_file_name = getAboslutPath(log_file_name.c_str());
 
     LOG_LEVEL log_level = LOG_LEVEL_INFO;
-    key = ("LOG_FILE_LEVEL");
-    it = log_section.find(key);
+    key                 = ("LOG_FILE_LEVEL");
+    it                  = log_section.find(key);
     if (it != log_section.end()) {
       int log = (int)log_level;
       str_to_val(it->second, log);
@@ -98,8 +102,8 @@ int init_log(ProcessParam *process_cfg, Ini &properties) {
     }
 
     LOG_LEVEL console_level = LOG_LEVEL_INFO;
-    key = ("LOG_CONSOLE_LEVEL");
-    it = log_section.find(key);
+    key                     = ("LOG_CONSOLE_LEVEL");
+    it                      = log_section.find(key);
     if (it != log_section.end()) {
       int log = (int)console_level;
       str_to_val(it->second, log);
@@ -110,7 +114,7 @@ int init_log(ProcessParam *process_cfg, Ini &properties) {
     g_log->set_context_getter(log_context_getter);
 
     key = ("DefaultLogModules");
-    it = log_section.find(key);
+    it  = log_section.find(key);
     if (it != log_section.end()) {
       g_log->set_default_module(it->second);
     }
@@ -128,7 +132,9 @@ int init_log(ProcessParam *process_cfg, Ini &properties) {
   return 0;
 }
 
-void cleanup_log() {
+void cleanup_log()
+{
+
   if (g_log) {
     delete g_log;
     g_log = nullptr;
@@ -136,12 +142,14 @@ void cleanup_log() {
   return;
 }
 
-int prepare_init_seda() {
+int prepare_init_seda()
+{
   static StageFactory session_stage_factory("SessionStage", &SessionStage::make_stage);
   return 0;
 }
 
-int init_global_objects(ProcessParam *process_param, Ini &properties) {
+int init_global_objects(ProcessParam *process_param, Ini &properties)
+{
   GCTX.buffer_pool_manager_ = new BufferPoolManager();
   BufferPoolManager::set_instance(GCTX.buffer_pool_manager_);
 
@@ -150,7 +158,7 @@ int init_global_objects(ProcessParam *process_param, Ini &properties) {
   DefaultHandler::set_default(GCTX.handler_);
 
   int ret = 0;
-  RC rc = TrxKit::init_global(process_param->trx_kit_name().c_str());
+  RC  rc  = TrxKit::init_global(process_param->trx_kit_name().c_str());
   if (rc != RC::SUCCESS) {
     LOG_ERROR("failed to init trx kit. rc=%s", strrc(rc));
     ret = -1;
@@ -165,7 +173,8 @@ int init_global_objects(ProcessParam *process_param, Ini &properties) {
   return ret;
 }
 
-int uninit_global_objects() {
+int uninit_global_objects()
+{
   // TODO use global context
   DefaultHandler *default_handler = &DefaultHandler::get_default();
   if (default_handler != nullptr) {
@@ -181,8 +190,10 @@ int uninit_global_objects() {
   return 0;
 }
 
-int init(ProcessParam *process_param) {
+int init(ProcessParam *process_param)
+{
   if (get_init()) {
+
     return 0;
   }
 
@@ -249,7 +260,8 @@ int init(ProcessParam *process_param) {
   return STATUS_SUCCESS;
 }
 
-void cleanup_util() {
+void cleanup_util()
+{
   uninit_global_objects();
 
   if (nullptr != get_properties()) {

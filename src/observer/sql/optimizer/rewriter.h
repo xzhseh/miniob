@@ -31,8 +31,9 @@ class LogicalOperator;
  * @details 当前仅实现了一两个非常简单的规则。
  * 重写包括对逻辑计划和计划中包含的表达式。
  */
-class Rewriter {
- public:
+class Rewriter
+{
+public:
   Rewriter();
   virtual ~Rewriter() = default;
 
@@ -45,6 +46,6 @@ class Rewriter {
    */
   RC rewrite(std::unique_ptr<LogicalOperator> &oper, bool &change_made);
 
- private:
+private:
   std::vector<std::unique_ptr<RewriteRule>> rewrite_rules_;
 };

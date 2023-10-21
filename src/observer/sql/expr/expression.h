@@ -18,9 +18,9 @@ See the Mulan PSL v2 for more details. */
 #include <memory>
 #include <string>
 
-#include "common/log/log.h"
-#include "sql/parser/value.h"
 #include "storage/field/field.h"
+#include "sql/parser/value.h"
+#include "common/log/log.h"
 
 class Tuple;
 
@@ -33,7 +33,8 @@ class Tuple;
  * @brief 表达式类型
  * @ingroup Expression
  */
-enum class ExprType {
+enum class ExprType
+{
   NONE,
   STAR,         ///< 星号，表示所有字段
   FIELD,        ///< 字段。在实际执行时，根据行数据内容提取对应字段的值
@@ -55,9 +56,10 @@ enum class ExprType {
  * 才能计算出来真实的值。但是有些表达式可能就表示某一个固定的
  * 值，比如ValueExpr。
  */
-class Expression {
- public:
-  Expression() = default;
+class Expression
+{
+public:
+  Expression()          = default;
   virtual ~Expression() = default;
 
   /**
@@ -87,9 +89,9 @@ class Expression {
    * @brief 表达式的名字，比如是字段名称，或者用户在执行SQL语句时输入的内容
    */
   virtual std::string name() const { return name_; }
-  virtual void set_name(std::string name) { name_ = name; }
+  virtual void        set_name(std::string name) { name_ = name; }
 
- private:
+private:
   std::string name_;
 };
 
@@ -97,8 +99,9 @@ class Expression {
  * @brief 字段表达式
  * @ingroup Expression
  */
-class FieldExpr : public Expression {
- public:
+class FieldExpr : public Expression
+{
+public:
   FieldExpr() = default;
   FieldExpr(const Table *table, const FieldMeta *field) : field_(table, field) {}
   FieldExpr(const Field &field) : field_(field) {}
@@ -118,7 +121,7 @@ class FieldExpr : public Expression {
 
   RC get_value(const Tuple &tuple, Value &value) const override;
 
- private:
+private:
   Field field_;
 };
 
@@ -126,15 +129,17 @@ class FieldExpr : public Expression {
  * @brief 常量值表达式
  * @ingroup Expression
  */
-class ValueExpr : public Expression {
- public:
+class ValueExpr : public Expression
+{
+public:
   ValueExpr() = default;
   explicit ValueExpr(const Value &value) : value_(value) {}
 
   virtual ~ValueExpr() = default;
 
   RC get_value(const Tuple &tuple, Value &value) const override;
-  RC try_get_value(Value &value) const override {
+  RC try_get_value(Value &value) const override
+  {
     value = value_;
     return RC::SUCCESS;
   }
@@ -147,7 +152,7 @@ class ValueExpr : public Expression {
 
   const Value &get_value() const { return value_; }
 
- private:
+private:
   Value value_;
 };
 
@@ -155,13 +160,14 @@ class ValueExpr : public Expression {
  * @brief 类型转换表达式
  * @ingroup Expression
  */
-class CastExpr : public Expression {
- public:
+class CastExpr : public Expression
+{
+public:
   CastExpr(std::unique_ptr<Expression> child, AttrType cast_type);
   virtual ~CastExpr();
 
   ExprType type() const override { return ExprType::CAST; }
-  RC get_value(const Tuple &tuple, Value &value) const override;
+  RC       get_value(const Tuple &tuple, Value &value) const override;
 
   RC try_get_value(Value &value) const override;
 
@@ -169,20 +175,21 @@ class CastExpr : public Expression {
 
   std::unique_ptr<Expression> &child() { return child_; }
 
- private:
+private:
   RC cast(const Value &value, Value &cast_value) const;
 
- private:
-  std::unique_ptr<Expression> child_;  ///< 从这个表达式转换
-  AttrType cast_type_;                 ///< 想要转换成这个类型
+private:
+  std::unique_ptr<Expression> child_;      ///< 从这个表达式转换
+  AttrType                    cast_type_;  ///< 想要转换成这个类型
 };
 
 /**
  * @brief 比较表达式
  * @ingroup Expression
  */
-class ComparisonExpr : public Expression {
- public:
+class ComparisonExpr : public Expression
+{
+public:
   ComparisonExpr(CompOp comp, std::unique_ptr<Expression> left, std::unique_ptr<Expression> right);
   virtual ~ComparisonExpr();
 
@@ -209,8 +216,8 @@ class ComparisonExpr : public Expression {
    */
   RC compare_value(const Value &left, const Value &right, bool &value) const;
 
- private:
-  CompOp comp_;
+private:
+  CompOp                      comp_;
   std::unique_ptr<Expression> left_;
   std::unique_ptr<Expression> right_;
 };
@@ -221,14 +228,16 @@ class ComparisonExpr : public Expression {
  * 多个表达式使用同一种关系(AND或OR)来联结
  * 当前miniob仅有AND操作
  */
-class ConjunctionExpr : public Expression {
- public:
-  enum class Type {
+class ConjunctionExpr : public Expression
+{
+public:
+  enum class Type
+  {
     AND,
     OR,
   };
 
- public:
+public:
   ConjunctionExpr(Type type, std::vector<std::unique_ptr<Expression>> &children);
   virtual ~ConjunctionExpr() = default;
 
@@ -242,8 +251,8 @@ class ConjunctionExpr : public Expression {
 
   std::vector<std::unique_ptr<Expression>> &children() { return children_; }
 
- private:
-  Type conjunction_type_;
+private:
+  Type                                     conjunction_type_;
   std::vector<std::unique_ptr<Expression>> children_;
 };
 
@@ -251,9 +260,11 @@ class ConjunctionExpr : public Expression {
  * @brief 算术表达式
  * @ingroup Expression
  */
-class ArithmeticExpr : public Expression {
- public:
-  enum class Type {
+class ArithmeticExpr : public Expression
+{
+public:
+  enum class Type
+  {
     ADD,
     SUB,
     MUL,
@@ -261,7 +272,7 @@ class ArithmeticExpr : public Expression {
     NEGATIVE,
   };
 
- public:
+public:
   ArithmeticExpr(Type type, Expression *left, Expression *right);
   ArithmeticExpr(Type type, std::unique_ptr<Expression> left, std::unique_ptr<Expression> right);
   virtual ~ArithmeticExpr() = default;
@@ -278,11 +289,11 @@ class ArithmeticExpr : public Expression {
   std::unique_ptr<Expression> &left() { return left_; }
   std::unique_ptr<Expression> &right() { return right_; }
 
- private:
+private:
   RC calc_value(const Value &left_value, const Value &right_value, Value &value) const;
 
- private:
-  Type arithmetic_type_;
+private:
+  Type                        arithmetic_type_;
   std::unique_ptr<Expression> left_;
   std::unique_ptr<Expression> right_;
 };

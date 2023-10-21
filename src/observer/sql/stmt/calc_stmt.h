@@ -14,12 +14,12 @@ See the Mulan PSL v2 for more details. */
 
 #pragma once
 
-#include <memory>
 #include <vector>
+#include <memory>
 
 #include "common/rc.h"
-#include "sql/expr/expression.h"
 #include "sql/stmt/stmt.h"
+#include "sql/expr/expression.h"
 
 class Db;
 class Table;
@@ -28,15 +28,17 @@ class Table;
  * @brief 描述算术运算语句
  * @ingroup Statement
  */
-class CalcStmt : public Stmt {
- public:
-  CalcStmt() = default;
+class CalcStmt : public Stmt
+{
+public:
+  CalcStmt()                   = default;
   virtual ~CalcStmt() override = default;
 
   StmtType type() const override { return StmtType::CALC; }
 
- public:
-  static RC create(CalcSqlNode &calc_sql, Stmt *&stmt) {
+public:
+  static RC create(CalcSqlNode &calc_sql, Stmt *&stmt)
+  {
     CalcStmt *calc_stmt = new CalcStmt();
     for (Expression *const expr : calc_sql.expressions) {
       calc_stmt->expressions_.emplace_back(expr);
@@ -46,9 +48,9 @@ class CalcStmt : public Stmt {
     return RC::SUCCESS;
   }
 
- public:
+public:
   std::vector<std::unique_ptr<Expression>> &expressions() { return expressions_; }
 
- private:
+private:
   std::vector<std::unique_ptr<Expression>> expressions_;
 };

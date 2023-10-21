@@ -13,22 +13,24 @@ See the Mulan PSL v2 for more details. */
 //
 
 #include "net/plain_communicator.h"
+#include "net/buffered_writer.h"
+#include "sql/expr/tuple.h"
+#include "event/session_event.h"
+#include "session/session.h"
 #include "common/io/io.h"
 #include "common/log/log.h"
-#include "event/session_event.h"
-#include "net/buffered_writer.h"
-#include "session/session.h"
-#include "sql/expr/tuple.h"
 #include "sql/parser/value.h"
 
-PlainCommunicator::PlainCommunicator() {
+PlainCommunicator::PlainCommunicator()
+{
   send_message_delimiter_.assign(1, '\0');
   debug_message_prefix_.resize(2);
   debug_message_prefix_[0] = '#';
   debug_message_prefix_[1] = ' ';
 }
 
-RC PlainCommunicator::read_event(SessionEvent *&event) {
+RC PlainCommunicator::read_event(SessionEvent *&event)
+{
   RC rc = RC::SUCCESS;
 
   event = nullptr;
@@ -36,7 +38,7 @@ RC PlainCommunicator::read_event(SessionEvent *&event) {
   int data_len = 0;
   int read_len = 0;
 
-  const int max_packet_size = 8192;
+  const int         max_packet_size = 8192;
   std::vector<char> buf(max_packet_size);
 
   // 持续接收消息，直到遇到'\0'。将'\0'遇到的后续数据直接丢弃没有处理，因为目前仅支持一收一发的模式
@@ -91,10 +93,11 @@ RC PlainCommunicator::read_event(SessionEvent *&event) {
   return rc;
 }
 
-RC PlainCommunicator::write_state(SessionEvent *event, bool &need_disconnect) {
-  SqlResult *sql_result = event->sql_result();
-  const int buf_size = 2048;
-  char *buf = new char[buf_size];
+RC PlainCommunicator::write_state(SessionEvent *event, bool &need_disconnect)
+{
+  SqlResult         *sql_result   = event->sql_result();
+  const int          buf_size     = 2048;
+  char              *buf          = new char[buf_size];
   const std::string &state_string = sql_result->state_string();
   if (state_string.empty()) {
     const char *result = (RC::SUCCESS == sql_result->return_code()) ? "SUCCESS" : "FAILURE";
@@ -117,12 +120,13 @@ RC PlainCommunicator::write_state(SessionEvent *event, bool &need_disconnect) {
   return RC::SUCCESS;
 }
 
-RC PlainCommunicator::write_debug(SessionEvent *request, bool &need_disconnect) {
+RC PlainCommunicator::write_debug(SessionEvent *request, bool &need_disconnect)
+{
   if (!session_->sql_debug_on()) {
     return RC::SUCCESS;
   }
 
-  SqlDebug &sql_debug = request->sql_debug();
+  SqlDebug                     &sql_debug   = request->sql_debug();
   const std::list<std::string> &debug_infos = sql_debug.get_debug_infos();
   for (auto &debug_info : debug_infos) {
     RC rc = writer_->writen(debug_message_prefix_.data(), debug_message_prefix_.size());
@@ -140,7 +144,7 @@ RC PlainCommunicator::write_debug(SessionEvent *request, bool &need_disconnect) 
     }
 
     char newline = '\n';
-    rc = writer_->writen(&newline, 1);
+    rc           = writer_->writen(&newline, 1);
     if (OB_FAIL(rc)) {
       LOG_WARN("failed to send new line to client. err=%s", strerror(errno));
       need_disconnect = true;
@@ -152,7 +156,8 @@ RC PlainCommunicator::write_debug(SessionEvent *request, bool &need_disconnect) 
   return RC::SUCCESS;
 }
 
-RC PlainCommunicator::write_result(SessionEvent *event, bool &need_disconnect) {
+RC PlainCommunicator::write_result(SessionEvent *event, bool &need_disconnect)
+{
   RC rc = write_result_internal(event, need_disconnect);
   if (!need_disconnect) {
     (void)write_debug(event, need_disconnect);
@@ -166,8 +171,9 @@ RC PlainCommunicator::write_result(SessionEvent *event, bool &need_disconnect) {
   return rc;
 }
 
-RC PlainCommunicator::write_result_internal(SessionEvent *event, bool &need_disconnect) {
-  RC rc = RC::SUCCESS;
+RC PlainCommunicator::write_result_internal(SessionEvent *event, bool &need_disconnect)
+{
+  RC rc           = RC::SUCCESS;
   need_disconnect = true;
 
   SqlResult *sql_result = event->sql_result();
@@ -183,16 +189,16 @@ RC PlainCommunicator::write_result_internal(SessionEvent *event, bool &need_disc
     return write_state(event, need_disconnect);
   }
 
-  const TupleSchema &schema = sql_result->tuple_schema();
-  const int cell_num = schema.cell_num();
+  const TupleSchema &schema   = sql_result->tuple_schema();
+  const int          cell_num = schema.cell_num();
 
   for (int i = 0; i < cell_num; i++) {
-    const TupleCellSpec &spec = schema.cell_at(i);
-    const char *alias = spec.alias();
+    const TupleCellSpec &spec  = schema.cell_at(i);
+    const char          *alias = spec.alias();
     if (nullptr != alias || alias[0] != 0) {
       if (0 != i) {
         const char *delim = " | ";
-        rc = writer_->writen(delim, strlen(delim));
+        rc                = writer_->writen(delim, strlen(delim));
         if (OB_FAIL(rc)) {
           LOG_WARN("failed to send data to client. err=%s", strerror(errno));
           return rc;
@@ -200,7 +206,7 @@ RC PlainCommunicator::write_result_internal(SessionEvent *event, bool &need_disc
       }
 
       int len = strlen(alias);
-      rc = writer_->writen(alias, len);
+      rc      = writer_->writen(alias, len);
       if (OB_FAIL(rc)) {
         LOG_WARN("failed to send data to client. err=%s", strerror(errno));
         sql_result->close();
@@ -211,7 +217,7 @@ RC PlainCommunicator::write_result_internal(SessionEvent *event, bool &need_disc
 
   if (cell_num > 0) {
     char newline = '\n';
-    rc = writer_->writen(&newline, 1);
+    rc           = writer_->writen(&newline, 1);
     if (OB_FAIL(rc)) {
       LOG_WARN("failed to send data to client. err=%s", strerror(errno));
       sql_result->close();
@@ -219,7 +225,7 @@ RC PlainCommunicator::write_result_internal(SessionEvent *event, bool &need_disc
     }
   }
 
-  rc = RC::SUCCESS;
+  rc           = RC::SUCCESS;
   Tuple *tuple = nullptr;
   while (RC::SUCCESS == (rc = sql_result->next_tuple(tuple))) {
     assert(tuple != nullptr);
@@ -228,7 +234,7 @@ RC PlainCommunicator::write_result_internal(SessionEvent *event, bool &need_disc
     for (int i = 0; i < cell_num; i++) {
       if (i != 0) {
         const char *delim = " | ";
-        rc = writer_->writen(delim, strlen(delim));
+        rc                = writer_->writen(delim, strlen(delim));
         if (OB_FAIL(rc)) {
           LOG_WARN("failed to send data to client. err=%s", strerror(errno));
           sql_result->close();
@@ -270,8 +276,7 @@ RC PlainCommunicator::write_result_internal(SessionEvent *event, bool &need_disc
             cell_str = "NULL";
           }
         } break;
-        default:
-          assert(false);
+        default: assert(false);
       }
 
       rc = writer_->writen(cell_str.data(), cell_str.size());
@@ -283,7 +288,7 @@ RC PlainCommunicator::write_result_internal(SessionEvent *event, bool &need_disc
     }
 
     char newline = '\n';
-    rc = writer_->writen(&newline, 1);
+    rc           = writer_->writen(&newline, 1);
     if (OB_FAIL(rc)) {
       LOG_WARN("failed to send data to client. err=%s", strerror(errno));
       sql_result->close();
@@ -313,6 +318,7 @@ RC PlainCommunicator::write_result_internal(SessionEvent *event, bool &need_disc
     sql_result->set_return_code(rc);
     return write_state(event, need_disconnect);
   } else {
+
     rc = writer_->writen(send_message_delimiter_.data(), send_message_delimiter_.size());
     if (OB_FAIL(rc)) {
       LOG_ERROR("Failed to send data back to client. ret=%s, error=%s", strrc(rc), strerror(errno));

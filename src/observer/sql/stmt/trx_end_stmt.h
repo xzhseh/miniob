@@ -23,19 +23,21 @@ See the Mulan PSL v2 for more details. */
  * @brief 事务的 Commit/Rollback 语句，现在什么成员都没有
  * @ingroup Statement
  */
-class TrxEndStmt : public Stmt {
- public:
+class TrxEndStmt : public Stmt
+{
+public:
   TrxEndStmt(StmtType type) : type_(type) {}
   virtual ~TrxEndStmt() = default;
 
   StmtType type() const override { return type_; }
 
-  static RC create(SqlCommandFlag flag, Stmt *&stmt) {
+  static RC create(SqlCommandFlag flag, Stmt *&stmt)
+  {
     StmtType type = flag == SqlCommandFlag::SCF_COMMIT ? StmtType::COMMIT : StmtType::ROLLBACK;
-    stmt = new TrxEndStmt(type);
+    stmt          = new TrxEndStmt(type);
     return RC::SUCCESS;
   }
 
- private:
+private:
   StmtType type_;
 };

@@ -12,25 +12,28 @@ See the Mulan PSL v2 for more details. */
 // Created by WangYunlai on 2022/12/27.
 //
 
-#include "sql/operator/explain_physical_operator.h"
 #include <sstream>
+#include "sql/operator/explain_physical_operator.h"
 #include "common/log/log.h"
 
 using namespace std;
 
-RC ExplainPhysicalOperator::open(Trx *) {
+RC ExplainPhysicalOperator::open(Trx *)
+{
   ASSERT(children_.size() == 1, "explain must has 1 child");
   return RC::SUCCESS;
 }
 
-RC ExplainPhysicalOperator::close() {
+RC ExplainPhysicalOperator::close()
+{
   for (std::unique_ptr<PhysicalOperator> &child_oper : children_) {
     child_oper->close();
   }
   return RC::SUCCESS;
 }
 
-RC ExplainPhysicalOperator::next() {
+RC ExplainPhysicalOperator::next()
+{
   if (!physical_plan_.empty()) {
     return RC::RECORD_EOF;
   }
@@ -38,7 +41,7 @@ RC ExplainPhysicalOperator::next() {
   stringstream ss;
   ss << "OPERATOR(NAME)\n";
 
-  int level = 0;
+  int               level = 0;
   std::vector<bool> ends;
   ends.push_back(true);
   const auto children_size = static_cast<int>(children_.size());
@@ -52,7 +55,7 @@ RC ExplainPhysicalOperator::next() {
   physical_plan_ = ss.str();
 
   vector<Value> cells;
-  Value cell;
+  Value         cell;
   cell.set_string(physical_plan_.c_str());
   cells.emplace_back(cell);
   tuple_.set_cells(cells);
@@ -69,8 +72,9 @@ Tuple *ExplainPhysicalOperator::current_tuple() { return &tuple_; }
  * @param last_child 当前算子是否是当前兄弟节点中最后一个节点
  * @param ends 表示当前某个层级上的算子，是否已经没有其它的节点，以判断使用什么打印符号
  */
-void ExplainPhysicalOperator::to_string(std::ostream &os, PhysicalOperator *oper, int level, bool last_child,
-                                        std::vector<bool> &ends) {
+void ExplainPhysicalOperator::to_string(
+    std::ostream &os, PhysicalOperator *oper, int level, bool last_child, std::vector<bool> &ends)
+{
   for (int i = 0; i < level - 1; i++) {
     if (ends[i]) {
       os << "  ";
@@ -100,7 +104,7 @@ void ExplainPhysicalOperator::to_string(std::ostream &os, PhysicalOperator *oper
   ends[level + 1] = false;
 
   vector<std::unique_ptr<PhysicalOperator>> &children = oper->children();
-  const auto size = static_cast<int>(children.size());
+  const auto                                 size     = static_cast<int>(children.size());
   for (auto i = 0; i < size - 1; i++) {
     to_string(os, children[i].get(), level + 1, false /*last_child*/, ends);
   }

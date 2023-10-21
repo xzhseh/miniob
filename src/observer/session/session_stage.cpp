@@ -18,14 +18,14 @@ See the Mulan PSL v2 for more details. */
 #include <string>
 
 #include "common/conf/ini.h"
+#include "common/log/log.h"
 #include "common/lang/mutex.h"
 #include "common/lang/string.h"
-#include "common/log/log.h"
 #include "common/seda/callback.h"
 #include "event/session_event.h"
 #include "event/sql_event.h"
-#include "net/communicator.h"
 #include "net/server.h"
+#include "net/communicator.h"
 #include "session/session.h"
 
 using namespace common;
@@ -37,7 +37,8 @@ SessionStage::SessionStage(const char *tag) : Stage(tag) {}
 SessionStage::~SessionStage() {}
 
 // Parse properties, instantiate a stage object
-Stage *SessionStage::make_stage(const std::string &tag) {
+Stage *SessionStage::make_stage(const std::string &tag)
+{
   SessionStage *stage = new (std::nothrow) SessionStage(tag.c_str());
   if (stage == nullptr) {
     LOG_ERROR("new ExecutorStage failed");
@@ -48,7 +49,8 @@ Stage *SessionStage::make_stage(const std::string &tag) {
 }
 
 // Set properties for this object set in stage specific properties
-bool SessionStage::set_properties() {
+bool SessionStage::set_properties()
+{
   //  std::string stageNameStr(stage_name_);
   //  std::map<std::string, std::string> section = g_properties()->get(
   //    stageNameStr);
@@ -65,7 +67,8 @@ bool SessionStage::initialize() { return true; }
 // Cleanup after disconnection
 void SessionStage::cleanup() {}
 
-void SessionStage::handle_event(StageEvent *event) {
+void SessionStage::handle_event(StageEvent *event)
+{
   // right now, we just support only one event.
   handle_request(event);
 
@@ -73,7 +76,8 @@ void SessionStage::handle_event(StageEvent *event) {
   return;
 }
 
-void SessionStage::handle_request(StageEvent *event) {
+void SessionStage::handle_request(StageEvent *event)
+{
   SessionEvent *sev = dynamic_cast<SessionEvent *>(event);
   if (nullptr == sev) {
     LOG_ERROR("Cannot cat event to sessionEvent");
@@ -96,9 +100,9 @@ void SessionStage::handle_request(StageEvent *event) {
     sev->sql_result()->set_return_code(res);
   }
 
-  Communicator *communicator = sev->get_communicator();
-  bool need_disconnect = false;
-  RC rc = communicator->write_result(sev, need_disconnect);
+  Communicator *communicator    = sev->get_communicator();
+  bool          need_disconnect = false;
+  RC            rc              = communicator->write_result(sev, need_disconnect);
   LOG_INFO("write result return %s", strrc(rc));
   if (need_disconnect) {
     Server::close_connection(communicator);
@@ -117,7 +121,8 @@ void SessionStage::handle_request(StageEvent *event) {
  * execute_stage中的执行，通过explain语句看需要哪些operator，然后找对应的operator来
  * 调试或者看代码执行过程即可。
  */
-RC SessionStage::handle_sql(SQLStageEvent *sql_event) {
+RC SessionStage::handle_sql(SQLStageEvent *sql_event)
+{
   RC rc = query_cache_stage_.handle_request(sql_event);
   if (OB_FAIL(rc)) {
     LOG_TRACE("failed to do query cache. rc=%s", strrc(rc));

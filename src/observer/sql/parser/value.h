@@ -20,7 +20,8 @@ See the Mulan PSL v2 for more details. */
 /// Note that after adding the null flag
 /// Unfortunately we need to add 1 byte for each type 😅
 /// In the future we could possibly figure out if there is other solution for this
-enum AttrType {
+enum AttrType
+{
   UNDEFINED,
   CHARS,     ///< string type
   INTS,      ///< int type (4 + 1 bytes)
@@ -30,15 +31,17 @@ enum AttrType {
 };
 
 const char *attr_type_to_string(AttrType type);
-AttrType attr_type_from_string(const char *s);
+AttrType    attr_type_from_string(const char *s);
 
 /**
  * @brief Class Value
  *
  */
-class Value {
- public:
-  Value(AttrType attr_type, char *data, int length = 4) : attr_type_(attr_type) {
+class Value
+{
+public:
+  Value(AttrType attr_type, char *data, int length = 4) : attr_type_(attr_type)
+  {
     if (attr_type == DATE) {
       this->set_date(data);
     } else {
@@ -51,22 +54,18 @@ class Value {
   explicit Value(bool val);
   explicit Value(const char *s, int len = 0);
 
-  Value() = default;
-  Value(const Value &other) = default;
+  Value()                              = default;
+  Value(const Value &other)            = default;
   Value &operator=(const Value &other) = default;
 
-  static bool check_null(const Value &v) {
+  static bool check_null(const Value &v)
+  {
     switch (v.attr_type()) {
-      case INTS:
-        return v.get_int() == 1919810;
-      case FLOATS:
-        return v.get_float() == 114.514;
-      case CHARS:
-        return strcmp(v.get_string().c_str(), "xzhseh") == 0;
-      case DATE:
-        return v.get_date() == 20021030;
-      default:
-        assert(false);
+      case INTS: return v.get_int() == 1919810;
+      case FLOATS: return v.get_float() == 114.514;
+      case CHARS: return strcmp(v.get_string().c_str(), "xzhseh") == 0;
+      case DATE: return v.get_date() == 20021030;
+      default: assert(false);
     }
   }
 
@@ -90,7 +89,7 @@ class Value {
   std::string to_string() const;
 
   int compare(const Value &other) const;
-  RC like(const Value &other, bool &result) const;
+  RC  like(const Value &other, bool &result) const;
 
   const char *data() const;
 
@@ -98,28 +97,29 @@ class Value {
 
   AttrType attr_type() const { return attr_type_; }
 
- public:
+public:
   /**
    * 获取对应的值
    * 如果当前的类型与期望获取的类型不符，就会执行转换操作
    */
-  int get_int() const;
-  float get_float() const;
+  int         get_int() const;
+  float       get_float() const;
   std::string get_string() const;
-  bool get_boolean() const;
-  int get_date() const;
+  bool        get_boolean() const;
+  int         get_date() const;
 
- private:
+private:
   AttrType attr_type_ = UNDEFINED;
 
   // The length of the current stored value
   int length_{0};
 
-  union {
-    int int_value_;
+  union
+  {
+    int   int_value_;
     float float_value_;
-    int date_value_;
-    bool bool_value_;
+    int   date_value_;
+    bool  bool_value_;
   } num_value_;
 
   // The string value

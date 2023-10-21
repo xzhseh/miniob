@@ -22,9 +22,10 @@ class SQLStageEvent;
  * @brief 创建表的执行器
  * @ingroup Executor
  */
-class CreateTableExecutor {
- public:
-  CreateTableExecutor() = default;
+class CreateTableExecutor
+{
+public:
+  CreateTableExecutor()          = default;
   virtual ~CreateTableExecutor() = default;
 
   RC execute(SQLStageEvent *sql_event);

@@ -13,26 +13,26 @@ See the Mulan PSL v2 for more details. */
 //
 #pragma once
 
+#include <sys/types.h>
+#include <sys/stat.h>
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/stat.h>
-#include <sys/types.h>
 #include <time.h>
-#include <functional>
-#include <mutex>
 #include <string>
+#include <mutex>
 #include <unordered_map>
+#include <functional>
 
-#include "common/lang/bitmap.h"
-#include "common/lang/lru_cache.h"
-#include "common/lang/mutex.h"
-#include "common/mm/mem_pool.h"
 #include "common/rc.h"
 #include "common/types.h"
-#include "storage/buffer/frame.h"
+#include "common/lang/mutex.h"
+#include "common/mm/mem_pool.h"
+#include "common/lang/lru_cache.h"
+#include "common/lang/bitmap.h"
 #include "storage/buffer/page.h"
+#include "storage/buffer/frame.h"
 
 class BufferPoolManager;
 class DiskBufferPool;
@@ -55,10 +55,11 @@ class DiskBufferPool;
  *         效率非常低，你有办法优化吗？
  * @endcode
  */
-struct BPFileHeader {
+struct BPFileHeader
+{
   int32_t page_count;       //! 当前文件一共有多少个页面
   int32_t allocated_pages;  //! 已经分配了多少个页面
-  char bitmap[0];           //! 页面分配位图, 第0个页面(就是当前页面)，总是1
+  char    bitmap[0];        //! 页面分配位图, 第0个页面(就是当前页面)，总是1
 
   /**
    * 能够分配的最大的页面个数，即bitmap的字节数 乘以8
@@ -79,8 +80,9 @@ struct BPFileHeader {
  * 这个管理器负责为所有的BufferPool提供页帧管理服务，也就是所有的BufferPool磁盘文件
  * 在访问时都使用这个管理器映射到内存。
  */
-class BPFrameManager {
- public:
+class BPFrameManager
+{
+public:
   BPFrameManager(const char *tag);
 
   RC init(int pool_num);
@@ -134,21 +136,22 @@ class BPFrameManager {
    */
   size_t total_frame_num() const { return allocator_.get_size(); }
 
- private:
+private:
   Frame *get_internal(const FrameId &frame_id);
-  RC free_internal(const FrameId &frame_id, Frame *frame);
+  RC     free_internal(const FrameId &frame_id, Frame *frame);
 
- private:
-  class BPFrameIdHasher {
-   public:
+private:
+  class BPFrameIdHasher
+  {
+  public:
     size_t operator()(const FrameId &frame_id) const { return frame_id.hash(); }
   };
 
-  using FrameLruCache = common::LruCache<FrameId, Frame *, BPFrameIdHasher>;
+  using FrameLruCache  = common::LruCache<FrameId, Frame *, BPFrameIdHasher>;
   using FrameAllocator = common::MemPoolSimple<Frame>;
 
-  std::mutex lock_;
-  FrameLruCache frames_;
+  std::mutex     lock_;
+  FrameLruCache  frames_;
   FrameAllocator allocator_;
 };
 
@@ -156,27 +159,29 @@ class BPFrameManager {
  * @brief 用于遍历BufferPool中的所有页面
  * @ingroup BufferPool
  */
-class BufferPoolIterator {
- public:
+class BufferPoolIterator
+{
+public:
   BufferPoolIterator();
   ~BufferPoolIterator();
 
-  RC init(DiskBufferPool &bp, PageNum start_page = 0);
-  bool has_next();
+  RC      init(DiskBufferPool &bp, PageNum start_page = 0);
+  bool    has_next();
   PageNum next();
-  RC reset();
+  RC      reset();
 
- private:
+private:
   common::Bitmap bitmap_;
-  PageNum current_page_num_ = -1;
+  PageNum        current_page_num_ = -1;
 };
 
 /**
  * @brief BufferPool的实现
  * @ingroup BufferPool
  */
-class DiskBufferPool {
- public:
+class DiskBufferPool
+{
+public:
   DiskBufferPool(BufferPoolManager &bp_manager, BPFrameManager &frame_manager);
   ~DiskBufferPool();
 
@@ -253,7 +258,7 @@ class DiskBufferPool {
    */
   RC recover_page(PageNum page_num);
 
- protected:
+protected:
   RC allocate_frame(PageNum page_num, Frame **buf);
 
   /**
@@ -272,19 +277,19 @@ class DiskBufferPool {
    */
   RC flush_page_internal(Frame &frame);
 
- private:
+private:
   BufferPoolManager &bp_manager_;
-  BPFrameManager &frame_manager_;
+  BPFrameManager    &frame_manager_;
 
-  std::string file_name_;
-  int file_desc_ = -1;
-  Frame *hdr_frame_ = nullptr;
-  BPFileHeader *file_header_ = nullptr;
+  std::string       file_name_;
+  int               file_desc_   = -1;
+  Frame            *hdr_frame_   = nullptr;
+  BPFileHeader     *file_header_ = nullptr;
   std::set<PageNum> disposed_pages_;
 
   common::Mutex lock_;
 
- private:
+private:
   friend class BufferPoolIterator;
 };
 
@@ -292,8 +297,9 @@ class DiskBufferPool {
  * @brief BufferPool的管理类
  * @ingroup BufferPool
  */
-class BufferPoolManager {
- public:
+class BufferPoolManager
+{
+public:
   BufferPoolManager(int memory_size = 0);
   ~BufferPoolManager();
 
@@ -303,14 +309,14 @@ class BufferPoolManager {
 
   RC flush_page(Frame &frame);
 
- public:
-  static void set_instance(BufferPoolManager *bpm);  // TODO 优化全局变量的表示方法
+public:
+  static void               set_instance(BufferPoolManager *bpm);  // TODO 优化全局变量的表示方法
   static BufferPoolManager &instance();
 
- private:
+private:
   BPFrameManager frame_manager_{"BufPool"};
 
-  common::Mutex lock_;
+  common::Mutex                                     lock_;
   std::unordered_map<std::string, DiskBufferPool *> buffer_pools_;
-  std::unordered_map<int, DiskBufferPool *> fd_buffer_pools_;
+  std::unordered_map<int, DiskBufferPool *>         fd_buffer_pools_;
 };

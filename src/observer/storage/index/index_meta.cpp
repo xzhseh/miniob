@@ -13,33 +13,36 @@ See the Mulan PSL v2 for more details. */
 //
 
 #include "storage/index/index_meta.h"
+#include "storage/field/field_meta.h"
+#include "storage/table/table_meta.h"
 #include "common/lang/string.h"
 #include "common/log/log.h"
 #include "json/json.h"
-#include "storage/field/field_meta.h"
-#include "storage/table/table_meta.h"
 
 const static Json::StaticString FIELD_NAME("name");
 const static Json::StaticString FIELD_FIELD_NAME("field_name");
 
-RC IndexMeta::init(const char *name, const FieldMeta &field) {
+RC IndexMeta::init(const char *name, const FieldMeta &field)
+{
   if (common::is_blank(name)) {
     LOG_ERROR("Failed to init index, name is empty.");
     return RC::INVALID_ARGUMENT;
   }
 
-  name_ = name;
+  name_  = name;
   field_ = field.name();
   return RC::SUCCESS;
 }
 
-void IndexMeta::to_json(Json::Value &json_value) const {
-  json_value[FIELD_NAME] = name_;
+void IndexMeta::to_json(Json::Value &json_value) const
+{
+  json_value[FIELD_NAME]       = name_;
   json_value[FIELD_FIELD_NAME] = field_;
 }
 
-RC IndexMeta::from_json(const TableMeta &table, const Json::Value &json_value, IndexMeta &index) {
-  const Json::Value &name_value = json_value[FIELD_NAME];
+RC IndexMeta::from_json(const TableMeta &table, const Json::Value &json_value, IndexMeta &index)
+{
+  const Json::Value &name_value  = json_value[FIELD_NAME];
   const Json::Value &field_value = json_value[FIELD_FIELD_NAME];
   if (!name_value.isString()) {
     LOG_ERROR("Index name is not a string. json value=%s", name_value.toStyledString().c_str());

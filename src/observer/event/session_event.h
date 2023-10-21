@@ -18,8 +18,8 @@ See the Mulan PSL v2 for more details. */
 #include <string>
 
 #include "common/seda/stage_event.h"
-#include "event/sql_debug.h"
 #include "sql/executor/sql_result.h"
+#include "event/sql_debug.h"
 
 class Session;
 class Communicator;
@@ -28,13 +28,14 @@ class Communicator;
  * @brief 表示一个SQL请求
  *
  */
-class SessionEvent : public common::StageEvent {
- public:
+class SessionEvent : public common::StageEvent
+{
+public:
   SessionEvent(Communicator *client);
   virtual ~SessionEvent();
 
   Communicator *get_communicator() const;
-  Session *session() const;
+  Session      *session() const;
 
   void set_query(const std::string &query) { query_ = query; }
 
@@ -44,9 +45,9 @@ class SessionEvent : public common::StageEvent {
 
   SqlDebug &sql_debug() { return sql_debug_; }
 
- private:
+private:
   Communicator *communicator_ = nullptr;  ///< 与客户端通讯的对象
-  SqlResult sql_result_;                  ///< SQL执行结果
-  SqlDebug sql_debug_;                    ///< SQL调试信息
-  std::string query_;                     ///< SQL语句
+  SqlResult     sql_result_;              ///< SQL执行结果
+  SqlDebug      sql_debug_;               ///< SQL调试信息
+  std::string   query_;                   ///< SQL语句
 };

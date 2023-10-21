@@ -14,12 +14,12 @@ See the Mulan PSL v2 for more details. */
 //
 #pragma once
 
-#include <limits>
 #include <sstream>
-#include "common/lang/bitmap.h"
+#include <limits>
 #include "storage/buffer/disk_buffer_pool.h"
-#include "storage/record/record.h"
 #include "storage/trx/latch_memo.h"
+#include "storage/record/record.h"
+#include "common/lang/bitmap.h"
 
 class ConditionFilter;
 class RecordPageHandler;
@@ -60,7 +60,8 @@ class Table;
  * 从这个页头描述的信息来看，当前仅支持定长行/记录。如果要支持变长记录，
  * 或者超长（超出一页）的记录，这么做是不合适的。
  */
-struct PageHeader {
+struct PageHeader
+{
   int32_t record_num;           ///< 当前页面记录的个数
   int32_t record_real_size;     ///< 每条记录的实际大小
   int32_t record_size;          ///< 每条记录占用实际空间大小(可能对齐)
@@ -72,8 +73,9 @@ struct PageHeader {
  * @brief 遍历一个页面中每条记录的iterator
  * @ingroup RecordManager
  */
-class RecordPageIterator {
- public:
+class RecordPageIterator
+{
+public:
   RecordPageIterator();
   ~RecordPageIterator();
 
@@ -102,11 +104,11 @@ class RecordPageIterator {
    */
   bool is_valid() const { return record_page_handler_ != nullptr; }
 
- private:
+private:
   RecordPageHandler *record_page_handler_ = nullptr;
-  PageNum page_num_ = BP_INVALID_PAGE_NUM;
-  common::Bitmap bitmap_;      ///< bitmap 的相关信息可以参考 RecordPageHandler 的说明
-  SlotNum next_slot_num_ = 0;  ///< 当前遍历到了哪一个slot
+  PageNum            page_num_            = BP_INVALID_PAGE_NUM;
+  common::Bitmap     bitmap_;             ///< bitmap 的相关信息可以参考 RecordPageHandler 的说明
+  SlotNum            next_slot_num_ = 0;  ///< 当前遍历到了哪一个slot
 };
 
 /**
@@ -119,8 +121,9 @@ class RecordPageIterator {
  * | record1 | record2 | ..... | recordN |
  * @endcode
  */
-class RecordPageHandler {
- public:
+class RecordPageHandler
+{
+public:
   RecordPageHandler() = default;
   ~RecordPageHandler();
 
@@ -198,14 +201,15 @@ class RecordPageHandler {
    */
   bool is_full() const;
 
- protected:
+protected:
   /**
    * @details
    * 前面在计算record_capacity时并没有考虑对齐，但第一个record需要8字节对齐
    * 因此按此前计算的record_capacity，最后一个记录的部分数据可能会被挤出页面
    * 所以需要对record_capacity进行修正，保证记录不会溢出
    */
-  void fix_record_capacity() {
+  void fix_record_capacity()
+  {
     int32_t last_record_offset =
         page_header_->first_record_offset + page_header_->record_capacity * page_header_->record_size;
     while (last_record_offset > BP_PAGE_DATA_SIZE) {
@@ -219,18 +223,19 @@ class RecordPageHandler {
    *
    * @param 指定的记录槽位
    */
-  char *get_record_data(SlotNum slot_num) {
+  char *get_record_data(SlotNum slot_num)
+  {
     return frame_->data() + page_header_->first_record_offset + (page_header_->record_size * slot_num);
   }
 
- protected:
+protected:
   DiskBufferPool *disk_buffer_pool_ = nullptr;  ///< 当前操作的buffer pool(文件)
   Frame *frame_ = nullptr;  ///< 当前操作页面关联的frame(frame的更多概念可以参考buffer pool和frame)
-  bool readonly_ = false;   ///< 当前的操作是否都是只读的
+  bool   readonly_         = false;    ///< 当前的操作是否都是只读的
   PageHeader *page_header_ = nullptr;  ///< 当前页面上页面头
-  char *bitmap_ = nullptr;             ///< 当前页面上record分配状态信息bitmap内存起始位置
+  char       *bitmap_      = nullptr;  ///< 当前页面上record分配状态信息bitmap内存起始位置
 
- private:
+private:
   friend class RecordPageIterator;
 };
 
@@ -239,8 +244,9 @@ class RecordPageHandler {
  * @ingroup RecordManager
  * @details 整个文件的组织格式请参考该文件中最前面的注释
  */
-class RecordFileHandler {
- public:
+class RecordFileHandler
+{
+public:
   RecordFileHandler() = default;
   ~RecordFileHandler();
 
@@ -304,16 +310,16 @@ class RecordFileHandler {
 
   RC update_record(const Record &old_record, Record &new_record);
 
- private:
+private:
   /**
    * @brief 初始化当前没有填满记录的页面，初始化free_pages_成员
    */
   RC init_free_pages();
 
- private:
-  DiskBufferPool *disk_buffer_pool_ = nullptr;
+private:
+  DiskBufferPool             *disk_buffer_pool_ = nullptr;
   std::unordered_set<PageNum> free_pages_;  ///< 没有填充满的页面集合
-  common::Mutex lock_;  ///< 当编译时增加-DCONCURRENCY=ON 选项时，才会真正的支持并发
+  common::Mutex               lock_;  ///< 当编译时增加-DCONCURRENCY=ON 选项时，才会真正的支持并发
 };
 
 /**
@@ -321,8 +327,9 @@ class RecordFileHandler {
  * @ingroup RecordManager
  * @details 遍历所有的页面，同时访问这些页面中所有的记录
  */
-class RecordFileScanner {
- public:
+class RecordFileScanner
+{
+public:
   RecordFileScanner() = default;
   ~RecordFileScanner();
 
@@ -357,7 +364,7 @@ class RecordFileScanner {
    */
   RC next(Record &record);
 
- private:
+private:
   /**
    * @brief 获取该文件中的下一条记录
    */
@@ -368,16 +375,16 @@ class RecordFileScanner {
    */
   RC fetch_next_record_in_page();
 
- private:
+private:
   // TODO 对于一个纯粹的record遍历器来说，不应该关心表和事务
   Table *table_ = nullptr;  ///< 当前遍历的是哪张表。这个字段仅供事务函数使用，如果设计合适，可以去掉
   DiskBufferPool *disk_buffer_pool_ = nullptr;  ///< 当前访问的文件
-  Trx *trx_ = nullptr;                          ///< 当前是哪个事务在遍历
-  bool readonly_ = false;                       ///< 遍历出来的数据，是否可能对它做修改
+  Trx            *trx_              = nullptr;  ///< 当前是哪个事务在遍历
+  bool            readonly_         = false;    ///< 遍历出来的数据，是否可能对它做修改
 
-  BufferPoolIterator bp_iterator_;               ///< 遍历buffer pool的所有页面
-  ConditionFilter *condition_filter_ = nullptr;  ///< 过滤record
-  RecordPageHandler record_page_handler_;        ///< 处理文件某页面的记录
-  RecordPageIterator record_page_iterator_;      ///< 遍历某个页面上的所有record
-  Record next_record_;                           ///< 获取的记录放在这里缓存起来
+  BufferPoolIterator bp_iterator_;                 ///< 遍历buffer pool的所有页面
+  ConditionFilter   *condition_filter_ = nullptr;  ///< 过滤record
+  RecordPageHandler  record_page_handler_;         ///< 处理文件某页面的记录
+  RecordPageIterator record_page_iterator_;        ///< 遍历某个页面上的所有record
+  Record             next_record_;                 ///< 获取的记录放在这里缓存起来
 };

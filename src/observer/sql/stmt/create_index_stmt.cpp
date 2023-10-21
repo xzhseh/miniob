@@ -13,15 +13,16 @@ See the Mulan PSL v2 for more details. */
 //
 
 #include "sql/stmt/create_index_stmt.h"
+#include "storage/table/table.h"
+#include "storage/db/db.h"
 #include "common/lang/string.h"
 #include "common/log/log.h"
-#include "storage/db/db.h"
-#include "storage/table/table.h"
 
 using namespace std;
 using namespace common;
 
-RC CreateIndexStmt::create(Db *db, const CreateIndexSqlNode &create_index, Stmt *&stmt) {
+RC CreateIndexStmt::create(Db *db, const CreateIndexSqlNode &create_index, Stmt *&stmt)
+{
   stmt = nullptr;
 
   const char *table_name = create_index.relation_name.c_str();

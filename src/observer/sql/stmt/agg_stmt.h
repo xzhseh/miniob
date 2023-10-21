@@ -6,12 +6,13 @@
 
 #include "common/rc.h"
 #include "sql/parser/parse_defs.h"
-#include "sql/stmt/stmt.h"
 #include "storage/field/field.h"
+#include "sql/stmt/stmt.h"
 #include "storage/field/field_meta.h"
 
-class AggStmt {
- public:
+class AggStmt
+{
+public:
   AggStmt() = delete;
 
   explicit AggStmt(std::vector<std::pair<const FieldMeta *, int>> aggregate_keys, std::vector<agg> aggregate_types);
@@ -23,7 +24,7 @@ class AggStmt {
 
   auto get_types() -> const std::vector<agg> & { return aggregate_types_; }
 
- private:
+private:
   // FIXME: Any other way / more efficiently to store the aggregation key / type?
 
   // Currently storing format:

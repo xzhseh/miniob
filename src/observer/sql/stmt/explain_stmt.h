@@ -21,8 +21,9 @@ See the Mulan PSL v2 for more details. */
  * @brief explain语句
  * @ingroup Statement
  */
-class ExplainStmt : public Stmt {
- public:
+class ExplainStmt : public Stmt
+{
+public:
   ExplainStmt(std::unique_ptr<Stmt> child_stmt);
   virtual ~ExplainStmt() = default;
 
@@ -32,6 +33,6 @@ class ExplainStmt : public Stmt {
 
   static RC create(Db *db, const ExplainSqlNode &query, Stmt *&stmt);
 
- private:
+private:
   std::unique_ptr<Stmt> child_stmt_;
 };
