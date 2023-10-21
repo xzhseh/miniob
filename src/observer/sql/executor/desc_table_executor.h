@@ -22,9 +22,8 @@ class SQLStageEvent;
  * @brief 描述表的执行器
  * @ingroup Executor
  */
-class DescTableExecutor
-{
-public:
+class DescTableExecutor {
+ public:
   DescTableExecutor() = default;
   virtual ~DescTableExecutor() = default;
 

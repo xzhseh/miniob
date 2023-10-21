@@ -13,16 +13,15 @@ See the Mulan PSL v2 for more details. */
 //
 
 #include "sql/executor/load_data_executor.h"
-#include "event/sql_event.h"
-#include "event/session_event.h"
-#include "sql/executor/sql_result.h"
 #include "common/lang/string.h"
+#include "event/session_event.h"
+#include "event/sql_event.h"
+#include "sql/executor/sql_result.h"
 #include "sql/stmt/load_data_stmt.h"
 
 using namespace common;
 
-RC LoadDataExecutor::execute(SQLStageEvent *sql_event)
-{
+RC LoadDataExecutor::execute(SQLStageEvent *sql_event) {
   RC rc = RC::SUCCESS;
   SqlResult *sql_result = sql_event->session_event()->sql_result();
   LoadDataStmt *stmt = static_cast<LoadDataStmt *>(sql_event->stmt());
@@ -40,9 +39,7 @@ RC LoadDataExecutor::execute(SQLStageEvent *sql_event)
  * @param errmsg 如果出现错误，通过这个参数返回错误信息
  * @return 成功返回RC::SUCCESS
  */
-RC insert_record_from_file(Table *table, 
-                           std::vector<std::string> &file_values, 
-                           std::vector<Value> &record_values, 
+RC insert_record_from_file(Table *table, std::vector<std::string> &file_values, std::vector<Value> &record_values,
                            std::stringstream &errmsg) {
   const int field_num = record_values.size();
   const int sys_field_num = table->table_meta().sys_field_num();
@@ -124,8 +121,7 @@ RC insert_record_from_file(Table *table,
   return rc;
 }
 
-void LoadDataExecutor::load_data(Table *table, const char *file_name, SqlResult *sql_result)
-{
+void LoadDataExecutor::load_data(Table *table, const char *file_name, SqlResult *sql_result) {
   std::stringstream result_string;
 
   std::fstream fs;

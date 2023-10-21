@@ -12,22 +12,22 @@ See the Mulan PSL v2 for more details. */
 // Created by Longda on 2021/4/13.
 //
 
-#include <string>
 #include <sstream>
+#include <string>
 
 #include "sql/executor/execute_stage.h"
 
 #include "common/log/log.h"
-#include "session/session.h"
-#include "event/storage_event.h"
-#include "event/sql_event.h"
 #include "event/session_event.h"
-#include "sql/parser/parse_defs.h"
-#include "sql/stmt/stmt.h"
-#include "sql/stmt/select_stmt.h"
-#include "storage/default/default_handler.h"
+#include "event/sql_event.h"
+#include "event/storage_event.h"
+#include "session/session.h"
 #include "sql/executor/command_executor.h"
 #include "sql/operator/calc_physical_operator.h"
+#include "sql/parser/parse_defs.h"
+#include "sql/stmt/select_stmt.h"
+#include "sql/stmt/stmt.h"
+#include "storage/default/default_handler.h"
 
 using namespace std;
 using namespace common;
@@ -97,7 +97,7 @@ RC ExecuteStage::handle_request_with_physical_operator(SQLStageEvent *sql_event)
 
     case StmtType::CALC: {
       CalcPhysicalOperator *calc_operator = static_cast<CalcPhysicalOperator *>(physical_operator.get());
-      for (const unique_ptr<Expression> & expr : calc_operator->expressions()) {
+      for (const unique_ptr<Expression> &expr : calc_operator->expressions()) {
         schema.append_cell(expr->name().c_str());
       }
     } break;

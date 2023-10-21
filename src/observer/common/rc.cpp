@@ -14,8 +14,7 @@ See the Mulan PSL v2 for more details. */
 
 #include "common/rc.h"
 
-const char *strrc(RC rc)
-{
+const char *strrc(RC rc) {
 #define DEFINE_RC(name) \
   case RC::name: {      \
     return #name;       \
