@@ -65,3 +65,13 @@ else
 fi
 
 echo "----------------------------------------------------------"
+
+cd src/observer/sql/parser && ./gen_parser.sh
+
+if (( $? == 0 )); then
+    echo "Finish generating the yacc / lex files."
+else
+    echo "Error when running \`gen_parser.sh\`, please check your yacc / lex files"
+fi
+
+echo "----------------------------------------------------------"
