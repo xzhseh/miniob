@@ -26,7 +26,6 @@ enum AttrType {
   INTS,           ///< int type (4 bytes)
   FLOATS,         ///< float type (4 bytes)
   DATE,           ///< date type (4 bytes)
-  OB_NULL,        ///< null type (currently store as a bool, which is of 1 byte)
   BOOLEANS,       ///< boolean type (currently used internally, will not be parsed by parser)
 };
 
@@ -62,6 +61,14 @@ public:
 
   void set_data(const char *data, int length) {
     this->set_data(const_cast<char *>(data), length);
+  }
+
+  void set_null() {
+    null_flag_ = true;
+  }
+
+  bool is_null() {
+    return null_flag_;
   }
 
   void set_data(char *data, int length);
@@ -116,5 +123,8 @@ private:
   std::string str_value_;
 
   // The null flag
-  bool null_flag{false};
+  // In two cases this will be `false`
+  //   1. Explicitly declare `not null`
+  //   2. Does NOT explicitly declare `null`
+  bool null_flag_{false};
 };
