@@ -19,6 +19,7 @@ See the Mulan PSL v2 for more details. */
 #include "net/buffered_writer.h"
 #include "session/session.h"
 #include "sql/expr/tuple.h"
+#include "sql/parser/value.h"
 
 PlainCommunicator::PlainCommunicator() {
   send_message_delimiter_.assign(1, '\0');
@@ -243,6 +244,15 @@ RC PlainCommunicator::write_result_internal(SessionEvent *event, bool &need_disc
       }
 
       std::string cell_str = value.to_string();
+
+      // std::cout << "[plain communicator] current cell_str: " << cell_str << std::endl;
+
+      // Check null here 😅
+      // TODO: Refactor the code 😅😅
+      if (Value::check_null(value)) {
+        cell_str = "NULL";
+      }
+
       rc = writer_->writen(cell_str.data(), cell_str.size());
       if (OB_FAIL(rc)) {
         LOG_WARN("failed to send data to client. err=%s", strerror(errno));
