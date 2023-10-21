@@ -14,10 +14,10 @@ See the Mulan PSL v2 for more details. */
 
 #pragma once
 
+#include <cassert>
 #include <cstdlib>
 #include <cstring>
 #include <string>
-#include <cassert>
 #include "common/rc.h"
 
 /// Note that after adding the null flag
