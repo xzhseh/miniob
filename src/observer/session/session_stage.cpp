@@ -18,29 +18,26 @@ See the Mulan PSL v2 for more details. */
 #include <string>
 
 #include "common/conf/ini.h"
-#include "common/log/log.h"
 #include "common/lang/mutex.h"
 #include "common/lang/string.h"
+#include "common/log/log.h"
 #include "common/seda/callback.h"
 #include "event/session_event.h"
 #include "event/sql_event.h"
-#include "net/server.h"
 #include "net/communicator.h"
+#include "net/server.h"
 #include "session/session.h"
 
 using namespace common;
 
 // Constructor
-SessionStage::SessionStage(const char *tag) : Stage(tag) 
-{}
+SessionStage::SessionStage(const char *tag) : Stage(tag) {}
 
 // Destructor
-SessionStage::~SessionStage()
-{}
+SessionStage::~SessionStage() {}
 
 // Parse properties, instantiate a stage object
-Stage *SessionStage::make_stage(const std::string &tag)
-{
+Stage *SessionStage::make_stage(const std::string &tag) {
   SessionStage *stage = new (std::nothrow) SessionStage(tag.c_str());
   if (stage == nullptr) {
     LOG_ERROR("new ExecutorStage failed");
@@ -51,8 +48,7 @@ Stage *SessionStage::make_stage(const std::string &tag)
 }
 
 // Set properties for this object set in stage specific properties
-bool SessionStage::set_properties()
-{
+bool SessionStage::set_properties() {
   //  std::string stageNameStr(stage_name_);
   //  std::map<std::string, std::string> section = g_properties()->get(
   //    stageNameStr);
@@ -64,17 +60,12 @@ bool SessionStage::set_properties()
   return true;
 }
 // Initialize stage params and validate outputs
-bool SessionStage::initialize() { 
-    return true; 
-}
+bool SessionStage::initialize() { return true; }
 
 // Cleanup after disconnection
-void SessionStage::cleanup() {
+void SessionStage::cleanup() {}
 
-}
-
-void SessionStage::handle_event(StageEvent *event) 
-{
+void SessionStage::handle_event(StageEvent *event) {
   // right now, we just support only one event.
   handle_request(event);
 
@@ -105,9 +96,9 @@ void SessionStage::handle_request(StageEvent *event) {
     sev->sql_result()->set_return_code(res);
   }
 
-  Communicator *communicator    = sev->get_communicator();
-  bool          need_disconnect = false;
-  RC            rc              = communicator->write_result(sev, need_disconnect);
+  Communicator *communicator = sev->get_communicator();
+  bool need_disconnect = false;
+  RC rc = communicator->write_result(sev, need_disconnect);
   LOG_INFO("write result return %s", strrc(rc));
   if (need_disconnect) {
     Server::close_connection(communicator);

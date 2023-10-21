@@ -13,24 +13,22 @@ See the Mulan PSL v2 for more details. */
 //
 
 #include "net/plain_communicator.h"
-#include "net/buffered_writer.h"
-#include "sql/expr/tuple.h"
-#include "event/session_event.h"
-#include "session/session.h"
 #include "common/io/io.h"
 #include "common/log/log.h"
 #include "sql/parser/value.h"
+#include "event/session_event.h"
+#include "net/buffered_writer.h"
+#include "session/session.h"
+#include "sql/expr/tuple.h"
 
-PlainCommunicator::PlainCommunicator()
-{
+PlainCommunicator::PlainCommunicator() {
   send_message_delimiter_.assign(1, '\0');
   debug_message_prefix_.resize(2);
   debug_message_prefix_[0] = '#';
   debug_message_prefix_[1] = ' ';
 }
 
-RC PlainCommunicator::read_event(SessionEvent *&event)
-{
+RC PlainCommunicator::read_event(SessionEvent *&event) {
   RC rc = RC::SUCCESS;
 
   event = nullptr;
@@ -93,8 +91,7 @@ RC PlainCommunicator::read_event(SessionEvent *&event)
   return rc;
 }
 
-RC PlainCommunicator::write_state(SessionEvent *event, bool &need_disconnect)
-{
+RC PlainCommunicator::write_state(SessionEvent *event, bool &need_disconnect) {
   SqlResult *sql_result = event->sql_result();
   const int buf_size = 2048;
   char *buf = new char[buf_size];
@@ -120,8 +117,7 @@ RC PlainCommunicator::write_state(SessionEvent *event, bool &need_disconnect)
   return RC::SUCCESS;
 }
 
-RC PlainCommunicator::write_debug(SessionEvent *request, bool &need_disconnect)
-{
+RC PlainCommunicator::write_debug(SessionEvent *request, bool &need_disconnect) {
   if (!session_->sql_debug_on()) {
     return RC::SUCCESS;
   }
@@ -156,14 +152,13 @@ RC PlainCommunicator::write_debug(SessionEvent *request, bool &need_disconnect)
   return RC::SUCCESS;
 }
 
-RC PlainCommunicator::write_result(SessionEvent *event, bool &need_disconnect)
-{
+RC PlainCommunicator::write_result(SessionEvent *event, bool &need_disconnect) {
   RC rc = write_result_internal(event, need_disconnect);
   if (!need_disconnect) {
     (void)write_debug(event, need_disconnect);
   }
   if (rc == RC::SUCCESS) {
-    writer_->flush(); // TODO handle error
+    writer_->flush();  // TODO handle error
   } else {
     write_state(event, need_disconnect);
     writer_->flush();
@@ -299,7 +294,6 @@ RC PlainCommunicator::write_result_internal(SessionEvent *event, bool &need_disc
     rc = RC::SUCCESS;
   }
 
-
   // FIXME: Ensure this
   if (rc != RC::SUCCESS) {
     sql_result->set_return_code(rc);
@@ -318,7 +312,6 @@ RC PlainCommunicator::write_result_internal(SessionEvent *event, bool &need_disc
     sql_result->set_return_code(rc);
     return write_state(event, need_disconnect);
   } else {
-
     rc = writer_->writen(send_message_delimiter_.data(), send_message_delimiter_.size());
     if (OB_FAIL(rc)) {
       LOG_ERROR("Failed to send data back to client. ret=%s, error=%s", strrc(rc), strerror(errno));

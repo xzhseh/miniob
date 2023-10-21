@@ -12,8 +12,8 @@ See the Mulan PSL v2 for more details. */
 // Created by Meiyi & Wangyunlai on 2021/5/12.
 //
 
-#include "common/lang/string.h"
 #include "storage/field/field_meta.h"
+#include "common/lang/string.h"
 #include "common/log/log.h"
 #include "sql/parser/parse_defs.h"
 
@@ -26,8 +26,7 @@ const static Json::StaticString FIELD_LEN("len");
 const static Json::StaticString FIELD_VISIBLE("visible");
 const static Json::StaticString FIELD_IS_NULL("is_null");
 
-FieldMeta::FieldMeta() : attr_type_(AttrType::UNDEFINED), attr_offset_(-1), attr_len_(0), visible_(false)
-{}
+FieldMeta::FieldMeta() : attr_type_(AttrType::UNDEFINED), attr_offset_(-1), attr_len_(0), visible_(false) {}
 
 FieldMeta::FieldMeta(const char *name, AttrType attr_type, int attr_offset, int attr_len, bool visible)
 {
@@ -62,30 +61,15 @@ RC FieldMeta::init(const char *name, AttrType attr_type, int attr_offset, int at
   return RC::SUCCESS;
 }
 
-const char *FieldMeta::name() const
-{
-  return name_.c_str();
-}
+const char *FieldMeta::name() const { return name_.c_str(); }
 
-AttrType FieldMeta::type() const
-{
-  return attr_type_;
-}
+AttrType FieldMeta::type() const { return attr_type_; }
 
-int FieldMeta::offset() const
-{
-  return attr_offset_;
-}
+int FieldMeta::offset() const { return attr_offset_; }
 
-int FieldMeta::len() const
-{
-  return attr_len_;
-}
+int FieldMeta::len() const { return attr_len_; }
 
-bool FieldMeta::visible() const
-{
-  return visible_;
-}
+bool FieldMeta::visible() const { return visible_; }
 
 bool FieldMeta::is_null() const {
   return is_null_;
@@ -97,8 +81,7 @@ void FieldMeta::desc(std::ostream &os) const
      << ", visible=" << (visible_ ? "yes" : "no") << ", is_null=" << (is_null_ ? "yes" : "no");
 }
 
-void FieldMeta::to_json(Json::Value &json_value) const
-{
+void FieldMeta::to_json(Json::Value &json_value) const {
   json_value[FIELD_NAME] = name_;
   json_value[FIELD_TYPE] = attr_type_to_string(attr_type_);
   json_value[FIELD_OFFSET] = attr_offset_;
@@ -107,8 +90,7 @@ void FieldMeta::to_json(Json::Value &json_value) const
   json_value[FIELD_IS_NULL] = is_null_;
 }
 
-RC FieldMeta::from_json(const Json::Value &json_value, FieldMeta &field)
-{
+RC FieldMeta::from_json(const Json::Value &json_value, FieldMeta &field) {
   if (!json_value.isObject()) {
     LOG_ERROR("Failed to deserialize field. json is not an object. json value=%s", json_value.toStyledString().c_str());
     return RC::INTERNAL;

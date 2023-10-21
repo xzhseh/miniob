@@ -12,8 +12,8 @@ See the Mulan PSL v2 for more details. */
 // Created by Meiyi
 //
 
-#include <mutex>
 #include "sql/parser/parse.h"
+#include <mutex>
 #include "common/log/log.h"
 #include "sql/expr/expression.h"
 

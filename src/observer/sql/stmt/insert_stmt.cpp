@@ -19,11 +19,10 @@ See the Mulan PSL v2 for more details. */
 #include "storage/table/table.h"
 
 InsertStmt::InsertStmt(Table *table, const Value *values, int value_amount)
-    : table_(table), values_(values), value_amount_(value_amount)
-{}
+    : table_(table), values_(values), value_amount_(value_amount) {}
 
-RC InsertStmt::create(Db *db, InsertSqlNode &inserts, Stmt *&stmt)
-{
+
+RC InsertStmt::create(Db *db, const InsertSqlNode &inserts, Stmt *&stmt) {
   const char *table_name = inserts.relation_name.c_str();
   if (nullptr == db || nullptr == table_name || inserts.values.empty()) {
     LOG_WARN("invalid argument. db=%p, table_name=%p, value_num=%d",

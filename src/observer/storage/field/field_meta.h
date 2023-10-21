@@ -25,18 +25,17 @@ class Value;
 
 /**
  * @brief 字段元数据
- * 
+ *
  */
-class FieldMeta 
-{
-public:
+class FieldMeta {
+ public:
   FieldMeta();
   FieldMeta(const char *name, AttrType attr_type, int attr_offset, int attr_len, bool visible);
   ~FieldMeta() = default;
 
   RC init(const char *name, AttrType attr_type, int attr_offset, int attr_len, bool visible, bool is_null);
 
-public:
+ public:
   const char *name() const;
   AttrType type() const;
   int offset() const;
@@ -44,14 +43,14 @@ public:
   bool visible() const;
   bool is_null() const;
 
-public:
+ public:
   void desc(std::ostream &os) const;
 
-public:
+ public:
   void to_json(Json::Value &json_value) const;
   static RC from_json(const Json::Value &json_value, FieldMeta &field);
 
-protected:
+ protected:
   std::string name_;
   AttrType attr_type_;
   int attr_offset_;

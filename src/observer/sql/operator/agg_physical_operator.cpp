@@ -3,99 +3,102 @@
 #pragma once
 
 #include "sql/operator/agg_physical_operator.h"
-#include "sql/expr/tuple.h"
-#include "sql/parser/value.h"
 #include <climits>
 #include <unordered_map>
+#include "sql/expr/tuple.h"
+#include "sql/parser/value.h"
 
 RC AggPhysicalOperator::open(Trx *trx) {
-    RC rc = RC::SUCCESS;
-    assert(children_.size() == 1 && "aggregate operator should have exactly one child");
-    child_ = children_[0].get();
-    rc = child_->open(trx);
-    return rc;
+  RC rc = RC::SUCCESS;
+  assert(children_.size() == 1 && "aggregate operator should have exactly one child");
+  child_ = children_[0].get();
+  rc = child_->open(trx);
+  return rc;
 }
 
 RC AggPhysicalOperator::close() {
-    RC rc = RC::SUCCESS;
-    assert(next_flag && "`next_flag` should be true");
-    if (child_ != nullptr) {
-        rc = child_->close();
-    }
-    return rc;
+  RC rc = RC::SUCCESS;
+  assert(next_flag && "`next_flag` should be true");
+  if (child_ != nullptr) {
+    rc = child_->close();
+  }
+  return rc;
 }
 
 /// FIXME: Refactor this
 Value add_value(Value &lhs, Value &rhs) {
-    Value ret;
-    if (lhs.attr_type() == AttrType::INTS) {
-        switch (rhs.attr_type()) {
-            case AttrType::INTS: {
-                ret.set_int(lhs.get_int() + rhs.get_int());
-            } break;
-            case AttrType::FLOATS: {
-                // INT + FLOAT is impossible even for AVG / SUM
-                assert(false);
-            } break;
-            default: assert(false); // Unsupported
-        }
-    } else if (lhs.attr_type() == AttrType::FLOATS) {
-        switch (rhs.attr_type()) {
-            case AttrType::FLOATS: {
-                ret.set_float(lhs.get_float() + rhs.get_float());
-            } break;
-            default: assert(false); // Unsupported
-        }
-    } else {
-        // Not yet supported
+  Value ret;
+  if (lhs.attr_type() == AttrType::INTS) {
+    switch (rhs.attr_type()) {
+      case AttrType::INTS: {
+        ret.set_int(lhs.get_int() + rhs.get_int());
+      } break;
+      case AttrType::FLOATS: {
+        // INT + FLOAT is impossible even for AVG / SUM
         assert(false);
+      } break;
+      default:
+        assert(false);  // Unsupported
     }
-    return ret;
+  } else if (lhs.attr_type() == AttrType::FLOATS) {
+    switch (rhs.attr_type()) {
+      case AttrType::FLOATS: {
+        ret.set_float(lhs.get_float() + rhs.get_float());
+      } break;
+      default:
+        assert(false);  // Unsupported
+    }
+  } else {
+    // Not yet supported
+    assert(false);
+  }
+  return ret;
 }
 
 void set_initial_value_for_map(std::unordered_map<agg, Value> &m, AttrType t, agg a_t, Value v) {
-    if (m.count(a_t) == 0) {
-        Value ret;
-        if (a_t == agg::AGG_COUNT) {
+  if (m.count(a_t) == 0) {
+    Value ret;
+    if (a_t == agg::AGG_COUNT) {
+      ret.set_int(0);
+    } else {
+      switch (t) {
+        case AttrType::INTS:
+          if (a_t == agg::AGG_MIN || a_t == agg::AGG_MAX) {
+            ret = v;
+          } else {
+            // SUM / AVG
             ret.set_int(0);
-        } else {
-            switch (t) {
-                case AttrType::INTS:
-                    if (a_t == agg::AGG_MIN || a_t == agg::AGG_MAX) {
-                        ret = v;
-                    } else {
-                        // SUM / AVG
-                        ret.set_int(0);
-                    }
-                    break;
-                case AttrType::FLOATS:
-                    if (a_t == agg::AGG_MIN || a_t == agg::AGG_MAX) {
-                        ret = v;
-                    } else {
-                        // SUM / AVG
-                        ret.set_float(0);
-                    }
-                    break;
-                case AttrType::CHARS:
-                    if (a_t == agg::AGG_MIN || a_t == agg::AGG_MAX) {
-                        ret = v;
-                    } else {
-                        assert(false); // Not yet supported
-                    }
-                    break;
-                case AttrType::DATE:
-                    if (a_t == agg::AGG_MIN || a_t == agg::AGG_MAX) {
-                        ret = v;
-                    } else {
-                        // SUM / AVG
-                        assert(false);
-                    }
-                    break;
-                default: assert(false); // Not yet supported
-            }
-        }
-        m[a_t] = ret;
+          }
+          break;
+        case AttrType::FLOATS:
+          if (a_t == agg::AGG_MIN || a_t == agg::AGG_MAX) {
+            ret = v;
+          } else {
+            // SUM / AVG
+            ret.set_float(0);
+          }
+          break;
+        case AttrType::CHARS:
+          if (a_t == agg::AGG_MIN || a_t == agg::AGG_MAX) {
+            ret = v;
+          } else {
+            assert(false);  // Not yet supported
+          }
+          break;
+        case AttrType::DATE:
+          if (a_t == agg::AGG_MIN || a_t == agg::AGG_MAX) {
+            ret = v;
+          } else {
+            // SUM / AVG
+            assert(false);
+          }
+          break;
+        default:
+          assert(false);  // Not yet supported
+      }
     }
+    m[a_t] = ret;
+  }
 }
 
 /// Basically we will extract all possible tuples from the child operator
@@ -191,12 +194,42 @@ RC AggPhysicalOperator::next() {
                     // TODO: Please note this
                     break;
                 }
+              } break;
+              case agg::AGG_MAX: {
+                auto v_t = agg_value_map_[agg::AGG_MAX];
+                // FIXME: Ensure this
+                // std::cout << "[agg::max] Current v: " << v.to_string() << std::endl;
+                // std::cout << "[agg::max] Current v_t: " << v_t.to_string() << std::endl;
+                if (v.compare(v_t) > 0) {
+                  agg_value_map_[agg::AGG_MAX] = v;
+                }
+              } break;
+              case agg::AGG_SUM: {
+                auto v_t = agg_value_map_[agg::AGG_SUM];
+                auto res = add_value(v, v_t);
+                agg_value_map_[agg::AGG_SUM] = res;
+              } break;
+              case agg::AGG_AVG: {
+                // TODO: Refactor this
+                auto v_t = agg_value_map_[agg::AGG_AVG];
+                // std::cout << "[agg::avg] Current v: " << v.to_string() << std::endl;
+                // std::cout << "[agg::avg] Current v_t: " << v_t.to_string() << std::endl;
+                auto res = add_value(v, v_t);
+                agg_value_map_[agg::AGG_AVG] = res;
+              } break;
+              default:
+                assert(false);  // This is impossible
             }
+          }
+          // TODO: Please note this
+          break;
         }
         if (!null_flag) {
             avg_n += 1;
         }
     }
+    n += 1;
+  }
 
     // std::cout << "Current avg_n: " << avg_n << std::endl;
 
@@ -219,20 +252,19 @@ RC AggPhysicalOperator::next() {
             assert(false); // Not yet support
         }
     }
+  }
 
-    std::vector<Value> ret;
-    for (int i = 0; i < aggregate_types_.size(); ++i) {
-        ret.push_back(agg_value_map_[aggregate_types_[i]]);
-    }
-    tuple_.set_cells(ret);
-    // std::cout << "[agg] Current tuple: " << tuple_.to_string() << std::endl;
-    if (rc == RC::RECORD_EOF) {
-        rc = RC::SUCCESS;
-    }
-    next_flag = true;
-    return rc;
+  std::vector<Value> ret;
+  for (int i = 0; i < aggregate_types_.size(); ++i) {
+    ret.push_back(agg_value_map_[aggregate_types_[i]]);
+  }
+  tuple_.set_cells(ret);
+  // std::cout << "[agg] Current tuple: " << tuple_.to_string() << std::endl;
+  if (rc == RC::RECORD_EOF) {
+    rc = RC::SUCCESS;
+  }
+  next_flag = true;
+  return rc;
 }
 
-Tuple *AggPhysicalOperator::current_tuple() {
-    return &tuple_;
-}
+Tuple *AggPhysicalOperator::current_tuple() { return &tuple_; }
