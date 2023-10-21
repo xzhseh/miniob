@@ -122,6 +122,7 @@ RC LogicalPlanGenerator::create_plan(SelectStmt *select_stmt, unique_ptr<Logical
     Table *table = tables[i];
     std::vector<Field> fields;
     for (const Field &field : all_fields) {
+      // How to handle alias? Eg : SELECT tbl.age_before FROM ages AS tbl;
       if (0 == strcmp(field.table_name(), table->name())) {
         fields.push_back(field);
       }
@@ -206,8 +207,7 @@ RC LogicalPlanGenerator::create_plan(SelectStmt *select_stmt, unique_ptr<Logical
       return RC::INTERNAL;
     }
   }
-
-  unique_ptr<LogicalOperator> project_oper(new ProjectLogicalOperator(all_fields));
+  unique_ptr<LogicalOperator> project_oper(new ProjectLogicalOperator(select_stmt->query_fields()));
   if (order_by_op) {
     project_oper->add_child(std::move(order_by_op));
   } else if (agg_oper) {

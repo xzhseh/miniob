@@ -113,6 +113,7 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
         ORDER
         BY
         ASC
+        AS
 
 /** union 中定义各种数据类型，真实生成的代码也是union类型，所以不能有非POD类型的数据 **/
 %union {
@@ -128,7 +129,7 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
   std::vector<Value> *              value_list;
   std::vector<ConditionSqlNode> *   condition_list;
   std::vector<RelAttrSqlNode> *     rel_attr_list;
-  std::vector<std::string> *        relation_list;
+  std::vector<RelationSqlNode> *        relation_list;
   std::vector<JoinSqlNode> *        join_list;
   std::vector<UpdateValueNode> *    update_value_list;
   std::vector<OrderBySqlNode> *     order_by_list_type;
@@ -191,6 +192,7 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
 %type <sql_node>            help_stmt
 %type <sql_node>            exit_stmt
 %type <sql_node>            command_wrapper
+%type <string>              option_as
 // commands should be a list but I use a single command instead
 %type <sql_node>            commands
 %type <null>                null
@@ -507,28 +509,34 @@ update_value_list:
 ;
 
 select_stmt:        /*  select 语句的语法解析树*/
-    SELECT select_attr FROM ID rel_list where order_by_clause
+    SELECT select_attr FROM ID option_as rel_list where order_by_clause
     {
       $$ = new ParsedSqlNode(SCF_SELECT);
       if ($2 != nullptr) {
         $$->selection.attributes.swap(*$2);
         delete $2;
       }
-      if ($5 != nullptr) {
-        $$->selection.relations.swap(*$5);
-        delete $5;
-      }
-      $$->selection.relations.push_back($4);
-      std::reverse($$->selection.relations.begin(), $$->selection.relations.end());
-
       if ($6 != nullptr) {
-        $$->selection.conditions.swap(*$6);
+        $$->selection.relations.swap(*$6);
         delete $6;
       }
+      RelationSqlNode relation;
+      relation.relation_name = $4;
+      if($5 != nullptr) {
+      	relation.alias_name = $5;
+      	free($5);
+      }
+      $$->selection.relations.push_back(relation);
+      std::reverse($$->selection.relations.begin(), $$->selection.relations.end());
 
-      if($7 != nullptr) {
-	$$->selection.order_bys.insert($$->selection.order_bys.end(),$7->begin(),$7->end());
-	delete $7;
+      if ($7 != nullptr) {
+        $$->selection.conditions.swap(*$7);
+        delete $7;
+      }
+
+      if($8 != nullptr) {
+	$$->selection.order_bys.insert($$->selection.order_bys.end(),$8->begin(),$8->end());
+	delete $8;
       }
       free($4);
     }
@@ -540,17 +548,23 @@ select_stmt:        /*  select 语句的语法解析树*/
             $$->selection.attributes.swap(*$2);
             delete $2;
           }
-          $$->selection.relations.push_back($4);
+          RelationSqlNode relation_node;
+          relation_node.relation_name = $4;
+          $$->selection.relations.push_back(relation_node);
           delete $4;
 
-          $$->selection.relations.push_back((*$5)[0].relation_name);
+          RelationSqlNode join_relation_node;
+          join_relation_node.relation_name = (*$5)[0].relation_name;
+          $$->selection.relations.push_back(join_relation_node);
           $$->selection.conditions.swap((*$5)[0].conditions);
           delete $5;
 
           if ($6 != nullptr) {
             std::reverse($6->begin(), $6->end());
 	    for (auto &join_relation : *$6) {
-	      $$->selection.relations.push_back(join_relation.relation_name);
+	      RelationSqlNode join_relation_node;
+              join_relation_node.relation_name = join_relation.relation_name;
+	      $$->selection.relations.push_back(join_relation_node);
 	      for (auto &condition : join_relation.conditions) {
 	      	$$->selection.conditions.emplace_back(condition);
 	      }
@@ -706,6 +720,15 @@ expression:
     }
     ;
 
+option_as:
+    /* empty */
+    {
+      $$ = nullptr;
+    }
+    | AS ID {
+      $$ = $2;
+    }
+    ;
 select_attr:
     '*' {
       $$ = new std::vector<RelAttrSqlNode>;
@@ -716,7 +739,7 @@ select_attr:
       $$->emplace_back(attr);
     }
     // TODO: Add the syntax for cases like `select agg(c1), count(*) from t1;`
-    | agg LBRACE '*' RBRACE attr_list {
+    | agg LBRACE '*' RBRACE attr_list  {
       /* AGG_FUNC(*) */
       $$ = new std::vector<RelAttrSqlNode>;
       RelAttrSqlNode attr;
@@ -785,21 +808,30 @@ agg:
     ;
 
 rel_attr:
-    ID {
+    ID option_as {
       $$ = new RelAttrSqlNode;
       $$->relation_name = "";
       $$->attribute_name = $1;
       $$->aggregate_func = agg::NONE;
+      if($2 != nullptr) {
+      	$$->alias_name = $2;
+      	free($2);
+      }
       free($1);
     }
-    | ID DOT ID {
+    | ID DOT ID option_as {
       $$ = new RelAttrSqlNode;
       $$->relation_name  = $1;
       $$->attribute_name = $3;
       $$->aggregate_func = agg::NONE;
+      if($4 != nullptr) {
+	$$->alias_name = $4;
+	free($4);
+      }
       free($1);
       free($3);
     }
+    // TODO : Add alias name for agg ?
     | agg LBRACE ID RBRACE {
       $$ = new RelAttrSqlNode;
       $$->relation_name = "";
@@ -845,14 +877,19 @@ rel_list:
     {
       $$ = nullptr;
     }
-    | COMMA ID rel_list {
-      if ($3 != nullptr) {
-        $$ = $3;
+    | COMMA ID option_as rel_list {
+      if ($4 != nullptr) {
+        $$ = $4;
       } else {
-        $$ = new std::vector<std::string>;
+        $$ = new std::vector<RelationSqlNode>;
       }
-
-      $$->push_back($2);
+      RelationSqlNode relation;
+      relation.relation_name = $2;
+      if($3 != nullptr) {
+      	relation.alias_name = $3;
+      		free($3);
+      }
+      $$->push_back(relation);
       free($2);
     }
     ;

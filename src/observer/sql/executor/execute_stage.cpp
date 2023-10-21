@@ -65,7 +65,7 @@ RC ExecuteStage::handle_request_with_physical_operator(SQLStageEvent *sql_event)
   TupleSchema schema;
   switch (stmt->type()) {
     case StmtType::SELECT: {
-      SelectStmt *select_stmt = static_cast<SelectStmt *>(stmt);
+      auto *select_stmt = dynamic_cast<SelectStmt *>(stmt);
 
       // FIXME: Refactor this (This is currently hard-coded for aggregation case)
       if (select_stmt->agg_stmt() != nullptr) {
@@ -86,11 +86,21 @@ RC ExecuteStage::handle_request_with_physical_operator(SQLStageEvent *sql_event)
 
       bool with_table_name = select_stmt->tables().size() > 1;
 
-      for (const Field &field : select_stmt->query_fields()) {
+      for (size_t i = 0; i < select_stmt->query_fields().size(); i++) {
+        const auto &field = select_stmt->query_fields()[i];
+        const auto &alias = select_stmt->alias_vec()[i];
         if (with_table_name) {
-          schema.append_cell(field.table_name(), field.field_name());
+          if (alias.is_alias) {
+            schema.append_cell(alias.table_alias.c_str(), alias.field_alias.c_str());
+          } else {
+            schema.append_cell(field.table_name(), field.field_name());
+          }
         } else {
-          schema.append_cell(field.field_name());
+          if (alias.is_alias) {
+            schema.append_cell(alias.field_alias.c_str());
+          } else {
+            schema.append_cell(field.field_name());
+          }
         }
       }
     } break;

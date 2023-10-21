@@ -67,6 +67,12 @@ struct RelAttrSqlNode {
   std::string attribute_name;  ///< attribute / column name
   enum agg aggregate_func;     ///< aggregate function (may be NULL/EMPTY)
   bool agg_valid_flag{true};   /// Whether the parsed aggregate syntax is valid
+  std::string alias_name;      ///< alias name (may be NULL/EMPTY)
+};
+
+struct RelationSqlNode {
+  std::string relation_name;
+  std::string alias_name;
 };
 
 /**
@@ -125,7 +131,7 @@ struct OrderBySqlNode {
 
 struct SelectSqlNode {
   std::vector<RelAttrSqlNode> attributes;    ///< attributes in select clause
-  std::vector<std::string> relations;        ///< 查询的表
+  std::vector<RelationSqlNode> relations;    ///< 查询的表
   std::vector<ConditionSqlNode> conditions;  ///< 查询条件，使用AND串联起来多个条件
   std::vector<OrderBySqlNode> order_bys;     ///< order by clause
 };

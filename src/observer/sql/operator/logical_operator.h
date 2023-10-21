@@ -57,7 +57,7 @@ class LogicalOperator {
 
   void add_child(std::unique_ptr<LogicalOperator> oper);
   std::vector<std::unique_ptr<LogicalOperator>> &children() { return children_; }
-  std::vector<std::unique_ptr<Expression>> &expressions() { return expressions_; }
+  virtual std::vector<std::unique_ptr<Expression>> &expressions() { return expressions_; }
 
  protected:
   std::vector<std::unique_ptr<LogicalOperator>> children_;  ///< 子算子
