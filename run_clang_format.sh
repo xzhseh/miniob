@@ -51,7 +51,7 @@ case $UNAME in
 DARWIN)
     echo "Running \`clang-format\` for MacOS."
     find ./src -name "*.cpp" -o -name "*.h" | xargs clang-format -i ;;
-LINUM)
+LINUX)
     echo "Running \`clang-format-14\` for Linux."
     find ./src -name "*.cpp" -o -name "*.h" | xargs clang-format-14 -i ;;
 *) ;;
