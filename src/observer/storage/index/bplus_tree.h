@@ -98,7 +98,7 @@ private:
 class KeyComparator 
 {
 public:
-  void init(std::vector<AttrType> types, std::vector<int> lengths, bool unique = false)
+  void init(std::vector<AttrType> types, std::vector<int> lengths)
   {
     if(types.size() != lengths.size()) {
       LOG_ERROR("not match size");
@@ -244,6 +244,8 @@ private:
  * @details this is the first page of bplus tree.
  * only one field can be supported, can you extend it to multi-fields?
  */
+
+#define MAX_ATTR_NUM 4
 struct IndexFileHeader 
 {
   IndexFileHeader()
@@ -255,9 +257,10 @@ struct IndexFileHeader
   int32_t internal_max_size;  ///< 内部节点最大的键值对数
   int32_t leaf_max_size;      ///< 叶子节点最大的键值对数
   int32_t attr_total_length;
-  std::vector<int32_t> attr_lengths;        ///< 键值的长度
+  int32_t attr_num;
+  int32_t attr_lengths[MAX_ATTR_NUM];        ///< 键值的长度
   int32_t key_length;         ///< attr length + sizeof(RID)
-  std::vector<AttrType> attr_types;         ///< 键值的类型
+  AttrType attr_types[MAX_ATTR_NUM];         ///< 键值的类型
 
   const std::string to_string()
   {

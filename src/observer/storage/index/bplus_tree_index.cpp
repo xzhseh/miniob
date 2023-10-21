@@ -116,14 +116,22 @@ RC BplusTreeIndex::close()
   LOG_INFO("Successfully close index.");
   return RC::SUCCESS;
 }
-RC BplusTreeIndex::insert_entry(const char *record, const RID *rid)
+RC BplusTreeIndex::check_unique_constraint(const char *record)
 {
+  RC rc = RC::SUCCESS;
   std::list<RID> rids{};
   char *user_key = make_user_key(record);
   index_handler_.get_entry(user_key, user_key_len() + static_cast<int>(sizeof(RID)), rids);
   if (!rids.empty() && index_meta_.unique()) {
-    return RC::CONSTRAINT_UNIQUE;
+    rc = RC::CONSTRAINT_UNIQUE;
   }
+  free_user_key(user_key);
+  return rc;
+}
+
+RC BplusTreeIndex::insert_entry(const char *record, const RID *rid)
+{
+  char *user_key = make_user_key(record);
   RC rc = index_handler_.insert_entry(user_key, rid);
   free_user_key(user_key);
   return rc;

@@ -789,9 +789,17 @@ RC BplusTreeHandler::create(const char *file_name, std::vector<AttrType> attr_ty
 
   char *pdata = header_frame->data();
   IndexFileHeader *file_header = (IndexFileHeader *)pdata;
-  file_header->attr_lengths = attr_lengths;
+  file_header->attr_num = attr_lengths.size();
+  for(int i = 0; i < file_header->attr_num; i++) {
+    file_header->attr_lengths[i] = attr_lengths[i];
+    file_header->attr_types[i] = attr_types[i];
+  }
+  for(int i = file_header->attr_num; i < MAX_ATTR_NUM; i++) {
+    file_header->attr_lengths[i] = 0;
+    file_header->attr_types[i] = AttrType::UNDEFINED;
+  }
   file_header->key_length = attr_total_length + sizeof(RID);
-  file_header->attr_types = attr_types;
+  file_header->attr_total_length = attr_total_length;
   file_header->internal_max_size = internal_max_size;
   file_header->leaf_max_size = leaf_max_size;
   file_header->root_page = BP_INVALID_PAGE_NUM;
@@ -811,8 +819,8 @@ RC BplusTreeHandler::create(const char *file_name, std::vector<AttrType> attr_ty
     return RC::NOMEM;
   }
 
-  key_comparator_.init(file_header->attr_types, file_header->attr_lengths, unique_);
-  key_printer_.init(file_header->attr_types, file_header->attr_lengths);
+  key_comparator_.init(attr_types, attr_lengths);
+  key_printer_.init(attr_types, attr_lengths);
 
   this->sync();
 
@@ -865,9 +873,15 @@ RC BplusTreeHandler::open(const char *file_name)
 
   // close old page_handle
   disk_buffer_pool->unpin_page(frame);
-
-  key_comparator_.init(file_header_.attr_types, file_header_.attr_lengths, unique_);
-  key_printer_.init(file_header_.attr_types, file_header_.attr_lengths);
+  vector<int> attr_lengths;
+  vector<AttrType> attr_types;
+  for(int i = 0; i < file_header_.attr_num; i++) {
+    attr_lengths.push_back(file_header_.attr_lengths[i]);
+    attr_types.push_back(file_header_.attr_types[i]);
+  }
+  
+  key_comparator_.init(attr_types, attr_lengths);
+  key_printer_.init(attr_types, attr_lengths);
   LOG_INFO("Successfully open index %s", file_name);
   return RC::SUCCESS;
 }
@@ -1364,6 +1378,7 @@ MemPoolItem::unique_ptr BplusTreeHandler::make_key(const char *user_key, const R
     LOG_WARN("Failed to alloc memory for key.");
     return nullptr;
   }
+  memcpy(static_cast<char *>(key.get()), user_key, file_header_.attr_total_length);
   memcpy(static_cast<char *>(key.get()), user_key, file_header_.attr_total_length);
   memcpy(static_cast<char *>(key.get()), &rid, sizeof(rid));
   return key;

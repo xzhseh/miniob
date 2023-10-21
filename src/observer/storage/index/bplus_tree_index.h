@@ -30,7 +30,7 @@ public:
   RC create(const char *file_name, const IndexMeta &index_meta, std::vector<const FieldMeta*> field_metas);
   RC open(const char *file_name, const IndexMeta &index_meta, std::vector<const FieldMeta*> field_metas);
   RC close();
-
+  RC check_unique_constraint(const char *record);
   RC insert_entry(const char *record, const RID *rid) override;
   RC delete_entry(const char *record, const RID *rid) override;
 
@@ -59,7 +59,6 @@ class BplusTreeIndexScanner : public IndexScanner
 public:
   explicit BplusTreeIndexScanner(BplusTreeHandler &tree_handle);
   ~BplusTreeIndexScanner() noexcept override;
-
   RC next_entry(RID *rid) override;
   RC destroy() override;
 
