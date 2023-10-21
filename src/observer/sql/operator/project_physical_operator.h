@@ -16,6 +16,7 @@ See the Mulan PSL v2 for more details. */
 
 #include "sql/expr/tuple.h"
 #include "sql/operator/physical_operator.h"
+#include "sql/operator/project_logical_operator.h"
 
 /**
  * @brief 选择/投影物理算子
@@ -28,7 +29,7 @@ class ProjectPhysicalOperator : public PhysicalOperator {
   virtual ~ProjectPhysicalOperator() = default;
 
   void add_expressions(std::vector<std::unique_ptr<Expression>> &&expressions) {}
-  void add_projection(const Table *table, const FieldMeta *field);
+  void add_projection(ProjectAliasCell cell);
 
   PhysicalOperatorType type() const override { return PhysicalOperatorType::PROJECT; }
 
@@ -42,5 +43,4 @@ class ProjectPhysicalOperator : public PhysicalOperator {
 
  private:
   ProjectTuple tuple_;
-  bool agg_flag_{false};
 };

@@ -122,6 +122,7 @@ RC LogicalPlanGenerator::create_plan(SelectStmt *select_stmt, unique_ptr<Logical
     Table *table = tables[i];
     std::vector<Field> fields;
     for (const Field &field : all_fields) {
+      // How to handle alias? Eg : SELECT tbl.age_before FROM ages AS tbl;
       if (0 == strcmp(field.table_name(), table->name())) {
         fields.push_back(field);
       }
@@ -206,8 +207,26 @@ RC LogicalPlanGenerator::create_plan(SelectStmt *select_stmt, unique_ptr<Logical
       return RC::INTERNAL;
     }
   }
-
-  unique_ptr<LogicalOperator> project_oper(new ProjectLogicalOperator(all_fields));
+  std::vector<ProjectAliasCell> project_alias_cells;
+  const auto &alias_vec = select_stmt->alias_vec();
+  for (size_t i = 0; i < all_fields.size(); i++) {
+    const auto &alias_cell = alias_vec[i];
+    ProjectAliasCell project_alias_cell;
+    project_alias_cell.field = all_fields[i].meta();
+    project_alias_cell.table = all_fields[i].table();
+    if (alias_cell.is_alias) {
+      if (!alias_cell.field_alias.empty()) {
+        project_alias_cell.field_is_alias = true;
+        project_alias_cell.field_alias = alias_cell.field_alias;
+      }
+      if (!alias_cell.table_alias.empty()) {
+        project_alias_cell.table_is_alias = true;
+        project_alias_cell.table_alias = alias_cell.table_alias;
+      }
+    }
+    project_alias_cells.emplace_back(project_alias_cell);
+  }
+  unique_ptr<LogicalOperator> project_oper(new ProjectLogicalOperator(project_alias_cells));
   if (order_by_op) {
     project_oper->add_child(std::move(order_by_op));
   } else if (agg_oper) {

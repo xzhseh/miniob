@@ -58,9 +58,17 @@ Tuple *ProjectPhysicalOperator::current_tuple() {
   return &tuple_;
 }
 
-void ProjectPhysicalOperator::add_projection(const Table *table, const FieldMeta *field_meta) {
+void ProjectPhysicalOperator::add_projection(ProjectAliasCell cell) {
   // 对单表来说，展示的(alias) 字段总是字段名称，
   // 对多表查询来说，展示的alias 需要带表名字
-  auto *spec = new TupleCellSpec(table->name(), field_meta->name(), field_meta->name());
+  const Table *table = cell.table;
+  const FieldMeta *field_meta = cell.field;
+  const char *alias_name = nullptr;
+  if (cell.field_is_alias) {
+    alias_name = cell.field_alias.c_str();
+  } else {
+    alias_name = field_meta->name();
+  }
+  auto *spec = new TupleCellSpec(table->name(), field_meta->name(), alias_name);
   tuple_.add_cell_spec(spec);
 }

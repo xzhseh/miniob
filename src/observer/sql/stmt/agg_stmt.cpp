@@ -1,7 +1,5 @@
 /// Create by Zihao Xu on 10/18/2023
 
-#pragma once
-
 #include "sql/stmt/agg_stmt.h"
 
 AggStmt::AggStmt(std::vector<std::pair<const FieldMeta *, int>> aggregate_keys, std::vector<agg> aggregate_types)

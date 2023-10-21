@@ -26,11 +26,12 @@ SelectStmt::~SelectStmt() {
   }
 }
 
-static void wildcard_fields(Table *table, std::vector<Field> &field_metas) {
+static void wildcard_fields(Table *table, std::vector<Field> &field_metas, std::vector<AliasCell> &alias_vec) {
   const TableMeta &table_meta = table->table_meta();
   const int field_num = table_meta.field_num();
   for (int i = table_meta.sys_field_num(); i < field_num; i++) {
-    field_metas.push_back(Field(table, table_meta.field(i)));
+    field_metas.emplace_back(table, table_meta.field(i));
+    alias_vec.emplace_back();
   }
 }
 
@@ -107,17 +108,13 @@ RC bind_order_by(Db *db, const std::vector<Table *> &tables, const std::vector<O
   return RC::SUCCESS;
 }
 
-RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt) {
-  if (nullptr == db) {
-    LOG_WARN("invalid argument. db is null");
-    return RC::INVALID_ARGUMENT;
-  }
-
-  // collect tables in `from` statement
-  std::vector<Table *> tables;
-  std::unordered_map<std::string, Table *> table_map;
+RC SelectStmt::resolve_tables(Db *db, const SelectSqlNode &select_sql, std::vector<Table *> &tables,
+                              std::unordered_map<std::string, Table *> &table_map,
+                              std::unordered_map<std::string, std::string> &table_alias_map) {
   for (size_t i = 0; i < select_sql.relations.size(); i++) {
-    const char *table_name = select_sql.relations[i].c_str();
+    const char *table_name = select_sql.relations[i].relation_name.c_str();
+    const auto &alias = select_sql.relations[i].alias_name;
+    // Both table name and alias name will map to the same table
     if (nullptr == table_name) {
       LOG_WARN("invalid argument. relation name is null. index=%d", i);
       return RC::INVALID_ARGUMENT;
@@ -131,10 +128,34 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt) {
 
     tables.push_back(table);
     table_map.insert(std::pair<std::string, Table *>(table_name, table));
+    if (!alias.empty()) {
+      table_map.insert(std::pair<std::string, Table *>(alias, table));
+      table_alias_map.insert(std::pair<std::string, std::string>(table_name, alias));
+    }
+  }
+  return RC::SUCCESS;
+}
+
+RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt) {
+  if (nullptr == db) {
+    LOG_WARN("invalid argument. db is null");
+    return RC::INVALID_ARGUMENT;
+  }
+
+  // collect tables in `from` statement
+  std::vector<Table *> tables;
+  std::unordered_map<std::string, Table *> table_map;
+  // Map table -> table's alias name
+  std::unordered_map<std::string, std::string> table_alias_map;
+  RC rc = resolve_tables(db, select_sql, tables, table_map, table_alias_map);
+  if (rc != RC::SUCCESS) {
+    LOG_WARN("failed to resolve tables");
+    return rc;
   }
 
   // collect query fields in `select` statement
   std::vector<Field> query_fields;
+  std::vector<AliasCell> alias_vec;
 
   // For aggregation
   std::vector<std::pair<const FieldMeta *, int>> aggregate_keys;
@@ -143,6 +164,7 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt) {
   bool agg_flag{false};
   bool non_agg_flag{false};
 
+  // Resolve the query fields
   for (int i = static_cast<int>(select_sql.attributes.size()) - 1; i >= 0; i--) {
     const RelAttrSqlNode &relation_attr = select_sql.attributes[i];
     if (!relation_attr.agg_valid_flag) {
@@ -155,7 +177,7 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt) {
       // If the current field is wildcard. (i.e., COUNT(*))
       for (Table *table : tables) {
         // We basically need all the metadata from all the underlying tables
-        wildcard_fields(table, query_fields);
+        wildcard_fields(table, query_fields, alias_vec);
       }
 
       // Possibly aggregation on `*`
@@ -173,7 +195,7 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt) {
           return RC::SCHEMA_FIELD_MISSING;
         }
         for (Table *table : tables) {
-          wildcard_fields(table, query_fields);
+          wildcard_fields(table, query_fields, alias_vec);
         }
 
         // Essentially the same as `*` cases for aggregation
@@ -181,7 +203,9 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt) {
             query_fields, agg_pos, aggregate_keys, aggregate_types, relation_attr, agg_flag, non_agg_flag);
 
       } else {
+        // select t1.c1 from t1;
         auto iter = table_map.find(table_name);
+        // Table alias is also in this map
         if (iter == table_map.end()) {
           LOG_WARN("no such table in from list: %s", table_name);
           return RC::SCHEMA_FIELD_MISSING;
@@ -190,17 +214,23 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt) {
         Table *table = iter->second;
         if (0 == strcmp(field_name, "*")) {
           // i.e., `select t1.* from t1;`. Though this is essentially the same with `*`.
-          wildcard_fields(table, query_fields);
+          wildcard_fields(table, query_fields, alias_vec);
           agg_builder_inner(
               query_fields, agg_pos, aggregate_keys, aggregate_types, relation_attr, agg_flag, non_agg_flag);
         } else {
+          // It's real name ,not alias name
           const FieldMeta *field_meta = table->table_meta().field(field_name);
           if (nullptr == field_meta) {
             LOG_WARN("no such field. field=%s.%s.%s", db->name(), table->name(), field_name);
             return RC::SCHEMA_FIELD_MISSING;
           }
 
-          query_fields.push_back(Field(table, field_meta));
+          query_fields.emplace_back(table, field_meta);
+          if (!relation_attr.alias_name.empty()) {
+            alias_vec.push_back({true, relation_attr.alias_name, table_name});
+          } else {
+            alias_vec.push_back(AliasCell());
+          }
           agg_builder_inner(
               query_fields, agg_pos, aggregate_keys, aggregate_types, relation_attr, agg_flag, non_agg_flag);
         }
@@ -223,7 +253,20 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt) {
         return RC::SCHEMA_FIELD_MISSING;
       }
 
-      query_fields.push_back(Field(table, field_meta));
+      query_fields.emplace_back(table, field_meta);
+      if (!relation_attr.alias_name.empty()) {
+        // Check if the table has an alias name
+        auto iter = table_alias_map.find(table->name());
+        if (iter != table_alias_map.end()) {
+          // If the table has an alias name, use the alias name instead
+          alias_vec.push_back({true, relation_attr.alias_name, iter->second});
+        } else {
+          // Does not have an alias name
+          alias_vec.push_back({true, relation_attr.alias_name, table->name()});
+        }
+      } else {
+        alias_vec.push_back(AliasCell());
+      }
       agg_builder_inner(query_fields, agg_pos, aggregate_keys, aggregate_types, relation_attr, agg_flag, non_agg_flag);
     }
   }
@@ -237,6 +280,8 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt) {
     query_fields = {query_fields.rbegin(), query_fields.rend()};
   }
 
+  assert(query_fields.size() == alias_vec.size());
+
   LOG_INFO("got %d tables in from stmt and %d fields in query stmt", tables.size(), query_fields.size());
 
   Table *default_table = nullptr;
@@ -246,6 +291,7 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt) {
 
   auto conditions = select_sql.conditions.data();
   auto condition_num = select_sql.conditions.size();
+
   // Check every equal-to condition ,then range the tables
   // To check if we can do any join operation
   std::vector<JoinStmt> join_stmts;
@@ -258,7 +304,8 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt) {
         if (left_table_name != right_table_name) {
           // Join operation
           FilterUnit *filter_unit = nullptr;
-          RC rc = FilterStmt::create_filter_unit(db, default_table, &table_map, conditions[i], filter_unit);
+          RC rc = FilterStmt::create_filter_unit(
+              db, default_table, &table_map, select_sql.attributes, conditions[i], filter_unit);
           auto filter_obj_left = filter_unit->left().field;
           auto filter_obj_right = filter_unit->right().field;
           if (rc != RC::SUCCESS) {
@@ -275,7 +322,7 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt) {
 
   // Bind order by
   std::vector<OrderByStmt> order_by_stmts;
-  RC rc = bind_order_by(db, tables, select_sql.order_bys, order_by_stmts);
+  rc = bind_order_by(db, tables, select_sql.order_bys, order_by_stmts);
   if (rc != RC::SUCCESS) {
     LOG_WARN("failed to bind order by");
     return rc;
@@ -286,6 +333,7 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt) {
   rc = FilterStmt::create(db,
                           default_table,
                           &table_map,
+                          select_sql.attributes,
                           select_sql.conditions.data(),
                           static_cast<int>(select_sql.conditions.size()),
                           filter_stmt);
@@ -307,6 +355,7 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt) {
   // TODO add expression copy
   select_stmt->tables_.swap(tables);
   select_stmt->query_fields_.swap(query_fields);
+  select_stmt->alias_vec_.swap(alias_vec);
   select_stmt->filter_stmt_ = filter_stmt;
   select_stmt->agg_stmt_ = agg_stmt;
   select_stmt->join_stmts_ = join_stmts;
