@@ -19,6 +19,7 @@ See the Mulan PSL v2 for more details. */
 #include "session/session.h"
 #include "common/io/io.h"
 #include "common/log/log.h"
+#include "sql/parser/value.h"
 
 PlainCommunicator::PlainCommunicator()
 {
@@ -248,6 +249,35 @@ RC PlainCommunicator::write_result_internal(SessionEvent *event, bool &need_disc
       }
 
       std::string cell_str = value.to_string();
+
+      // std::cout << "[plain communicator] current cell_str: " << cell_str << std::endl;
+
+      // Check null here 😅
+      // TODO: Refactor the code 😅😅
+      switch (value.attr_type()) {
+        case INTS: {
+          if (value.get_int() == 1919810) {
+            cell_str = "NULL";
+          }
+        } break;
+        case FLOATS: {
+          if (std::abs(value.get_float() - 114.514) < 1e-6) {
+            cell_str = "NULL";
+          }
+        } break;
+        case CHARS: {
+          if (strcmp(value.get_string().c_str(), "xzhseh") == 0) {
+            cell_str = "NULL";
+          }
+        } break;
+        case DATE: {
+          if (value.get_date() == 20021030) {
+            cell_str = "NULL";
+          }
+        } break;
+        default: assert(false);
+      }
+
       rc = writer_->writen(cell_str.data(), cell_str.size());
       if (OB_FAIL(rc)) {
         LOG_WARN("failed to send data to client. err=%s", strerror(errno));

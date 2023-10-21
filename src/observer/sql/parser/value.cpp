@@ -102,6 +102,7 @@ void Value::set_data(char *data, int length)
     }
   }
 }
+
 void Value::set_int(int val)
 {
   attr_type_            = INTS;
@@ -172,6 +173,7 @@ void Value::set_value(const Value &value)
     case UNDEFINED: {
       ASSERT(false, "got an invalid value type");
     } break;
+    default: assert(false); // Should not set value to a NULL
   }
 }
 
@@ -219,6 +221,12 @@ std::string Value::to_string() const
 
 int Value::compare(const Value &other) const
 {
+  if (this->is_null() || other.is_null()) {
+    // The current value is NULL
+    // FIXME: Please ensure this
+    return -1;
+  }
+
   if (this->attr_type_ == other.attr_type_) {
     switch (this->attr_type_) {
       case INTS: {

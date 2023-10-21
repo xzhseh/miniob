@@ -80,7 +80,7 @@ private:
   std::vector<FieldExpr> exprs_;
   std::vector<std::pair<const FieldMeta *, int>> aggregate_keys_;
   // The number of tuples
-  int n{0};
+  int avg_n{0};
   bool next_flag{false};
   std::vector<agg> aggregate_types_;
 };

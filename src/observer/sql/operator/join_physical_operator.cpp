@@ -64,13 +64,19 @@ RC NestedLoopJoinPhysicalOperator::next()
 
 RC NestedLoopJoinPhysicalOperator::close()
 {
-  RC rc = left_->close();
+  RC rc = RC::SUCCESS;
+  // FIXME: Ensure this
+  if (left_) {
+    RC rc = left_->close();
+  }
   if (rc != RC::SUCCESS) {
     LOG_WARN("failed to close left oper. rc=%s", strrc(rc));
   }
 
   if (!right_closed_) {
-    rc = right_->close();
+    if (right_) {
+      rc = right_->close();
+    }
     if (rc != RC::SUCCESS) {
       LOG_WARN("failed to close right oper. rc=%s", strrc(rc));
     } else {

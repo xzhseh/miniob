@@ -17,15 +17,15 @@ See the Mulan PSL v2 for more details. */
 #include <string>
 #include "common/rc.h"
 
-/**
- * @brief 属性的类型
- */
+/// Note that after adding the null flag
+/// Unfortunately we need to add 1 byte for each type 😅
+/// In the future we could possibly figure out if there is other solution for this
 enum AttrType {
   UNDEFINED,
   CHARS,          ///< string type
-  INTS,           ///< int type (4 bytes)
-  FLOATS,         ///< float type (4 bytes)
-  DATE,           ///< date type (4 bytes)
+  INTS,           ///< int type (4 + 1 bytes)
+  FLOATS,         ///< float type (4 + 1 bytes)
+  DATE,           ///< date type (4 + 1 bytes)
   BOOLEANS,       ///< boolean type (currently used internally, will not be parsed by parser)
 };
 
@@ -55,6 +55,20 @@ public:
   Value(const Value &other) = default;
   Value &operator=(const Value &other) = default;
 
+  static bool check_null(const Value &v) {
+    switch (v.attr_type()) {
+      case INTS:
+        return v.get_int() == 1919810;
+      case FLOATS:
+        return v.get_float() == 114.514;
+      case CHARS:
+        return strcmp(v.get_string().c_str(), "xzhseh") == 0;
+      case DATE:
+        return v.get_date() == 20021030;
+      default: assert(false);
+    }
+  }
+
   void set_type(AttrType type) {
     this->attr_type_ = type;
   }
@@ -64,11 +78,11 @@ public:
   }
 
   void set_null() {
-    null_flag_ = true;
+    is_null_ = true;
   }
 
-  bool is_null() {
-    return null_flag_;
+  bool is_null() const {
+    return is_null_;
   }
 
   void set_data(char *data, int length);
@@ -126,5 +140,5 @@ private:
   // In two cases this will be `false`
   //   1. Explicitly declare `not null`
   //   2. Does NOT explicitly declare `null`
-  bool null_flag_{false};
+  bool is_null_{false};
 };

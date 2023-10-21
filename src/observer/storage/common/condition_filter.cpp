@@ -15,6 +15,7 @@ See the Mulan PSL v2 for more details. */
 #include <stddef.h>
 #include <math.h>
 #include "condition_filter.h"
+#include "sql/parser/parse_defs.h"
 #include "storage/record/record_manager.h"
 #include "common/log/log.h"
 #include "storage/table/table.h"
@@ -125,6 +126,80 @@ bool DefaultConditionFilter::filter(const Record &rec) const
   Value left_value;
   Value right_value;
 
+  if (left_.value.is_null() && right_.value.is_null()) {
+    // Only NULL is NULL should return true
+    if (comp_op_ == IS) {
+      return true;
+    }
+    // NULL is not NULL should return false
+    if (comp_op_ == IS_NOT) {
+      return false;
+    }
+    // Other comparison should all return false
+    return false;
+  }
+
+  // TODO: Refactor this part
+  if (left_.value.is_null() || right_.value.is_null()) {
+    // If one side of the operand is null
+    if (comp_op_ == IS_NOT) {
+      if (left_.value.is_null()) {
+        if (right_.is_attr) {
+          // Is attribute
+          left_value.set_type(attr_type_);
+          left_value.set_data(rec.data() + left_.attr_offset, left_.attr_length);
+          return !Value::check_null(left_value);
+        } else {
+          // Is value
+          return true;
+        }
+      } else if (right_.value.is_null()) {
+        if (left_.is_attr) {
+          // Is attribute
+          right_value.set_type(attr_type_);
+          right_value.set_data(rec.data() + right_.attr_offset, right_.attr_length);
+          return !Value::check_null(right_value);
+        } else {
+          // Is value
+          return true;
+        }
+      } else {
+        assert(false); // This is impossible
+      }
+      assert(false); // This is impossible
+    }
+    if (comp_op_ == IS) {
+      if (left_.value.is_null()) {
+        if (right_.is_attr) {
+          // Is attribute
+          left_value.set_type(attr_type_);
+          left_value.set_data(rec.data() + left_.attr_offset, left_.attr_length);
+          return Value::check_null(left_value);
+        } else {
+          // Is value
+          return false;
+        }
+      } else if (right_.value.is_null()) {
+        if (left_.is_attr) {
+          // Is attribute
+          right_value.set_type(attr_type_);
+          right_value.set_data(rec.data() + right_.attr_offset, right_.attr_length);
+          return Value::check_null(right_value);
+        } else {
+          // Is value
+          return false;
+        }
+      } else {
+        assert(false); // This is impossible
+      }
+      assert(false); // This is impossible
+    }
+    // All other comparison should return false
+    return false;
+  }
+
+  assert(!left_.value.is_null() && !left_.value.is_null());
+
   if (left_.is_attr) {  // value
     left_value.set_type(attr_type_);
     left_value.set_data(rec.data() + left_.attr_offset, left_.attr_length);
@@ -137,6 +212,12 @@ bool DefaultConditionFilter::filter(const Record &rec) const
     right_value.set_data(rec.data() + right_.attr_offset, right_.attr_length);
   } else {
     right_value.set_value(right_.value);
+  }
+
+  std::cout << "left_value: " << left_value.to_string() << " right_value: " << right_value.to_string() << std::endl;
+
+  if (Value::check_null(left_value) || Value::check_null(right_value)) {
+    return false;
   }
 
   int cmp_result = left_value.compare(right_value);
@@ -159,6 +240,7 @@ bool DefaultConditionFilter::filter(const Record &rec) const
       break;
   }
 
+  assert(false);
   LOG_PANIC("Never should print this.");
   return cmp_result;  // should not go here
 }

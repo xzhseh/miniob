@@ -36,7 +36,9 @@ public:
   }
 
 public:
-  static RC create(Db *db, const InsertSqlNode &insert_sql, Stmt *&stmt);
+  // static RC create(Db *db, const InsertSqlNode &insert_sql, Stmt *&stmt);
+  // FIXME: The drop of const qualifier is for null
+  static RC create(Db *db, InsertSqlNode &insert_sql, Stmt *&stmt);
 
 public:
   Table *table() const

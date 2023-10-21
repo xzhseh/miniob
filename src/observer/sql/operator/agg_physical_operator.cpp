@@ -101,14 +101,19 @@ void set_initial_value_for_map(std::unordered_map<agg, Value> &m, AttrType t, ag
 /// Basically we will extract all possible tuples from the child operator
 /// And make the basic aggregation at present
 RC AggPhysicalOperator::next() {
+    bool g_null_flag{false};
     if (next_flag) {
         return RC::RECORD_EOF;
     }
     RC rc = RC::SUCCESS;
     while ((rc = child_->next()) == RC::SUCCESS) {
+        bool null_flag{false};
         Tuple *tuple = child_->current_tuple();
         // for (const auto &field_expr : exprs_) {
             for (int i = 0; i < aggregate_keys_.size(); ++i) {
+                if (null_flag) {
+                    break;
+                }
                 for (const auto &field_expr : exprs_) {
             // for (int i = 0; i < aggregate_types_.size(); ++i) {
                 auto &[field_meta, n] = aggregate_keys_[i];
@@ -133,6 +138,12 @@ RC AggPhysicalOperator::next() {
                         Value v;
                         field_expr.get_value(*tuple, v);
                         set_initial_value_for_map(agg_value_map_, v.attr_type(), aggregate_types_[i], v);
+                        // FIXME: Ensure the sequence of this and the `set_initial_value_for_map`
+                        if (Value::check_null(v)) {
+                            null_flag = true;
+                            g_null_flag = true;
+                            break;
+                        }
                         switch (aggregate_types_[i]) {
                             case agg::AGG_COUNT: {
                                 if (agg_value_map_.count(agg::AGG_COUNT) == 0) {
@@ -182,16 +193,28 @@ RC AggPhysicalOperator::next() {
                 }
             }
         }
-        n += 1;
+        if (!null_flag) {
+            avg_n += 1;
+        }
     }
+
+    // std::cout << "Current avg_n: " << avg_n << std::endl;
 
     // For agg::AGG_AVG
     if (agg_value_map_.count(agg::AGG_AVG) == 1) {
         auto &v_t = agg_value_map_[agg::AGG_AVG];
         if (v_t.attr_type() == AttrType::INTS) {
-            v_t.set_float(v_t.get_int() * 1.0 / n);
+            if (g_null_flag && v_t.get_int() == 0) {
+                v_t.set_float(114.514);
+            } else {
+                v_t.set_float(v_t.get_int() * 1.0 / avg_n);
+            }
         } else if (v_t.attr_type() == AttrType::FLOATS) {
-            v_t.set_float(v_t.get_float() / n);
+            if (g_null_flag && v_t.get_float() == 0) {
+                v_t.set_float(114.514);
+            } else {
+                v_t.set_float(v_t.get_float() / avg_n);
+            }
         } else {
             assert(false); // Not yet support
         }

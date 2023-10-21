@@ -60,6 +60,9 @@ RC TableMeta::init(int32_t table_id, const char *name, int field_num, const Attr
   int field_offset = 0;
   int trx_field_num = 0;
   const vector<FieldMeta> *trx_fields = TrxKit::instance()->trx_fields();
+
+  // MVCC txn will return `fields_`
+  // TODO: Ensure the null attribute for trx
   if (trx_fields != nullptr) {
     fields_.resize(field_num + trx_fields->size());
 
@@ -77,7 +80,7 @@ RC TableMeta::init(int32_t table_id, const char *name, int field_num, const Attr
   for (int i = 0; i < field_num; i++) {
     const AttrInfoSqlNode &attr_info = attributes[i];
     rc = fields_[i + trx_field_num].init(attr_info.name.c_str(), 
-            attr_info.type, field_offset, attr_info.length, true/*visible*/);
+            attr_info.type, field_offset, attr_info.length, true/*visible*/, attr_info.is_null);
     if (rc != RC::SUCCESS) {
       LOG_ERROR("Failed to init field meta. table name=%s, field name: %s", name, attr_info.name.c_str());
       return rc;
@@ -86,6 +89,9 @@ RC TableMeta::init(int32_t table_id, const char *name, int field_num, const Attr
     field_offset += attr_info.length;
   }
 
+  // We need extra bits to store information regarding null bitmap
+  // FIXME: Ensure this
+  // record_size_ = field_offset + field_num;
   record_size_ = field_offset;
 
   table_id_ = table_id;
@@ -279,7 +285,7 @@ int TableMeta::deserialize(std::istream &is)
   table_id_ = table_id;
   name_.swap(table_name);
   fields_.swap(fields);
-  record_size_ = fields_.back().offset() + fields_.back().len() - fields_.begin()->offset();
+  record_size_ = fields_.back().offset() + fields_.back().len() - fields_.begin()->offset(); // /* For the nulls */ field_num;
 
   const Json::Value &indexes_value = table_value[FIELD_INDEXES];
   if (!indexes_value.empty()) {
