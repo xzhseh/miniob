@@ -92,16 +92,14 @@ bool OrderByPhysicalOperator::compare_tuple(const std::unique_ptr<Tuple> &left, 
       return false;
     }
 
-    std::cout << "[order by] left: " << left_value.to_string() << " right: " << right_value.to_string() << std::endl;
-
     if (Value::check_null(left_value) && !Value::check_null(right_value)) {
       // NULL < NOT NULL
       // Regardless of ASC / DESC
-      return true;
+      return (is_asc) ? true : false;
     } else if (!Value::check_null(left_value) && Value::check_null(right_value)) {
       // Same as above
       // NOT NULL > NULL
-      return false;
+      return (is_asc) ? false : true;
     } else if (Value::check_null(left_value) && Value::check_null(right_value)) {
       // Nothing to do, we do not compare NULL & NULL
       continue;
