@@ -18,12 +18,12 @@ See the Mulan PSL v2 for more details. */
 
 RC ComparisonSimplificationRule::rewrite(std::unique_ptr<Expression> &expr, bool &change_made)
 {
-  RC rc       = RC::SUCCESS;
+  RC rc = RC::SUCCESS;
   change_made = false;
   if (expr->type() == ExprType::COMPARISON) {
     ComparisonExpr *cmp_expr = static_cast<ComparisonExpr *>(expr.get());
-    Value           value;
-    RC              sub_rc = cmp_expr->try_get_value(value);
+    Value value;
+    RC sub_rc = cmp_expr->try_get_value(value);
     if (sub_rc == RC::SUCCESS) {
       std::unique_ptr<Expression> new_expr(new ValueExpr(value));
       expr.swap(new_expr);

@@ -23,10 +23,10 @@ See the Mulan PSL v2 for more details. */
 
 RC Communicator::init(int fd, Session *session, const std::string &addr)
 {
-  fd_      = fd;
+  fd_ = fd;
   session_ = session;
-  addr_    = addr;
-  writer_  = new BufferedWriter(fd_);
+  addr_ = addr;
+  writer_ = new BufferedWriter(fd_);
   return RC::SUCCESS;
 }
 

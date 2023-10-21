@@ -29,20 +29,20 @@ RC IndexMeta::init(const char *name, const FieldMeta &field)
     return RC::INVALID_ARGUMENT;
   }
 
-  name_  = name;
+  name_ = name;
   field_ = field.name();
   return RC::SUCCESS;
 }
 
 void IndexMeta::to_json(Json::Value &json_value) const
 {
-  json_value[FIELD_NAME]       = name_;
+  json_value[FIELD_NAME] = name_;
   json_value[FIELD_FIELD_NAME] = field_;
 }
 
 RC IndexMeta::from_json(const TableMeta &table, const Json::Value &json_value, IndexMeta &index)
 {
-  const Json::Value &name_value  = json_value[FIELD_NAME];
+  const Json::Value &name_value = json_value[FIELD_NAME];
   const Json::Value &field_value = json_value[FIELD_FIELD_NAME];
   if (!name_value.isString()) {
     LOG_ERROR("Index name is not a string. json value=%s", name_value.toStyledString().c_str());
@@ -65,8 +65,17 @@ RC IndexMeta::from_json(const TableMeta &table, const Json::Value &json_value, I
   return index.init(name_value.asCString(), *field);
 }
 
-const char *IndexMeta::name() const { return name_.c_str(); }
+const char *IndexMeta::name() const
+{
+  return name_.c_str();
+}
 
-const char *IndexMeta::field() const { return field_.c_str(); }
+const char *IndexMeta::field() const
+{
+  return field_.c_str();
+}
 
-void IndexMeta::desc(std::ostream &os) const { os << "index name=" << name_ << ", field=" << field_; }
+void IndexMeta::desc(std::ostream &os) const
+{
+  os << "index name=" << name_ << ", field=" << field_;
+}

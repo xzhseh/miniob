@@ -23,4 +23,5 @@ See the Mulan PSL v2 for more details. */
  * 感兴趣的同学可以参考OceanBase的实现
  */
 class PlanCacheStage
-{};
+{
+};

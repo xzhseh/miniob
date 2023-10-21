@@ -25,7 +25,7 @@ RC ProjectPhysicalOperator::open(Trx *trx)
   }
 
   PhysicalOperator *child = children_[0].get();
-  RC                rc    = child->open(trx);
+  RC rc = child->open(trx);
   if (rc != RC::SUCCESS) {
     LOG_WARN("failed to open child operator: %s", strrc(rc));
     return rc;
@@ -54,7 +54,7 @@ Tuple *ProjectPhysicalOperator::current_tuple()
   // std::cout << "[project] Current children tuple: " << children_[0]->current_tuple()->to_string() << std::endl;
   if (dynamic_cast<ValueListTuple *>(children_[0]->current_tuple()) != nullptr) {
     // The child is of type aggregation, produce the value tuple
-    return children_[0]->current_tuple();
+    return  children_[0]->current_tuple();
   }
 
   tuple_.set_tuple(children_[0]->current_tuple());

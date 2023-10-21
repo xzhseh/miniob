@@ -34,17 +34,20 @@ class IndexScanner;
  * @brief 索引基类
  * @ingroup Index
  */
-class Index
+class Index 
 {
 public:
-  Index()          = default;
+  Index() = default;
   virtual ~Index() = default;
 
-  const IndexMeta &index_meta() const { return index_meta_; }
+  const IndexMeta &index_meta() const
+  {
+    return index_meta_;
+  }
 
   /**
    * @brief 插入一条数据
-   *
+   * 
    * @param record 插入的记录，当前假设记录是定长的
    * @param[out] rid    插入的记录的位置
    */
@@ -52,7 +55,7 @@ public:
 
   /**
    * @brief 删除一条数据
-   *
+   * 
    * @param record 删除的记录，当前假设记录是定长的
    * @param[in] rid   删除的记录的位置
    */
@@ -60,7 +63,7 @@ public:
 
   /**
    * @brief 创建一个索引数据的扫描器
-   *
+   * 
    * @param left_key 要扫描的左边界
    * @param left_len 左边界的长度
    * @param left_inclusive 是否包含左边界
@@ -73,7 +76,7 @@ public:
 
   /**
    * @brief 同步索引数据到磁盘
-   *
+   * 
    */
   virtual RC sync() = 0;
 
@@ -89,10 +92,10 @@ protected:
  * @brief 索引扫描器
  * @ingroup Index
  */
-class IndexScanner
+class IndexScanner 
 {
 public:
-  IndexScanner()          = default;
+  IndexScanner() = default;
   virtual ~IndexScanner() = default;
 
   /**
@@ -100,5 +103,5 @@ public:
    * 如果没有更多的元素，返回RECORD_EOF
    */
   virtual RC next_entry(RID *rid) = 0;
-  virtual RC destroy()            = 0;
+  virtual RC destroy() = 0;
 };

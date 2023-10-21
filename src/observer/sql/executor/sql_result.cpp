@@ -18,9 +18,13 @@ See the Mulan PSL v2 for more details. */
 #include "storage/trx/trx.h"
 #include "common/log/log.h"
 
-SqlResult::SqlResult(Session *session) : session_(session) {}
+SqlResult::SqlResult(Session *session) : session_(session)
+{}
 
-void SqlResult::set_tuple_schema(const TupleSchema &schema) { tuple_schema_ = schema; }
+void SqlResult::set_tuple_schema(const TupleSchema &schema)
+{
+  tuple_schema_ = schema;
+}
 
 RC SqlResult::open()
 {
@@ -58,8 +62,7 @@ RC SqlResult::close()
   return rc;
 }
 
-RC SqlResult::next_tuple(Tuple *&tuple)
-{
+RC SqlResult::next_tuple(Tuple *&tuple) {
   RC rc = operator_->next();
   if (rc != RC::SUCCESS) {
     return rc;

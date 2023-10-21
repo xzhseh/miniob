@@ -53,23 +53,41 @@ void parse_parameter(int argc, char **argv)
   process_param->init_default(process_name);
 
   // Process args
-  int          opt;
+  int opt;
   extern char *optarg;
   while ((opt = getopt(argc, argv, "dp:P:s:t:f:o:e:hn:")) > 0) {
     switch (opt) {
-      case 's': process_param->set_unix_socket_path(optarg); break;
-      case 'p': process_param->set_server_port(atoi(optarg)); break;
-      case 'P': process_param->set_protocol(optarg); break;
-      case 'f': process_param->set_conf(optarg); break;
-      case 'o': process_param->set_std_out(optarg); break;
-      case 'e': process_param->set_std_err(optarg); break;
-      case 't': process_param->set_trx_kit_name(optarg); break;
-      case 'n': process_param->set_buffer_pool_memory_size(atoi(optarg)); break;
+      case 's':
+        process_param->set_unix_socket_path(optarg);
+        break;
+      case 'p':
+        process_param->set_server_port(atoi(optarg));
+        break;
+      case 'P':
+        process_param->set_protocol(optarg);
+        break;
+      case 'f':
+        process_param->set_conf(optarg);
+        break;
+      case 'o':
+        process_param->set_std_out(optarg);
+        break;
+      case 'e':
+        process_param->set_std_err(optarg);
+        break;
+      case 't':
+        process_param->set_trx_kit_name(optarg);
+        break;
+      case 'n':
+        process_param->set_buffer_pool_memory_size(atoi(optarg));
+        break;
       case 'h':
         usage();
         exit(0);
         return;
-      default: std::cout << "Unknown option: " << static_cast<char>(opt) << ", ignored" << std::endl; break;
+      default:
+        std::cout << "Unknown option: " << static_cast<char>(opt) << ", ignored" << std::endl;
+        break;
     }
   }
 }
@@ -80,9 +98,9 @@ Server *init_server()
 
   ProcessParam *process_param = the_process_param();
 
-  long listen_addr        = INADDR_ANY;
+  long listen_addr = INADDR_ANY;
   long max_connection_num = MAX_CONNECTION_NUM_DEFAULT;
-  int  port               = PORT_DEFAULT;
+  int port = PORT_DEFAULT;
 
   std::map<std::string, std::string>::iterator it = net_section.find(CLIENT_ADDRESS);
   if (it != net_section.end()) {
@@ -108,20 +126,20 @@ Server *init_server()
   }
 
   ServerParam server_param;
-  server_param.listen_addr        = listen_addr;
+  server_param.listen_addr = listen_addr;
   server_param.max_connection_num = max_connection_num;
-  server_param.port               = port;
+  server_param.port = port;
   if (0 == strcasecmp(process_param->get_protocol().c_str(), "mysql")) {
     server_param.protocol = CommunicateProtocol::MYSQL;
   } else if (0 == strcasecmp(process_param->get_protocol().c_str(), "cli")) {
     server_param.use_std_io = true;
-    server_param.protocol   = CommunicateProtocol::CLI;
+    server_param.protocol = CommunicateProtocol::CLI;
   } else {
     server_param.protocol = CommunicateProtocol::PLAIN;
   }
 
   if (process_param->get_unix_socket_path().size() > 0 && !server_param.use_std_io) {
-    server_param.use_unix_socket  = true;
+    server_param.use_unix_socket = true;
     server_param.unix_socket_path = process_param->get_unix_socket_path();
   }
 
@@ -177,12 +195,8 @@ int main(int argc, char **argv)
 
 /**
  * @mainpage MiniOB
- *
+ * 
  * MiniOB 是 OceanBase 与华中科技大学联合开发的、面向"零"基础同学的数据库入门学习项目。
  *
- * MiniOB 设计的目标是面向在校学生、数据库从业者、爱好者，或者对基础技术有兴趣的爱好者, 整体代码量少，易于上手并学习,
- * 是一个系统性的数据库学习项目。miniob 设置了一系列由浅入深的题目，以帮助同学们"零"基础入门,
- * 让同学们快速了解数据库并深入学习数据库内核，期望通过相关训练之后，能够熟练掌握数据库内核模块的功能与协同关系,
- * 并能够在使用数据库时，设计出高效的 SQL 。miniob 为了更好的学习数据库实现原理,
- * 对诸多模块都做了简化，比如不考虑并发操作, 安全特性, 复杂的事物管理等功能。
+ * MiniOB 设计的目标是面向在校学生、数据库从业者、爱好者，或者对基础技术有兴趣的爱好者, 整体代码量少，易于上手并学习, 是一个系统性的数据库学习项目。miniob 设置了一系列由浅入深的题目，以帮助同学们"零"基础入门, 让同学们快速了解数据库并深入学习数据库内核，期望通过相关训练之后，能够熟练掌握数据库内核模块的功能与协同关系, 并能够在使用数据库时，设计出高效的 SQL 。miniob 为了更好的学习数据库实现原理, 对诸多模块都做了简化，比如不考虑并发操作, 安全特性, 复杂的事物管理等功能。
  */

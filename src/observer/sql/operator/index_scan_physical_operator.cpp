@@ -16,12 +16,14 @@ See the Mulan PSL v2 for more details. */
 #include "storage/index/index.h"
 #include "storage/trx/trx.h"
 
-IndexScanPhysicalOperator::IndexScanPhysicalOperator(Table *table, Index *index, bool readonly, const Value *left_value,
-    bool left_inclusive, const Value *right_value, bool right_inclusive)
-    : table_(table),
-      index_(index),
-      readonly_(readonly),
-      left_inclusive_(left_inclusive),
+IndexScanPhysicalOperator::IndexScanPhysicalOperator(
+    Table *table, Index *index, bool readonly, 
+    const Value *left_value, bool left_inclusive, 
+    const Value *right_value, bool right_inclusive)
+    : table_(table), 
+      index_(index), 
+      readonly_(readonly), 
+      left_inclusive_(left_inclusive), 
       right_inclusive_(right_inclusive)
 {
   if (left_value) {
@@ -66,7 +68,7 @@ RC IndexScanPhysicalOperator::open(Trx *trx)
 RC IndexScanPhysicalOperator::next()
 {
   RID rid;
-  RC  rc = RC::SUCCESS;
+  RC rc = RC::SUCCESS;
 
   record_page_handler_.cleanup();
 
@@ -98,8 +100,7 @@ RC IndexScanPhysicalOperator::next()
   return rc;
 }
 
-RC IndexScanPhysicalOperator::close()
-{
+RC IndexScanPhysicalOperator::close() {
   // FIXME: Ensure this
   if (index_scanner_ == nullptr) {
     return RC::SUCCESS;
@@ -110,20 +111,18 @@ RC IndexScanPhysicalOperator::close()
   return RC::SUCCESS;
 }
 
-Tuple *IndexScanPhysicalOperator::current_tuple()
-{
+Tuple *IndexScanPhysicalOperator::current_tuple() {
   tuple_.set_record(&current_record_);
   return &tuple_;
 }
 
-void IndexScanPhysicalOperator::set_predicates(std::vector<std::unique_ptr<Expression>> &&exprs)
-{
+void IndexScanPhysicalOperator::set_predicates(std::vector<std::unique_ptr<Expression>> &&exprs) {
   predicates_ = std::move(exprs);
 }
 
 RC IndexScanPhysicalOperator::filter(RowTuple &tuple, bool &result)
 {
-  RC    rc = RC::SUCCESS;
+  RC rc = RC::SUCCESS;
   Value value;
   for (std::unique_ptr<Expression> &expr : predicates_) {
     rc = expr->get_value(tuple, value);

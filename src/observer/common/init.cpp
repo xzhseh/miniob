@@ -41,12 +41,15 @@ using namespace common;
 
 bool *&_get_init()
 {
-  static bool  util_init   = false;
+  static bool util_init = false;
   static bool *util_init_p = &util_init;
   return util_init_p;
 }
 
-bool get_init() { return *_get_init(); }
+bool get_init()
+{
+  return *_get_init();
+}
 
 void set_init(bool value)
 {
@@ -75,14 +78,14 @@ int init_log(ProcessParam *process_cfg, Ini &properties)
 
     auto log_context_getter = []() { return reinterpret_cast<intptr_t>(Session::current_session()); };
 
-    const std::string                  log_section_name = "LOG";
-    std::map<std::string, std::string> log_section      = properties.get(log_section_name);
+    const std::string log_section_name = "LOG";
+    std::map<std::string, std::string> log_section = properties.get(log_section_name);
 
     std::string log_file_name;
 
     // get log file name
-    std::string                                  key = "LOG_FILE_NAME";
-    std::map<std::string, std::string>::iterator it  = log_section.find(key);
+    std::string key = "LOG_FILE_NAME";
+    std::map<std::string, std::string>::iterator it = log_section.find(key);
     if (it == log_section.end()) {
       log_file_name = proc_name + ".log";
       std::cout << "Not set log file name, use default " << log_file_name << std::endl;
@@ -93,8 +96,8 @@ int init_log(ProcessParam *process_cfg, Ini &properties)
     log_file_name = getAboslutPath(log_file_name.c_str());
 
     LOG_LEVEL log_level = LOG_LEVEL_INFO;
-    key                 = ("LOG_FILE_LEVEL");
-    it                  = log_section.find(key);
+    key = ("LOG_FILE_LEVEL");
+    it = log_section.find(key);
     if (it != log_section.end()) {
       int log = (int)log_level;
       str_to_val(it->second, log);
@@ -102,8 +105,8 @@ int init_log(ProcessParam *process_cfg, Ini &properties)
     }
 
     LOG_LEVEL console_level = LOG_LEVEL_INFO;
-    key                     = ("LOG_CONSOLE_LEVEL");
-    it                      = log_section.find(key);
+    key = ("LOG_CONSOLE_LEVEL");
+    it = log_section.find(key);
     if (it != log_section.end()) {
       int log = (int)console_level;
       str_to_val(it->second, log);
@@ -114,7 +117,7 @@ int init_log(ProcessParam *process_cfg, Ini &properties)
     g_log->set_context_getter(log_context_getter);
 
     key = ("DefaultLogModules");
-    it  = log_section.find(key);
+    it = log_section.find(key);
     if (it != log_section.end()) {
       g_log->set_default_module(it->second);
     }
@@ -154,11 +157,11 @@ int init_global_objects(ProcessParam *process_param, Ini &properties)
   BufferPoolManager::set_instance(GCTX.buffer_pool_manager_);
 
   GCTX.handler_ = new DefaultHandler();
-
+  
   DefaultHandler::set_default(GCTX.handler_);
 
   int ret = 0;
-  RC  rc  = TrxKit::init_global(process_param->trx_kit_name().c_str());
+  RC rc = TrxKit::init_global(process_param->trx_kit_name().c_str());
   if (rc != RC::SUCCESS) {
     LOG_ERROR("failed to init trx kit. rc=%s", strrc(rc));
     ret = -1;
@@ -263,7 +266,7 @@ int init(ProcessParam *process_param)
 void cleanup_util()
 {
   uninit_global_objects();
-
+  
   if (nullptr != get_properties()) {
     delete get_properties();
     get_properties() = nullptr;
@@ -278,4 +281,7 @@ void cleanup_util()
   return;
 }
 
-void cleanup() { cleanup_util(); }
+void cleanup()
+{
+  cleanup_util();
+}

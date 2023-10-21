@@ -28,19 +28,22 @@ class Table;
  * @brief 描述算术运算语句
  * @ingroup Statement
  */
-class CalcStmt : public Stmt
+class CalcStmt : public Stmt 
 {
 public:
-  CalcStmt()                   = default;
+  CalcStmt() = default;
   virtual ~CalcStmt() override = default;
 
-  StmtType type() const override { return StmtType::CALC; }
+  StmtType type() const override
+  {
+    return StmtType::CALC;
+  }
 
 public:
   static RC create(CalcSqlNode &calc_sql, Stmt *&stmt)
   {
     CalcStmt *calc_stmt = new CalcStmt();
-    for (Expression *const expr : calc_sql.expressions) {
+    for (Expression * const expr : calc_sql.expressions) {
       calc_stmt->expressions_.emplace_back(expr);
     }
     calc_sql.expressions.clear();
@@ -49,7 +52,10 @@ public:
   }
 
 public:
-  std::vector<std::unique_ptr<Expression>> &expressions() { return expressions_; }
+  std::vector<std::unique_ptr<Expression>> &expressions()
+  {
+    return expressions_;
+  }
 
 private:
   std::vector<std::unique_ptr<Expression>> expressions_;

@@ -16,4 +16,7 @@ See the Mulan PSL v2 for more details. */
 
 static GlobalContext global_context;
 
-GlobalContext &GlobalContext::instance() { return global_context; }
+GlobalContext &GlobalContext::instance()
+{
+  return global_context;
+}

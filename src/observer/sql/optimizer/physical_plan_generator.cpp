@@ -45,8 +45,7 @@ See the Mulan PSL v2 for more details. */
 using namespace std;
 
 /// Physical plan factory
-RC PhysicalPlanGenerator::create(LogicalOperator &logical_operator, unique_ptr<PhysicalOperator> &oper)
-{
+RC PhysicalPlanGenerator::create(LogicalOperator &logical_operator, unique_ptr<PhysicalOperator> &oper) {
   RC rc = RC::SUCCESS;
   switch (logical_operator.type()) {
     case LogicalOperatorType::CALC: {
@@ -232,8 +231,7 @@ RC PhysicalPlanGenerator::create_plan(InsertLogicalOperator &insert_oper, unique
   return RC::SUCCESS;
 }
 
-RC PhysicalPlanGenerator::create_plan(UpdateLogicalOperator &update_oper, std::unique_ptr<PhysicalOperator> &oper)
-{
+RC PhysicalPlanGenerator::create_plan(UpdateLogicalOperator &update_oper, std::unique_ptr<PhysicalOperator> &oper) {
   vector<unique_ptr<LogicalOperator>> &child_opers = update_oper.children();
 
   unique_ptr<PhysicalOperator> child_physical_oper;
@@ -343,8 +341,7 @@ RC PhysicalPlanGenerator::create_plan(CalcLogicalOperator &logical_oper, std::un
   return rc;
 }
 
-RC PhysicalPlanGenerator::create_plan(AggLogicalOperator &logical_oper, std::unique_ptr<PhysicalOperator> &oper)
-{
+RC PhysicalPlanGenerator::create_plan(AggLogicalOperator &logical_oper, std::unique_ptr<PhysicalOperator> &oper) {
   RC rc = RC::SUCCESS;
 
   // The logical operator for child
@@ -362,16 +359,16 @@ RC PhysicalPlanGenerator::create_plan(AggLogicalOperator &logical_oper, std::uni
   assert(child_physical_oper != nullptr);
 
   // Get the relevant data
-  auto agg_keys  = logical_oper.get_agg_keys();
+  auto agg_keys = logical_oper.get_agg_keys();
   auto agg_types = logical_oper.get_agg_types();
-  auto all_keys  = logical_oper.get_all_keys();
+  auto all_keys = logical_oper.get_all_keys();
 
   // Construct exprs
   // std::vector<FieldExpr> exprs(agg_keys.size());
   std::vector<FieldExpr> exprs(all_keys.size());
 
   for (int i = 0; i < all_keys.size(); ++i) {
-    // for (int i = 0; i < agg_keys.size(); ++i) {
+  // for (int i = 0; i < agg_keys.size(); ++i) {
     exprs.push_back(all_keys[i]);
     // for (const auto &f : all_keys) {
     //   if (f.meta() == agg_keys[i].first) {
@@ -382,9 +379,9 @@ RC PhysicalPlanGenerator::create_plan(AggLogicalOperator &logical_oper, std::uni
 
   // Construct the physical operator
   AggPhysicalOperator *agg_oper = new AggPhysicalOperator{
-      agg_keys,
-      agg_types,
-      exprs,
+    agg_keys,
+    agg_types,
+    exprs,
   };
 
   agg_oper->add_child(std::move(child_physical_oper));

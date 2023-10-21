@@ -20,13 +20,16 @@ See the Mulan PSL v2 for more details. */
  * @brief Explain逻辑算子
  * @ingroup LogicalOperator
  */
-class ExplainLogicalOperator : public LogicalOperator
+class ExplainLogicalOperator : public LogicalOperator 
 {
 public:
-  ExplainLogicalOperator()          = default;
+  ExplainLogicalOperator() = default;
   virtual ~ExplainLogicalOperator() = default;
 
-  LogicalOperatorType type() const override { return LogicalOperatorType::EXPLAIN; }
+  LogicalOperatorType type() const override
+  {
+    return LogicalOperatorType::EXPLAIN;
+  }
 
 private:
 };

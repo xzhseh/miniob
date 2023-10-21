@@ -26,17 +26,29 @@ See the Mulan PSL v2 for more details. */
  * @ingroup LogicalOperator
  * @details 从表中获取数据后，可能需要过滤，投影，连接等等。
  */
-class ProjectLogicalOperator : public LogicalOperator
+class ProjectLogicalOperator : public LogicalOperator 
 {
 public:
   ProjectLogicalOperator(const std::vector<Field> &fields);
   virtual ~ProjectLogicalOperator() = default;
 
-  LogicalOperatorType type() const override { return LogicalOperatorType::PROJECTION; }
+  LogicalOperatorType type() const override
+  {
+    return LogicalOperatorType::PROJECTION;
+  }
 
-  std::vector<std::unique_ptr<Expression>>       &expressions() { return expressions_; }
-  const std::vector<std::unique_ptr<Expression>> &expressions() const { return expressions_; }
-  const std::vector<Field>                       &fields() const { return fields_; }
+  std::vector<std::unique_ptr<Expression>> &expressions()
+  {
+    return expressions_;
+  }
+  const std::vector<std::unique_ptr<Expression>> &expressions() const
+  {
+    return expressions_;
+  }
+  const std::vector<Field> &fields() const
+  {
+    return fields_;
+  }
 
 private:
   //! 投影映射的字段名称

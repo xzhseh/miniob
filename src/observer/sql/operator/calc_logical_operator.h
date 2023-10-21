@@ -26,8 +26,13 @@ See the Mulan PSL v2 for more details. */
 class CalcLogicalOperator : public LogicalOperator
 {
 public:
-  CalcLogicalOperator(std::vector<std::unique_ptr<Expression>> &&expressions) { expressions_.swap(expressions); }
+  CalcLogicalOperator(std::vector<std::unique_ptr<Expression>> &&expressions)
+      
+  {
+    expressions_.swap(expressions);
+  }
   virtual ~CalcLogicalOperator() = default;
 
   LogicalOperatorType type() const override { return LogicalOperatorType::CALC; }
+
 };

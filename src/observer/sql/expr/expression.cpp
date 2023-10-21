@@ -18,17 +18,15 @@ See the Mulan PSL v2 for more details. */
 
 using namespace std;
 
-RC FieldExpr::get_value(const Tuple &tuple, Value &value) const
-{
-  auto rc = tuple.find_cell(TupleCellSpec(table_name(), field_name()), value);
-  if (value.attr_type() == DATE && value.get_date() == -1) {
-    rc = RC::INVALID_ARGUMENT;
-  }
-  return rc;
+RC FieldExpr::get_value(const Tuple &tuple, Value &value) const {
+    auto rc = tuple.find_cell(TupleCellSpec(table_name(), field_name()), value);
+    if (value.attr_type() == DATE && value.get_date() == -1) {
+      rc = RC::INVALID_ARGUMENT;
+    }
+    return rc;
 }
 
-RC ValueExpr::get_value(const Tuple &tuple, Value &value) const
-{
+RC ValueExpr::get_value(const Tuple &tuple, Value &value) const {
   if (value_.attr_type() == DATE && value_.get_date() == -1) {
     return RC::INVALID_ARGUMENT;
   } else {
@@ -38,10 +36,12 @@ RC ValueExpr::get_value(const Tuple &tuple, Value &value) const
 }
 
 /////////////////////////////////////////////////////////////////////////////////
-CastExpr::CastExpr(unique_ptr<Expression> child, AttrType cast_type) : child_(std::move(child)), cast_type_(cast_type)
+CastExpr::CastExpr(unique_ptr<Expression> child, AttrType cast_type)
+    : child_(std::move(child)), cast_type_(cast_type)
 {}
 
-CastExpr::~CastExpr() {}
+CastExpr::~CastExpr()
+{}
 
 RC CastExpr::cast(const Value &value, Value &cast_value) const
 {
@@ -90,10 +90,10 @@ ComparisonExpr::ComparisonExpr(CompOp comp, unique_ptr<Expression> left, unique_
     : comp_(comp), left_(std::move(left)), right_(std::move(right))
 {}
 
-ComparisonExpr::~ComparisonExpr() {}
+ComparisonExpr::~ComparisonExpr()
+{}
 
-RC ComparisonExpr::compare_value(const Value &left, const Value &right, bool &result) const
-{
+RC ComparisonExpr::compare_value(const Value &left, const Value &right, bool &result) const {
   if (left.attr_type() == DATE && left.get_date() == -1) {
     return RC::INVALID_ARGUMENT;
   }
@@ -103,11 +103,12 @@ RC ComparisonExpr::compare_value(const Value &left, const Value &right, bool &re
 
   // std::cout << "[expression] left: " << left.to_string() << " right: " << right.to_string() << std::endl;
 
-  auto left_check_null  = Value::check_null(left);
+  auto left_check_null = Value::check_null(left);
   auto right_check_null = Value::check_null(right);
 
   // FIXME: Ensure this
-  if ((left.is_null() || right.is_null()) || (left_check_null || right_check_null)) {
+  if ((left.is_null() || right.is_null()) ||
+      (left_check_null || right_check_null)) {
     if (comp_ == IS) {
       result = (left.is_null() || left_check_null) && (right.is_null() || right_check_null);
       return RC::SUCCESS;
@@ -120,9 +121,9 @@ RC ComparisonExpr::compare_value(const Value &left, const Value &right, bool &re
     return RC::SUCCESS;
   }
 
-  RC  rc         = RC::SUCCESS;
+  RC rc = RC::SUCCESS;
   int cmp_result = left.compare(right);
-  result         = false;
+  result = false;
   switch (comp_) {
     case EQUAL_TO: {
       result = (0 == cmp_result);
@@ -146,7 +147,7 @@ RC ComparisonExpr::compare_value(const Value &left, const Value &right, bool &re
       rc = left.like(right, result);
     } break;
     case NOT_LIKE_OP: {
-      rc     = left.like(right, result);
+      rc = left.like(right, result);
       result = !result;
     } break;
     default: {
@@ -161,13 +162,13 @@ RC ComparisonExpr::compare_value(const Value &left, const Value &right, bool &re
 RC ComparisonExpr::try_get_value(Value &cell) const
 {
   if (left_->type() == ExprType::VALUE && right_->type() == ExprType::VALUE) {
-    ValueExpr   *left_value_expr  = static_cast<ValueExpr *>(left_.get());
-    ValueExpr   *right_value_expr = static_cast<ValueExpr *>(right_.get());
-    const Value &left_cell        = left_value_expr->get_value();
-    const Value &right_cell       = right_value_expr->get_value();
+    ValueExpr *left_value_expr = static_cast<ValueExpr *>(left_.get());
+    ValueExpr *right_value_expr = static_cast<ValueExpr *>(right_.get());
+    const Value &left_cell = left_value_expr->get_value();
+    const Value &right_cell = right_value_expr->get_value();
 
     bool value = false;
-    RC   rc    = compare_value(left_cell, right_cell, value);
+    RC rc = compare_value(left_cell, right_cell, value);
     if (rc != RC::SUCCESS) {
       LOG_WARN("failed to compare tuple cells. rc=%s", strrc(rc));
     } else {
@@ -196,7 +197,7 @@ RC ComparisonExpr::get_value(const Tuple &tuple, Value &value) const
   }
 
   bool bool_value = false;
-  rc              = compare_value(left_value, right_value, bool_value);
+  rc = compare_value(left_value, right_value, bool_value);
   if (rc == RC::SUCCESS) {
     value.set_boolean(bool_value);
   }
@@ -250,11 +251,12 @@ AttrType ArithmeticExpr::value_type() const
     return left_->value_type();
   }
 
-  if (left_->value_type() == AttrType::INTS && right_->value_type() == AttrType::INTS &&
+  if (left_->value_type() == AttrType::INTS &&
+      right_->value_type() == AttrType::INTS &&
       arithmetic_type_ != Type::DIV) {
     return AttrType::INTS;
   }
-
+  
   return AttrType::FLOATS;
 }
 
@@ -292,16 +294,14 @@ RC ArithmeticExpr::calc_value(const Value &left_value, const Value &right_value,
     case Type::DIV: {
       if (target_type == AttrType::INTS) {
         if (right_value.get_int() == 0) {
-          // NOTE:
-          // 设置为整数最大值是不正确的。通常的做法是设置为NULL，但是当前的miniob没有NULL概念，所以这里设置为整数最大值。
+          // NOTE: 设置为整数最大值是不正确的。通常的做法是设置为NULL，但是当前的miniob没有NULL概念，所以这里设置为整数最大值。
           value.set_int(numeric_limits<int>::max());
         } else {
           value.set_int(left_value.get_int() / right_value.get_int());
         }
       } else {
         if (right_value.get_float() > -EPSILON && right_value.get_float() < EPSILON) {
-          // NOTE:
-          // 设置为浮点数最大值是不正确的。通常的做法是设置为NULL，但是当前的miniob没有NULL概念，所以这里设置为浮点数最大值。
+          // NOTE: 设置为浮点数最大值是不正确的。通常的做法是设置为NULL，但是当前的miniob没有NULL概念，所以这里设置为浮点数最大值。
           value.set_float(numeric_limits<float>::max());
         } else {
           value.set_float(left_value.get_float() / right_value.get_float());
