@@ -28,8 +28,7 @@ const static Json::StaticString FIELD_IS_NULL("is_null");
 
 FieldMeta::FieldMeta() : attr_type_(AttrType::UNDEFINED), attr_offset_(-1), attr_len_(0), visible_(false) {}
 
-FieldMeta::FieldMeta(const char *name, AttrType attr_type, int attr_offset, int attr_len, bool visible)
-{
+FieldMeta::FieldMeta(const char *name, AttrType attr_type, int attr_offset, int attr_len, bool visible) {
   // FIXME: Ensure this for null type
   [[maybe_unused]] RC rc = this->init(name, attr_type, attr_offset, attr_len, visible, false);
   ASSERT(rc == RC::SUCCESS, "failed to init field meta. rc=%s", strrc(rc));
@@ -71,12 +70,9 @@ int FieldMeta::len() const { return attr_len_; }
 
 bool FieldMeta::visible() const { return visible_; }
 
-bool FieldMeta::is_null() const {
-  return is_null_;
-}
+bool FieldMeta::is_null() const { return is_null_; }
 
-void FieldMeta::desc(std::ostream &os) const
-{
+void FieldMeta::desc(std::ostream &os) const {
   os << "field name=" << name_ << ", type=" << attr_type_to_string(attr_type_) << ", len=" << attr_len_
      << ", visible=" << (visible_ ? "yes" : "no") << ", is_null=" << (is_null_ ? "yes" : "no");
 }

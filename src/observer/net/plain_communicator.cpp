@@ -15,11 +15,11 @@ See the Mulan PSL v2 for more details. */
 #include "net/plain_communicator.h"
 #include "common/io/io.h"
 #include "common/log/log.h"
-#include "sql/parser/value.h"
 #include "event/session_event.h"
 #include "net/buffered_writer.h"
 #include "session/session.h"
 #include "sql/expr/tuple.h"
+#include "sql/parser/value.h"
 
 PlainCommunicator::PlainCommunicator() {
   send_message_delimiter_.assign(1, '\0');
@@ -270,7 +270,8 @@ RC PlainCommunicator::write_result_internal(SessionEvent *event, bool &need_disc
             cell_str = "NULL";
           }
         } break;
-        default: assert(false);
+        default:
+          assert(false);
       }
 
       rc = writer_->writen(cell_str.data(), cell_str.size());

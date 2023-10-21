@@ -100,8 +100,7 @@ RC ComparisonExpr::compare_value(const Value &left, const Value &right, bool &re
   auto right_check_null = Value::check_null(right);
 
   // FIXME: Ensure this
-  if ((left.is_null() || right.is_null()) ||
-      (left_check_null || right_check_null)) {
+  if ((left.is_null() || right.is_null()) || (left_check_null || right_check_null)) {
     if (comp_ == IS) {
       result = (left.is_null() || left_check_null) && (right.is_null() || right_check_null);
       return RC::SUCCESS;

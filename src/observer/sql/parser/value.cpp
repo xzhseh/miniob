@@ -161,7 +161,8 @@ void Value::set_value(const Value &value) {
     case UNDEFINED: {
       ASSERT(false, "got an invalid value type");
     } break;
-    default: assert(false); // Should not set value to a NULL
+    default:
+      assert(false);  // Should not set value to a NULL
   }
 }
 
@@ -205,8 +206,7 @@ std::string Value::to_string() const {
   return os.str();
 }
 
-int Value::compare(const Value &other) const
-{
+int Value::compare(const Value &other) const {
   if (this->is_null() || other.is_null()) {
     // The current value is NULL
     // FIXME: Please ensure this

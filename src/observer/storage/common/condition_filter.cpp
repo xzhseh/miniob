@@ -13,11 +13,10 @@ See the Mulan PSL v2 for more details. */
 //
 
 #include "condition_filter.h"
-#include "sql/parser/parse_defs.h"
-#include "storage/record/record_manager.h"
 #include <math.h>
 #include <stddef.h>
 #include "common/log/log.h"
+#include "sql/parser/parse_defs.h"
 #include "sql/parser/value.h"
 #include "storage/record/record_manager.h"
 #include "storage/table/table.h"
@@ -159,9 +158,9 @@ bool DefaultConditionFilter::filter(const Record &rec) const {
           return true;
         }
       } else {
-        assert(false); // This is impossible
+        assert(false);  // This is impossible
       }
-      assert(false); // This is impossible
+      assert(false);  // This is impossible
     }
     if (comp_op_ == IS) {
       if (left_.value.is_null()) {
@@ -185,9 +184,9 @@ bool DefaultConditionFilter::filter(const Record &rec) const {
           return false;
         }
       } else {
-        assert(false); // This is impossible
+        assert(false);  // This is impossible
       }
-      assert(false); // This is impossible
+      assert(false);  // This is impossible
     }
     // All other comparison should return false
     return false;

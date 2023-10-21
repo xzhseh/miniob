@@ -184,12 +184,11 @@ struct UpdateSqlNode {
  * Rel -> Relation
  * Attr -> Attribute
  */
-struct AttrInfoSqlNode
-{
-  AttrType    type;    ///< Type of attribute
-  std::string name;    ///< Attribute name
-  size_t      length;  ///< Length of attribute
-  bool        is_null{false};
+struct AttrInfoSqlNode {
+  AttrType type;     ///< Type of attribute
+  std::string name;  ///< Attribute name
+  size_t length;     ///< Length of attribute
+  bool is_null{false};
 };
 
 /**

@@ -60,8 +60,7 @@ RC NestedLoopJoinPhysicalOperator::next() {
   return rc;
 }
 
-RC NestedLoopJoinPhysicalOperator::close()
-{
+RC NestedLoopJoinPhysicalOperator::close() {
   RC rc = RC::SUCCESS;
   // FIXME: Ensure this
   if (left_) {

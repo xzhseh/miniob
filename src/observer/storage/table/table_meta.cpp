@@ -76,8 +76,8 @@ RC TableMeta::init(int32_t table_id, const char *name, int field_num, const Attr
 
   for (int i = 0; i < field_num; i++) {
     const AttrInfoSqlNode &attr_info = attributes[i];
-    rc = fields_[i + trx_field_num].init(attr_info.name.c_str(), 
-            attr_info.type, field_offset, attr_info.length, true/*visible*/, attr_info.is_null);
+    rc = fields_[i + trx_field_num].init(
+        attr_info.name.c_str(), attr_info.type, field_offset, attr_info.length, true /*visible*/, attr_info.is_null);
     if (rc != RC::SUCCESS) {
       LOG_ERROR("Failed to init field meta. table name=%s, field name: %s", name, attr_info.name.c_str());
       return rc;
@@ -251,7 +251,8 @@ int TableMeta::deserialize(std::istream &is) {
   table_id_ = table_id;
   name_.swap(table_name);
   fields_.swap(fields);
-  record_size_ = fields_.back().offset() + fields_.back().len() - fields_.begin()->offset(); // /* For the nulls */ field_num;
+  record_size_ =
+      fields_.back().offset() + fields_.back().len() - fields_.begin()->offset();  // /* For the nulls */ field_num;
 
   const Json::Value &indexes_value = table_value[FIELD_INDEXES];
   if (!indexes_value.empty()) {

@@ -21,8 +21,7 @@ See the Mulan PSL v2 for more details. */
 InsertStmt::InsertStmt(Table *table, const Value *values, int value_amount)
     : table_(table), values_(values), value_amount_(value_amount) {}
 
-
-RC InsertStmt::create(Db *db, const InsertSqlNode &inserts, Stmt *&stmt) {
+RC InsertStmt::create(Db *db, InsertSqlNode &inserts, Stmt *&stmt) {
   const char *table_name = inserts.relation_name.c_str();
   if (nullptr == db || nullptr == table_name || inserts.values.empty()) {
     LOG_WARN("invalid argument. db=%p, table_name=%p, value_num=%d",
@@ -86,7 +85,8 @@ RC InsertStmt::create(Db *db, const InsertSqlNode &inserts, Stmt *&stmt) {
         case CHARS: {
           values[i].set_string("xzhseh");
         } break;
-        default: assert(false);
+        default:
+          assert(false);
       }
 
       assert(values[i].is_null() && "`values[i]` should persist the `is_null_` property");

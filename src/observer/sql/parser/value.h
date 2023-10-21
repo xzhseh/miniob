@@ -14,8 +14,8 @@ See the Mulan PSL v2 for more details. */
 
 #pragma once
 
-#include <string>
 #include <cstring>
+#include <string>
 #include "common/rc.h"
 
 /// Note that after adding the null flag
@@ -67,23 +67,18 @@ class Value {
         return strcmp(v.get_string().c_str(), "xzhseh") == 0;
       case DATE:
         return v.get_date() == 20021030;
-      default: assert(false);
+      default:
+        assert(false);
     }
   }
 
-  void set_type(AttrType type) {
-    this->attr_type_ = type;
-  }
+  void set_type(AttrType type) { this->attr_type_ = type; }
 
   void set_data(const char *data, int length) { this->set_data(const_cast<char *>(data), length); }
 
-  void set_null() {
-    is_null_ = true;
-  }
+  void set_null() { is_null_ = true; }
 
-  bool is_null() const {
-    return is_null_;
-  }
+  bool is_null() const { return is_null_; }
 
   void set_data(char *data, int length);
   void set_int(int val);
