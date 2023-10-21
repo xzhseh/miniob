@@ -32,8 +32,9 @@ See the Mulan PSL v2 for more details. */
 using namespace std;
 using namespace common;
 
-RC ExecuteStage::handle_request(SQLStageEvent *sql_event) {
-  RC rc = RC::SUCCESS;
+RC ExecuteStage::handle_request(SQLStageEvent *sql_event)
+{
+  RC                                  rc                = RC::SUCCESS;
   const unique_ptr<PhysicalOperator> &physical_operator = sql_event->physical_operator();
   if (physical_operator != nullptr) {
     return handle_request_with_physical_operator(sql_event);
@@ -52,7 +53,8 @@ RC ExecuteStage::handle_request(SQLStageEvent *sql_event) {
   return rc;
 }
 
-RC ExecuteStage::handle_request_with_physical_operator(SQLStageEvent *sql_event) {
+RC ExecuteStage::handle_request_with_physical_operator(SQLStageEvent *sql_event)
+{
   RC rc = RC::SUCCESS;
 
   Stmt *stmt = sql_event->stmt();
@@ -71,13 +73,13 @@ RC ExecuteStage::handle_request_with_physical_operator(SQLStageEvent *sql_event)
       if (select_stmt->agg_stmt() != nullptr) {
         // Construct the schema based on the agg_stmt
         // rather than the query_fields at present
-        auto &keys = select_stmt->agg_stmt()->get_keys();
+        auto &keys  = select_stmt->agg_stmt()->get_keys();
         auto &types = select_stmt->agg_stmt()->get_types();
-        int n = keys.size();
+        int   n     = keys.size();
         for (int i = 0; i < n; ++i) {
-          auto &[f, n] = keys[i];
-          auto name = (n > 1) ? "*" : f->name();
-          const std::string s = std::string(agg_to_string(types[i])) + "(" + name + ")";
+          auto &[f, n]           = keys[i];
+          auto              name = (n > 1) ? "*" : f->name();
+          const std::string s    = std::string(agg_to_string(types[i])) + "(" + name + ")";
           // std::cout << "current s: " << s << std::endl;
           schema.append_cell(s.c_str());
         }
@@ -97,7 +99,7 @@ RC ExecuteStage::handle_request_with_physical_operator(SQLStageEvent *sql_event)
 
     case StmtType::CALC: {
       CalcPhysicalOperator *calc_operator = static_cast<CalcPhysicalOperator *>(physical_operator.get());
-      for (const unique_ptr<Expression> & expr : calc_operator->expressions()) {
+      for (const unique_ptr<Expression> &expr : calc_operator->expressions()) {
         schema.append_cell(expr->name().c_str());
       }
     } break;

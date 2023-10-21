@@ -37,7 +37,7 @@ See the Mulan PSL v2 for more details. */
  * @brief SQL处理的session阶段，也是第一个阶段
  * @ingroup SQLStage
  */
-class SessionStage : public common::Stage 
+class SessionStage : public common::Stage
 {
 public:
   virtual ~SessionStage();

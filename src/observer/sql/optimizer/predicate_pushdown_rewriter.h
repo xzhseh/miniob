@@ -22,10 +22,10 @@ See the Mulan PSL v2 for more details. */
  * @ingroup Rewriter
  * @details 这样可以提前过滤一些数据
  */
-class PredicatePushdownRewriter : public RewriteRule 
+class PredicatePushdownRewriter : public RewriteRule
 {
 public:
-  PredicatePushdownRewriter() = default;
+  PredicatePushdownRewriter()          = default;
   virtual ~PredicatePushdownRewriter() = default;
 
   RC rewrite(std::unique_ptr<LogicalOperator> &oper, bool &change_made) override;

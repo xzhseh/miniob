@@ -24,10 +24,11 @@ See the Mulan PSL v2 for more details. */
 
 RC CreateTableExecutor::execute(SQLStageEvent *sql_event)
 {
-  Stmt *stmt = sql_event->stmt();
+  Stmt    *stmt    = sql_event->stmt();
   Session *session = sql_event->session_event()->session();
-  ASSERT(stmt->type() == StmtType::CREATE_TABLE, 
-         "create table executor can not run this command: %d", static_cast<int>(stmt->type()));
+  ASSERT(stmt->type() == StmtType::CREATE_TABLE,
+      "create table executor can not run this command: %d",
+      static_cast<int>(stmt->type()));
 
   CreateTableStmt *create_table_stmt = static_cast<CreateTableStmt *>(stmt);
 

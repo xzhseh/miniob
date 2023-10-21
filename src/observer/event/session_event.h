@@ -26,16 +26,16 @@ class Communicator;
 
 /**
  * @brief 表示一个SQL请求
- * 
+ *
  */
-class SessionEvent : public common::StageEvent 
+class SessionEvent : public common::StageEvent
 {
 public:
   SessionEvent(Communicator *client);
   virtual ~SessionEvent();
 
   Communicator *get_communicator() const;
-  Session *session() const;
+  Session      *session() const;
 
   void set_query(const std::string &query) { query_ = query; }
 

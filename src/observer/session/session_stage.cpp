@@ -31,12 +31,10 @@ See the Mulan PSL v2 for more details. */
 using namespace common;
 
 // Constructor
-SessionStage::SessionStage(const char *tag) : Stage(tag) 
-{}
+SessionStage::SessionStage(const char *tag) : Stage(tag) {}
 
 // Destructor
-SessionStage::~SessionStage()
-{}
+SessionStage::~SessionStage() {}
 
 // Parse properties, instantiate a stage object
 Stage *SessionStage::make_stage(const std::string &tag)
@@ -64,16 +62,12 @@ bool SessionStage::set_properties()
   return true;
 }
 // Initialize stage params and validate outputs
-bool SessionStage::initialize() { 
-    return true; 
-}
+bool SessionStage::initialize() { return true; }
 
 // Cleanup after disconnection
-void SessionStage::cleanup() {
+void SessionStage::cleanup() {}
 
-}
-
-void SessionStage::handle_event(StageEvent *event) 
+void SessionStage::handle_event(StageEvent *event)
 {
   // right now, we just support only one event.
   handle_request(event);
@@ -82,7 +76,8 @@ void SessionStage::handle_event(StageEvent *event)
   return;
 }
 
-void SessionStage::handle_request(StageEvent *event) {
+void SessionStage::handle_request(StageEvent *event)
+{
   SessionEvent *sev = dynamic_cast<SessionEvent *>(event);
   if (nullptr == sev) {
     LOG_ERROR("Cannot cat event to sessionEvent");
@@ -126,7 +121,8 @@ void SessionStage::handle_request(StageEvent *event) {
  * execute_stage中的执行，通过explain语句看需要哪些operator，然后找对应的operator来
  * 调试或者看代码执行过程即可。
  */
-RC SessionStage::handle_sql(SQLStageEvent *sql_event) {
+RC SessionStage::handle_sql(SQLStageEvent *sql_event)
+{
   RC rc = query_cache_stage_.handle_request(sql_event);
   if (OB_FAIL(rc)) {
     LOG_TRACE("failed to do query cache. rc=%s", strrc(rc));

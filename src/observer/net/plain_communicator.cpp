@@ -38,7 +38,7 @@ RC PlainCommunicator::read_event(SessionEvent *&event)
   int data_len = 0;
   int read_len = 0;
 
-  const int max_packet_size = 8192;
+  const int         max_packet_size = 8192;
   std::vector<char> buf(max_packet_size);
 
   // 持续接收消息，直到遇到'\0'。将'\0'遇到的后续数据直接丢弃没有处理，因为目前仅支持一收一发的模式
@@ -95,9 +95,9 @@ RC PlainCommunicator::read_event(SessionEvent *&event)
 
 RC PlainCommunicator::write_state(SessionEvent *event, bool &need_disconnect)
 {
-  SqlResult *sql_result = event->sql_result();
-  const int buf_size = 2048;
-  char *buf = new char[buf_size];
+  SqlResult         *sql_result   = event->sql_result();
+  const int          buf_size     = 2048;
+  char              *buf          = new char[buf_size];
   const std::string &state_string = sql_result->state_string();
   if (state_string.empty()) {
     const char *result = (RC::SUCCESS == sql_result->return_code()) ? "SUCCESS" : "FAILURE";
@@ -126,7 +126,7 @@ RC PlainCommunicator::write_debug(SessionEvent *request, bool &need_disconnect)
     return RC::SUCCESS;
   }
 
-  SqlDebug &sql_debug = request->sql_debug();
+  SqlDebug                     &sql_debug   = request->sql_debug();
   const std::list<std::string> &debug_infos = sql_debug.get_debug_infos();
   for (auto &debug_info : debug_infos) {
     RC rc = writer_->writen(debug_message_prefix_.data(), debug_message_prefix_.size());
@@ -144,7 +144,7 @@ RC PlainCommunicator::write_debug(SessionEvent *request, bool &need_disconnect)
     }
 
     char newline = '\n';
-    rc = writer_->writen(&newline, 1);
+    rc           = writer_->writen(&newline, 1);
     if (OB_FAIL(rc)) {
       LOG_WARN("failed to send new line to client. err=%s", strerror(errno));
       need_disconnect = true;
@@ -163,7 +163,7 @@ RC PlainCommunicator::write_result(SessionEvent *event, bool &need_disconnect)
     (void)write_debug(event, need_disconnect);
   }
   if (rc == RC::SUCCESS) {
-    writer_->flush(); // TODO handle error
+    writer_->flush();  // TODO handle error
   } else {
     write_state(event, need_disconnect);
     writer_->flush();
@@ -171,8 +171,9 @@ RC PlainCommunicator::write_result(SessionEvent *event, bool &need_disconnect)
   return rc;
 }
 
-RC PlainCommunicator::write_result_internal(SessionEvent *event, bool &need_disconnect) {
-  RC rc = RC::SUCCESS;
+RC PlainCommunicator::write_result_internal(SessionEvent *event, bool &need_disconnect)
+{
+  RC rc           = RC::SUCCESS;
   need_disconnect = true;
 
   SqlResult *sql_result = event->sql_result();
@@ -188,16 +189,16 @@ RC PlainCommunicator::write_result_internal(SessionEvent *event, bool &need_disc
     return write_state(event, need_disconnect);
   }
 
-  const TupleSchema &schema = sql_result->tuple_schema();
-  const int cell_num = schema.cell_num();
+  const TupleSchema &schema   = sql_result->tuple_schema();
+  const int          cell_num = schema.cell_num();
 
   for (int i = 0; i < cell_num; i++) {
-    const TupleCellSpec &spec = schema.cell_at(i);
-    const char *alias = spec.alias();
+    const TupleCellSpec &spec  = schema.cell_at(i);
+    const char          *alias = spec.alias();
     if (nullptr != alias || alias[0] != 0) {
       if (0 != i) {
         const char *delim = " | ";
-        rc = writer_->writen(delim, strlen(delim));
+        rc                = writer_->writen(delim, strlen(delim));
         if (OB_FAIL(rc)) {
           LOG_WARN("failed to send data to client. err=%s", strerror(errno));
           return rc;
@@ -205,7 +206,7 @@ RC PlainCommunicator::write_result_internal(SessionEvent *event, bool &need_disc
       }
 
       int len = strlen(alias);
-      rc = writer_->writen(alias, len);
+      rc      = writer_->writen(alias, len);
       if (OB_FAIL(rc)) {
         LOG_WARN("failed to send data to client. err=%s", strerror(errno));
         sql_result->close();
@@ -216,7 +217,7 @@ RC PlainCommunicator::write_result_internal(SessionEvent *event, bool &need_disc
 
   if (cell_num > 0) {
     char newline = '\n';
-    rc = writer_->writen(&newline, 1);
+    rc           = writer_->writen(&newline, 1);
     if (OB_FAIL(rc)) {
       LOG_WARN("failed to send data to client. err=%s", strerror(errno));
       sql_result->close();
@@ -224,7 +225,7 @@ RC PlainCommunicator::write_result_internal(SessionEvent *event, bool &need_disc
     }
   }
 
-  rc = RC::SUCCESS;
+  rc           = RC::SUCCESS;
   Tuple *tuple = nullptr;
   while (RC::SUCCESS == (rc = sql_result->next_tuple(tuple))) {
     assert(tuple != nullptr);
@@ -233,7 +234,7 @@ RC PlainCommunicator::write_result_internal(SessionEvent *event, bool &need_disc
     for (int i = 0; i < cell_num; i++) {
       if (i != 0) {
         const char *delim = " | ";
-        rc = writer_->writen(delim, strlen(delim));
+        rc                = writer_->writen(delim, strlen(delim));
         if (OB_FAIL(rc)) {
           LOG_WARN("failed to send data to client. err=%s", strerror(errno));
           sql_result->close();
@@ -287,7 +288,7 @@ RC PlainCommunicator::write_result_internal(SessionEvent *event, bool &need_disc
     }
 
     char newline = '\n';
-    rc = writer_->writen(&newline, 1);
+    rc           = writer_->writen(&newline, 1);
     if (OB_FAIL(rc)) {
       LOG_WARN("failed to send data to client. err=%s", strerror(errno));
       sql_result->close();
@@ -298,7 +299,6 @@ RC PlainCommunicator::write_result_internal(SessionEvent *event, bool &need_disc
   if (rc == RC::RECORD_EOF) {
     rc = RC::SUCCESS;
   }
-
 
   // FIXME: Ensure this
   if (rc != RC::SUCCESS) {

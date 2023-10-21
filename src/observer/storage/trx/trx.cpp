@@ -35,7 +35,7 @@ TrxKit *TrxKit::create(const char *name)
   if (0 == strcasecmp(name, "mvcc")) {
     return new MvccTrxKit();
   }
-  
+
   LOG_ERROR("unknown trx kit name. name=%s", name);
   return nullptr;
 }
@@ -56,12 +56,6 @@ RC TrxKit::init_global(const char *name)
   return rc;
 }
 
-TrxKit *TrxKit::instance()
-{
-  return global_trxkit;
-}
+TrxKit *TrxKit::instance() { return global_trxkit; }
 
-RC Trx::redo(Db *db, const CLogRecord &)
-{
-  return RC::UNIMPLENMENT;
-}
+RC Trx::redo(Db *db, const CLogRecord &) { return RC::UNIMPLENMENT; }

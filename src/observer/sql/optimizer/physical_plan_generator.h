@@ -38,10 +38,10 @@ class AggLogicalOperator;
  * @details 根据逻辑计划生成物理计划。
  * 不会做任何优化，完全根据本意生成物理计划。
  */
-class PhysicalPlanGenerator 
+class PhysicalPlanGenerator
 {
 public:
-  PhysicalPlanGenerator() = default;
+  PhysicalPlanGenerator()          = default;
   virtual ~PhysicalPlanGenerator() = default;
 
   RC create(LogicalOperator &logical_operator, std::unique_ptr<PhysicalOperator> &oper);

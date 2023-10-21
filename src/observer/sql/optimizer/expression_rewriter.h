@@ -21,7 +21,7 @@ See the Mulan PSL v2 for more details. */
 #include "sql/expr/expression.h"
 #include "sql/optimizer/rewrite_rule.h"
 
-class ExpressionRewriter : public RewriteRule 
+class ExpressionRewriter : public RewriteRule
 {
 public:
   ExpressionRewriter();

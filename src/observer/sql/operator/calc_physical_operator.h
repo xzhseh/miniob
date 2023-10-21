@@ -21,26 +21,17 @@ class CalcPhysicalOperator : public PhysicalOperator
 {
 public:
   CalcPhysicalOperator(std::vector<std::unique_ptr<Expression>> &&expressions)
-    : expressions_(std::move(expressions)), tuple_(expressions_)
+      : expressions_(std::move(expressions)), tuple_(expressions_)
   {}
 
   virtual ~CalcPhysicalOperator() = default;
 
-  PhysicalOperatorType type() const override
-  {
-    return PhysicalOperatorType::CALC;
-  }
+  PhysicalOperatorType type() const override { return PhysicalOperatorType::CALC; }
 
-  std::string name() const override
-  {
-    return "CALC";
-  }
-  std::string param() const override
-  {
-    return "";
-  }
+  std::string name() const override { return "CALC"; }
+  std::string param() const override { return ""; }
 
-  RC open(Trx *trx) override { return RC::SUCCESS;}
+  RC open(Trx *trx) override { return RC::SUCCESS; }
   RC next() override
   {
     RC rc = RC::SUCCESS;
@@ -62,23 +53,14 @@ public:
   }
   RC close() override { return RC::SUCCESS; }
 
-  int cell_num() const
-  {
-    return tuple_.cell_num();
-  }
+  int cell_num() const { return tuple_.cell_num(); }
 
-  Tuple *current_tuple() override
-  {
-    return &tuple_;
-  }
+  Tuple *current_tuple() override { return &tuple_; }
 
-  const std::vector<std::unique_ptr<Expression>> &expressions() const
-  {
-    return expressions_;
-  }
+  const std::vector<std::unique_ptr<Expression>> &expressions() const { return expressions_; }
 
 private:
   std::vector<std::unique_ptr<Expression>> expressions_;
-  ExpressionTuple tuple_;
-  bool emitted_ = false;
+  ExpressionTuple                          tuple_;
+  bool                                     emitted_ = false;
 };

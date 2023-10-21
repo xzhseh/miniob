@@ -24,7 +24,7 @@ See the Mulan PSL v2 for more details. */
 
 #include "common/rc.h"
 
-class PersistHandler 
+class PersistHandler
 {
 public:
   PersistHandler();
@@ -62,5 +62,5 @@ public:
 
 private:
   std::string file_name_;
-  int file_desc_ = -1;
+  int         file_desc_ = -1;
 };

@@ -38,7 +38,8 @@ See the Mulan PSL v2 for more details. */
 using namespace std;
 
 /// Logical plan factory
-RC LogicalPlanGenerator::create(Stmt *stmt, unique_ptr<LogicalOperator> &logical_operator) {
+RC LogicalPlanGenerator::create(Stmt *stmt, unique_ptr<LogicalOperator> &logical_operator)
+{
   RC rc = RC::SUCCESS;
   switch (stmt->type()) {
     case StmtType::CALC: {
@@ -157,7 +158,7 @@ RC LogicalPlanGenerator::create_plan(SelectStmt *select_stmt, unique_ptr<Logical
 
   // TODO: Predicate push down? (or later)
   std::unique_ptr<LogicalOperator> predicate_oper;
-  RC rc = create_plan(select_stmt->filter_stmt(), predicate_oper);
+  RC                               rc = create_plan(select_stmt->filter_stmt(), predicate_oper);
   if (rc != RC::SUCCESS) {
     LOG_WARN("failed to create predicate logical plan. rc=%s", strrc(rc));
     return rc;
@@ -166,9 +167,9 @@ RC LogicalPlanGenerator::create_plan(SelectStmt *select_stmt, unique_ptr<Logical
   // Create the aggregate logical operator
   std::unique_ptr<LogicalOperator> agg_oper{nullptr};
   if (select_stmt->agg_stmt() != nullptr) {
-    auto agg_keys = select_stmt->agg_stmt()->get_keys();
+    auto agg_keys  = select_stmt->agg_stmt()->get_keys();
     auto agg_types = select_stmt->agg_stmt()->get_types();
-    agg_oper = std::make_unique<AggLogicalOperator>(all_fields, agg_keys, agg_types);
+    agg_oper       = std::make_unique<AggLogicalOperator>(all_fields, agg_keys, agg_types);
     assert(agg_oper != nullptr);
   }
 
