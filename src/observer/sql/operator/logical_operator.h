@@ -40,7 +40,8 @@ enum class LogicalOperatorType {
   DELETE,      ///< 删除，删除可能会有子查询
   EXPLAIN,     ///< 查看执行计划
   UPDATE,      ///< 更新
-  AGG,         ///< aggregation
+  ORDER_BY,    ///< 排序
+  AGG,         ///< 聚合
 };
 
 /**

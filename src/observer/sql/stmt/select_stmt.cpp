@@ -15,10 +15,8 @@ See the Mulan PSL v2 for more details. */
 #include "sql/stmt/select_stmt.h"
 #include "common/lang/string.h"
 #include "common/log/log.h"
-#include "sql/stmt/agg_stmt.h"
 #include "sql/stmt/filter_stmt.h"
 #include "storage/db/db.h"
-#include "storage/field/field_meta.h"
 #include "storage/table/table.h"
 
 SelectStmt::~SelectStmt() {
@@ -28,8 +26,6 @@ SelectStmt::~SelectStmt() {
   }
 }
 
-/// Basically push all metadata from the specified table to the current `field_metas`
-/// Use case: `select count(*) from t1 where t1.c1 = 1;`
 static void wildcard_fields(Table *table, std::vector<Field> &field_metas) {
   const TableMeta &table_meta = table->table_meta();
   const int field_num = table_meta.field_num();
@@ -58,11 +54,63 @@ static void agg_builder_inner(std::vector<Field> &query_fields, int &agg_pos,
   aggregate_types.push_back(relation_attr.aggregate_func);
 }
 
+RC bind_order_by(Db *db, const std::vector<Table *> &tables, const std::vector<OrderBySqlNode> &order_bys,
+                 std::vector<OrderByStmt> &order_by_stmts) {
+  for (const auto &order_by : order_bys) {
+    auto &attr = order_by.order_by_attributes[0];
+    bool is_asc = order_by.order_by_asc[0];
+    const char *table_name = attr.relation_name.c_str();
+    const char *field_name = attr.attribute_name.c_str();
+
+    if (common::is_blank(table_name)) {
+      // Table name is empty
+      if (common::is_blank(field_name)) {
+        // Field name is empty
+        LOG_WARN("invalid order by. both table and field are blank");
+        return RC::INVALID_ARGUMENT;
+      }
+
+      // find field in every table
+      for (Table *table : tables) {
+        const FieldMeta *field_meta = table->table_meta().field(field_name);
+        if (nullptr != field_meta) {
+          order_by_stmts.push_back({Field(table, field_meta), is_asc});
+          break;
+        } else {
+          LOG_WARN("no such field. field=%s.%s.%s", db->name(), table->name(), field_name);
+          return RC::SCHEMA_FIELD_MISSING;
+        }
+      }
+    } else {
+      // Table name is not empty
+      Table *table = db->find_table(table_name);
+      if (nullptr == table) {
+        LOG_WARN("no such table. db=%s, table_name=%s", db->name(), table_name);
+        return RC::SCHEMA_TABLE_NOT_EXIST;
+      }
+
+      if (common::is_blank(field_name)) {
+        LOG_WARN("invalid order by. field is blank");
+        return RC::INVALID_ARGUMENT;
+      }
+
+      const FieldMeta *field_meta = table->table_meta().field(field_name);
+      if (nullptr == field_meta) {
+        LOG_WARN("no such field. field=%s.%s.%s", db->name(), table->name(), field_name);
+        return RC::SCHEMA_FIELD_MISSING;
+      }
+
+      order_by_stmts.push_back({Field(table, field_meta), is_asc});
+    }
+  }
+
+  return RC::SUCCESS;
+}
+
 /// TODO: We definitely need to refactor this part, the current implementation is so embarrassed 😅
 RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt) {
   assert(stmt == nullptr && "`stmt` must be nullptr at the beginning");
-
-  if (db == nullptr) {
+  if (nullptr == db) {
     LOG_WARN("invalid argument. db is null");
     return RC::INVALID_ARGUMENT;
   }
@@ -70,7 +118,6 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt) {
   // collect tables in `from` statement
   std::vector<Table *> tables;
   std::unordered_map<std::string, Table *> table_map;
-
   for (size_t i = 0; i < select_sql.relations.size(); i++) {
     const char *table_name = select_sql.relations[i].c_str();
     if (nullptr == table_name) {
@@ -228,14 +275,22 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt) {
     }
   }
 
+  // Bind order by
+  std::vector<OrderByStmt> order_by_stmts;
+  RC rc = bind_order_by(db, tables, select_sql.order_bys, order_by_stmts);
+  if (rc != RC::SUCCESS) {
+    LOG_WARN("failed to bind order by");
+    return rc;
+  }
+
   // create filter statement in `where` statement
   FilterStmt *filter_stmt = nullptr;
-  RC rc = FilterStmt::create(db,
-                             default_table,
-                             &table_map,
-                             select_sql.conditions.data(),
-                             static_cast<int>(select_sql.conditions.size()),
-                             filter_stmt);
+  rc = FilterStmt::create(db,
+                          default_table,
+                          &table_map,
+                          select_sql.conditions.data(),
+                          static_cast<int>(select_sql.conditions.size()),
+                          filter_stmt);
   if (rc != RC::SUCCESS) {
     LOG_WARN("cannot construct filter stmt");
     return rc;
@@ -257,6 +312,7 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt) {
   select_stmt->filter_stmt_ = filter_stmt;
   select_stmt->agg_stmt_ = agg_stmt;
   select_stmt->join_stmts_ = join_stmts;
+  select_stmt->order_by_ = order_by_stmts;
   stmt = select_stmt;
   return RC::SUCCESS;
 }

@@ -1,7 +1,5 @@
 /// Create by Zihao Xu on 10/18/2023
 
-#pragma once
-
 #include "sql/operator/agg_physical_operator.h"
 #include <climits>
 #include <unordered_map>

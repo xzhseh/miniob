@@ -83,6 +83,8 @@ class Tuple {
    */
   virtual RC cell_at(int index, Value &cell) const = 0;
 
+  virtual std::unique_ptr<Tuple> copy() const { return nullptr; }
+
   /**
    * @brief 根据cell的描述，获取cell的值
    *
@@ -194,6 +196,17 @@ class RowTuple : public Tuple {
 
   const Record &record() const { return *record_; }
 
+  [[nodiscard]] std::unique_ptr<Tuple> copy() const override {
+    std::unique_ptr<RowTuple> tuple(new RowTuple());
+    tuple->record_ = new Record(record_->copy());
+    tuple->table_ = table_;
+    tuple->speces_.reserve(speces_.size());
+    for (const FieldExpr *spec : speces_) {
+      tuple->speces_.push_back(new FieldExpr(*spec));
+    }
+    return tuple;
+  }
+
  private:
   Record *record_ = nullptr;
   const Table *table_ = nullptr;
@@ -217,16 +230,7 @@ class ProjectTuple : public Tuple {
     speces_.clear();
   }
 
-  void set_tuple(Tuple *tuple) {
-    // std::cout << "[project tuple]: set_tuple" << std::endl;
-    for (const auto &s : speces_) {
-      // std::cout << "field: " << s->field_name() << " table: " << s->table_name() << " alias: " << s->alias() <<
-      // std::endl;
-    }
-    this->tuple_ = tuple;
-  }
-
-  Tuple *get_tuple() { return tuple_; }
+  void set_tuple(Tuple *tuple) { this->tuple_ = tuple; }
 
   void add_cell_spec(TupleCellSpec *spec) { speces_.push_back(spec); }
   int cell_num() const override { return speces_.size(); }
@@ -312,11 +316,7 @@ class ValueListTuple : public Tuple {
     return RC::SUCCESS;
   }
 
-  virtual RC find_cell(const TupleCellSpec &spec, Value &cell) const override {
-    // cell = cells_[0];
-    // return RC::INTERNAL;
-    return cell_at(0, cell);
-  }
+  virtual RC find_cell(const TupleCellSpec &spec, Value &cell) const override { return RC::INTERNAL; }
 
  private:
   std::vector<Value> cells_;
@@ -357,6 +357,13 @@ class JoinedTuple : public Tuple {
     }
 
     return right_->find_cell(spec, value);
+  }
+
+  [[nodiscard]] std::unique_ptr<Tuple> copy() const override {
+    std::unique_ptr<JoinedTuple> tuple(new JoinedTuple());
+    tuple->left_ = left_->copy().release();
+    tuple->right_ = right_->copy().release();
+    return tuple;
   }
 
  private:

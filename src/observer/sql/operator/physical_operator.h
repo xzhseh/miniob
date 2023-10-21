@@ -39,7 +39,6 @@ enum class PhysicalOperatorType {
   TABLE_SCAN,
   INDEX_SCAN,
   NESTED_LOOP_JOIN,
-  INNER_JOIN,
   EXPLAIN,
   PREDICATE,
   PROJECT,
@@ -48,6 +47,7 @@ enum class PhysicalOperatorType {
   DELETE,
   INSERT,
   UPDATE,
+  ORDER_BY,
   AGG,
 };
 
