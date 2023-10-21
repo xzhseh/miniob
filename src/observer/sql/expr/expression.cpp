@@ -14,6 +14,7 @@ See the Mulan PSL v2 for more details. */
 
 #include "sql/expr/expression.h"
 #include "sql/expr/tuple.h"
+#include "sql/parser/parse_defs.h"
 
 using namespace std;
 
@@ -91,6 +92,25 @@ RC ComparisonExpr::compare_value(const Value &left, const Value &right, bool &re
   }
   if (right.attr_type() == DATE && right.get_date() == -1) {
     return RC::INVALID_ARGUMENT;
+  }
+
+  // std::cout << "[expression] left: " << left.to_string() << " right: " << right.to_string() << std::endl;
+
+  auto left_check_null = Value::check_null(left);
+  auto right_check_null = Value::check_null(right);
+
+  // FIXME: Ensure this
+  if ((left.is_null() || right.is_null()) || (left_check_null || right_check_null)) {
+    if (comp_ == IS) {
+      result = (left.is_null() || left_check_null) && (right.is_null() || right_check_null);
+      return RC::SUCCESS;
+    }
+    if (comp_ == IS_NOT) {
+      result = (left.is_null() || left_check_null) != (right.is_null() || right_check_null);
+      return RC::SUCCESS;
+    }
+    result = false;
+    return RC::SUCCESS;
   }
 
   RC rc = RC::SUCCESS;

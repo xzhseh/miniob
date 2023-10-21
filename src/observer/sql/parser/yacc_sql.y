@@ -108,6 +108,8 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
         COUNT
         INNER
         JOIN
+        NULL_IS
+        OB_NULL
         ORDER
         BY
         ASC
@@ -134,6 +136,7 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
   int                               number;
   float                             floats;
   enum agg                          agg;
+  bool                              null;
 }
 
 %token <number> NUMBER
@@ -190,6 +193,7 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
 %type <sql_node>            command_wrapper
 // commands should be a list but I use a single command instead
 %type <sql_node>            commands
+%type <null>                null
 
 
 %left '+' '-'
@@ -341,26 +345,45 @@ attr_def_list:
       delete $2;
     }
     ;
+
 attr_def:
     /* i.e., char(255) */
-    ID type LBRACE number RBRACE {
+    ID type LBRACE number RBRACE null {
       $$ = new AttrInfoSqlNode;
       $$->type = (AttrType)$2;
       $$->name = $1;
       $$->length = $4;
+      $$->is_null = $6;
       free($1);
     }
-    | ID type {
+    | ID type null {
       $$ = new AttrInfoSqlNode;
       $$->type = (AttrType) $2;
       $$->name = $1;
       $$->length = 4;
+      $$->is_null = $3;
       free($1);
     }
     ;
+
+null:
+    // Could be empty
+  {
+    $$ = false;
+  }
+  | OB_NULL {
+    $$ = true;
+  }
+  | NOT OB_NULL {
+    // Note that we do NOT need to deal with `NOT NULL` here
+    // Since this property will be enable if NULL is not explicitly declared
+    $$ = false;
+  }
+
 number:
     NUMBER { $$ = $1; }
     ;
+
 type:
     INT_T      { $$ = INTS; }
     | STRING_T { $$ = CHARS; }
@@ -417,6 +440,12 @@ value:
       /* Note the length here is by default 10 */
       $$ = new Value(DATE, tmp);
       free(tmp);
+    }
+    | OB_NULL {
+      // Note that we can not get the actual schema of this column right here
+      // Will adjust the value to the actual type later
+      $$ = new Value(0);
+      $$->set_null();
     }
     ;
 delete_stmt:    /*  delete 语句的语法解析树*/
@@ -912,6 +941,8 @@ comp_op:
     | NE { $$ = NOT_EQUAL; }
     | LIKE { $$ = LIKE_OP;}
     | NOT LIKE { $$ = NOT_LIKE_OP;}
+    | NULL_IS { $$ = IS; }
+    | NULL_IS NOT { $$ = IS_NOT; }
     ;
 
 load_data_stmt:

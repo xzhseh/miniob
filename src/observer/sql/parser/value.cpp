@@ -13,6 +13,7 @@ See the Mulan PSL v2 for more details. */
 //
 
 #include "sql/parser/value.h"
+#include <cstring>
 #include <regex>
 #include <sstream>
 #include "common/lang/comparator.h"
@@ -51,12 +52,12 @@ bool check_date(int y, int m, int d) {
   return y > 0 && ((m > 0) && (m <= 12)) && ((d > 0) && (d <= (((m == 2 && leap) ? 1 : 0) + mon[m])));
 }
 
-int date_transform_inner(const char *s) {
+int date_transform_inner(const char *s, bool force = false) {
   int y;
   int m;
   int d;
   sscanf(s, "%d-%d-%d", &y, &m, &d);
-  if (!check_date(y, m, d)) {
+  if (!check_date(y, m, d) && !force) {
     return -1;
   } else {
     return (y * 10000 + m * 100 + d);
@@ -97,6 +98,7 @@ void Value::set_data(char *data, int length) {
     }
   }
 }
+
 void Value::set_int(int val) {
   attr_type_ = INTS;
   num_value_.int_value_ = val;
@@ -128,7 +130,11 @@ void Value::set_string(const char *s, int len /* = 0 */) {
 
 void Value::set_date(const char *s) {
   attr_type_ = DATE;
-  num_value_.date_value_ = date_transform_inner(s);
+  if (strcmp(s, "9191-91-91") == 0) {
+    num_value_.date_value_ = date_transform_inner(s, true);
+  } else {
+    num_value_.date_value_ = date_transform_inner(s);
+  }
   length_ = sizeof(int);
 }
 
@@ -160,6 +166,8 @@ void Value::set_value(const Value &value) {
     case UNDEFINED: {
       ASSERT(false, "got an invalid value type");
     } break;
+    default:
+      assert(false);  // Should not set value to a NULL
   }
 }
 
@@ -204,6 +212,12 @@ std::string Value::to_string() const {
 }
 
 int Value::compare(const Value &other) const {
+  if (this->is_null() || other.is_null()) {
+    // The current value is NULL
+    // FIXME: Please ensure this
+    return -1;
+  }
+
   if (this->attr_type_ == other.attr_type_) {
     switch (this->attr_type_) {
       case INTS: {

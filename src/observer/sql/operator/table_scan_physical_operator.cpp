@@ -61,6 +61,7 @@ RC TableScanPhysicalOperator::close() { return record_scanner_.close_scan(); }
 
 Tuple *TableScanPhysicalOperator::current_tuple() {
   tuple_.set_record(&current_record_);
+  // std::cout << "[table scan] current tuple: " << tuple_.to_string() << std::endl;
   return &tuple_;
 }
 

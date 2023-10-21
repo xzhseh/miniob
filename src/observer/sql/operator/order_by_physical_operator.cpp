@@ -5,6 +5,7 @@
 #include "order_by_physical_operator.h"
 
 #include <utility>
+#include "sql/parser/value.h"
 OrderByPhysicalOperator::OrderByPhysicalOperator(std::shared_ptr<std::vector<OrderByExpr>> order_by_exprs) {
   this->order_by_exprs_ = std::move(order_by_exprs);
 }
@@ -90,6 +91,20 @@ bool OrderByPhysicalOperator::compare_tuple(const std::unique_ptr<Tuple> &left, 
       LOG_WARN("failed to get value from right tuple: %s", strrc(rc));
       return false;
     }
+
+    if (Value::check_null(left_value) && !Value::check_null(right_value)) {
+      // NULL < NOT NULL
+      // Regardless of ASC / DESC
+      return (is_asc) ? true : false;
+    } else if (!Value::check_null(left_value) && Value::check_null(right_value)) {
+      // Same as above
+      // NOT NULL > NULL
+      return (is_asc) ? false : true;
+    } else if (Value::check_null(left_value) && Value::check_null(right_value)) {
+      // Nothing to do, we do not compare NULL & NULL
+      continue;
+    }
+
     // Compare the value
     int compare_result = left_value.compare(right_value);
     if (compare_result == 0) {

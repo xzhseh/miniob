@@ -107,7 +107,9 @@ RC bind_order_by(Db *db, const std::vector<Table *> &tables, const std::vector<O
   return RC::SUCCESS;
 }
 
+/// TODO: We definitely need to refactor this part, the current implementation is so embarrassed 😅
 RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt) {
+  assert(stmt == nullptr && "`stmt` must be nullptr at the beginning");
   if (nullptr == db) {
     LOG_WARN("invalid argument. db is null");
     return RC::INVALID_ARGUMENT;
