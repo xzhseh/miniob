@@ -5,12 +5,11 @@
 #ifndef MINIDB_ORDER_BY_PHYSICAL_OPERATOR_H
 #define MINIDB_ORDER_BY_PHYSICAL_OPERATOR_H
 
-#include "physical_operator.h"
 #include "order_by_logical_operator.h"
+#include "physical_operator.h"
 
-class OrderByPhysicalOperator : public PhysicalOperator
-{
-public:
+class OrderByPhysicalOperator : public PhysicalOperator {
+ public:
   explicit OrderByPhysicalOperator(std::shared_ptr<std::vector<OrderByExpr>> order_by_exprs);
 
   ~OrderByPhysicalOperator() override = default;
@@ -19,16 +18,16 @@ public:
 
   [[nodiscard]] const auto &order_by_exprs() const { return order_by_exprs_; }
 
-  RC     open(Trx *trx) override;
-  RC     next() override;
-  RC     close() override;
+  RC open(Trx *trx) override;
+  RC next() override;
+  RC close() override;
   Tuple *current_tuple() override;
 
-private:
+ private:
   bool compare_tuple(const std::unique_ptr<Tuple> &left, const std::unique_ptr<Tuple> &right);
   std::shared_ptr<std::vector<OrderByExpr>> order_by_exprs_;
-  std::vector<std::unique_ptr<Tuple>>       result_tuples_;
-  bool                                      construct_ = false;
+  std::vector<std::unique_ptr<Tuple>> result_tuples_;
+  bool construct_ = false;
 };
 
 #endif  // MINIDB_ORDER_BY_PHYSICAL_OPERATOR_H

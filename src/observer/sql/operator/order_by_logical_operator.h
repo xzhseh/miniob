@@ -5,19 +5,17 @@
 #ifndef MINIDB_ORDER_BY_LOGICAL_OPERATOR_H
 #define MINIDB_ORDER_BY_LOGICAL_OPERATOR_H
 
-#include "sql/operator/logical_operator.h"
 #include "sql/expr/expression.h"
+#include "sql/operator/logical_operator.h"
 #include "sql/stmt/select_stmt.h"
 
-struct OrderByExpr
-{
+struct OrderByExpr {
   std::unique_ptr<Expression> field_expr;
-  bool                        asc;
+  bool asc;
 };
 
-class OrderByLogicalOperator : public LogicalOperator
-{
-public:
+class OrderByLogicalOperator : public LogicalOperator {
+ public:
   explicit OrderByLogicalOperator(std::vector<OrderByExpr> order_by_stmts);
 
   ~OrderByLogicalOperator() override = default;
@@ -26,7 +24,7 @@ public:
 
   std::shared_ptr<std::vector<OrderByExpr>> order_by_exprs() const { return this->order_by_stmts_; }
 
-private:
+ private:
   std::shared_ptr<std::vector<OrderByExpr>> order_by_stmts_;
 };
 

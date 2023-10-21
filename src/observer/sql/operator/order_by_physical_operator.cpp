@@ -5,14 +5,12 @@
 #include "order_by_physical_operator.h"
 
 #include <utility>
-OrderByPhysicalOperator::OrderByPhysicalOperator(std::shared_ptr<std::vector<OrderByExpr>> order_by_exprs)
-{
+OrderByPhysicalOperator::OrderByPhysicalOperator(std::shared_ptr<std::vector<OrderByExpr>> order_by_exprs) {
   this->order_by_exprs_ = std::move(order_by_exprs);
 }
-RC OrderByPhysicalOperator::open(Trx *trx)
-{
+RC OrderByPhysicalOperator::open(Trx *trx) {
   PhysicalOperator *child = children_[0].get();
-  RC                rc    = child->open(trx);
+  RC rc = child->open(trx);
   if (rc != RC::SUCCESS) {
     LOG_WARN("failed to open child operator: %s", strrc(rc));
     return rc;
@@ -21,8 +19,7 @@ RC OrderByPhysicalOperator::open(Trx *trx)
   return RC::SUCCESS;
 }
 
-RC OrderByPhysicalOperator::next()
-{
+RC OrderByPhysicalOperator::next() {
   if (children_.empty()) {
     return RC::RECORD_EOF;
   }
@@ -37,7 +34,7 @@ RC OrderByPhysicalOperator::next()
   }
   // Collect all the tuples from the child operator
   // and store them in the vector.
-  RC                                  rc;
+  RC rc;
   std::vector<std::unique_ptr<Tuple>> result_tuples;
   while ((rc = children_[0]->next()) == RC::SUCCESS) {
     auto copy_row_tuple = children_[0]->current_tuple()->copy();
@@ -48,13 +45,13 @@ RC OrderByPhysicalOperator::next()
     return rc;
   }
   std::sort(result_tuples.begin(),
-      result_tuples.end(),
-      [this](const std::unique_ptr<Tuple> &left, const std::unique_ptr<Tuple> &right) {
-        // Because we use pop_back() to get result
-        return !this->compare_tuple(left, right);
-      });
+            result_tuples.end(),
+            [this](const std::unique_ptr<Tuple> &left, const std::unique_ptr<Tuple> &right) {
+              // Because we use pop_back() to get result
+              return !this->compare_tuple(left, right);
+            });
   this->result_tuples_ = std::move(result_tuples);
-  construct_           = true;
+  construct_ = true;
   if (this->result_tuples_.size() == 0) {
     return RC::RECORD_EOF;
   } else {
@@ -62,31 +59,28 @@ RC OrderByPhysicalOperator::next()
   }
 }
 
-RC OrderByPhysicalOperator::close()
-{
+RC OrderByPhysicalOperator::close() {
   if (!children_.empty()) {
     children_[0]->close();
   }
   return RC::SUCCESS;
 }
 
-Tuple *OrderByPhysicalOperator::current_tuple()
-{
+Tuple *OrderByPhysicalOperator::current_tuple() {
   if (result_tuples_.empty()) {
     return nullptr;
   }
   return result_tuples_.back().get();
 }
 
-bool OrderByPhysicalOperator::compare_tuple(const std::unique_ptr<Tuple> &left, const std::unique_ptr<Tuple> &right)
-{
+bool OrderByPhysicalOperator::compare_tuple(const std::unique_ptr<Tuple> &left, const std::unique_ptr<Tuple> &right) {
   // Range the order by stmt
   for (const auto &order_by_expr : *order_by_exprs_) {
     // Get the field value
-    const auto &expr   = order_by_expr.field_expr;
+    const auto &expr = order_by_expr.field_expr;
     const auto &is_asc = order_by_expr.asc;
-    Value       left_value, right_value;
-    RC          rc = expr->get_value(*left, left_value);
+    Value left_value, right_value;
+    RC rc = expr->get_value(*left, left_value);
     if (rc != RC::SUCCESS) {
       LOG_WARN("failed to get value from left tuple: %s", strrc(rc));
       return false;
