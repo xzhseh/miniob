@@ -26,6 +26,7 @@ enum AttrType {
   INTS,           ///< int type (4 bytes)
   FLOATS,         ///< float type (4 bytes)
   DATE,           ///< date type (4 bytes)
+  OB_NULL,        ///< null type (currently store as a bool, which is of 1 byte)
   BOOLEANS,       ///< boolean type (currently used internally, will not be parsed by parser)
 };
 
@@ -96,7 +97,6 @@ public:
   float get_float() const;
   std::string get_string() const;
   bool get_boolean() const;
-  /// TODO(Zihao): Consider changing the return type to int?
   int get_date() const;
 
 private:
@@ -114,4 +114,7 @@ private:
 
   // The string value
   std::string str_value_;
+
+  // The null flag
+  bool null_flag{false};
 };
