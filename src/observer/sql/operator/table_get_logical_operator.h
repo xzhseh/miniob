@@ -21,27 +21,20 @@ See the Mulan PSL v2 for more details. */
  * @details 比如使用全表扫描、通过索引获取数据等
  * @ingroup LogicalOperator
  */
-class TableGetLogicalOperator : public LogicalOperator
-{
-public:
+class TableGetLogicalOperator : public LogicalOperator {
+ public:
   TableGetLogicalOperator(Table *table, const std::vector<Field> &fields, bool readonly);
   virtual ~TableGetLogicalOperator() = default;
 
-  LogicalOperatorType type() const override
-  {
-    return LogicalOperatorType::TABLE_GET;
-  }
+  LogicalOperatorType type() const override { return LogicalOperatorType::TABLE_GET; }
 
-  Table *table() const  { return table_; }
+  Table *table() const { return table_; }
   bool readonly() const { return readonly_; }
 
   void set_predicates(std::vector<std::unique_ptr<Expression>> &&exprs);
-  std::vector<std::unique_ptr<Expression>> &predicates()
-  {
-    return predicates_;
-  }
+  std::vector<std::unique_ptr<Expression>> &predicates() { return predicates_; }
 
-private:
+ private:
   Table *table_ = nullptr;
   std::vector<Field> fields_;
   bool readonly_ = false;
@@ -50,5 +43,6 @@ private:
   // 这里的表达式都是比较简单的比较运算，并且左右两边都是取字段表达式或值表达式
   // 不包含复杂的表达式运算，比如加减乘除、或者conjunction expression
   // 如果有多个表达式，他们的关系都是 AND
+  // Note that this is set in rewrite phase, via predicate push down
   std::vector<std::unique_ptr<Expression>> predicates_;
 };

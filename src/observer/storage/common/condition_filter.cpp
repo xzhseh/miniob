@@ -12,21 +12,19 @@ See the Mulan PSL v2 for more details. */
 // Created by Wangyunlai on 2021/5/7.
 //
 
-#include <stddef.h>
-#include <math.h>
 #include "condition_filter.h"
-#include "storage/record/record_manager.h"
+#include <math.h>
+#include <stddef.h>
 #include "common/log/log.h"
-#include "storage/table/table.h"
 #include "sql/parser/value.h"
+#include "storage/record/record_manager.h"
+#include "storage/table/table.h"
 
 using namespace common;
 
-ConditionFilter::~ConditionFilter()
-{}
+ConditionFilter::~ConditionFilter() {}
 
-DefaultConditionFilter::DefaultConditionFilter()
-{
+DefaultConditionFilter::DefaultConditionFilter() {
   left_.is_attr = false;
   left_.attr_length = 0;
   left_.attr_offset = 0;
@@ -35,11 +33,9 @@ DefaultConditionFilter::DefaultConditionFilter()
   right_.attr_length = 0;
   right_.attr_offset = 0;
 }
-DefaultConditionFilter::~DefaultConditionFilter()
-{}
+DefaultConditionFilter::~DefaultConditionFilter() {}
 
-RC DefaultConditionFilter::init(const ConDesc &left, const ConDesc &right, AttrType attr_type, CompOp comp_op)
-{
+RC DefaultConditionFilter::init(const ConDesc &left, const ConDesc &right, AttrType attr_type, CompOp comp_op) {
   // FIXME: Ensure this
   if (attr_type < CHARS || attr_type > DATE) {
     LOG_ERROR("Invalid condition with unsupported attribute type: %d", attr_type);
@@ -58,8 +54,7 @@ RC DefaultConditionFilter::init(const ConDesc &left, const ConDesc &right, AttrT
   return RC::SUCCESS;
 }
 
-RC DefaultConditionFilter::init(Table &table, const ConditionSqlNode &condition)
-{
+RC DefaultConditionFilter::init(Table &table, const ConditionSqlNode &condition) {
   const TableMeta &table_meta = table.table_meta();
   ConDesc left;
   ConDesc right;
@@ -120,8 +115,7 @@ RC DefaultConditionFilter::init(Table &table, const ConditionSqlNode &condition)
   return init(left, right, type_left, condition.comp);
 }
 
-bool DefaultConditionFilter::filter(const Record &rec) const
-{
+bool DefaultConditionFilter::filter(const Record &rec) const {
   Value left_value;
   Value right_value;
 
@@ -163,28 +157,24 @@ bool DefaultConditionFilter::filter(const Record &rec) const
   return cmp_result;  // should not go here
 }
 
-CompositeConditionFilter::~CompositeConditionFilter()
-{
+CompositeConditionFilter::~CompositeConditionFilter() {
   if (memory_owner_) {
     delete[] filters_;
     filters_ = nullptr;
   }
 }
 
-RC CompositeConditionFilter::init(const ConditionFilter *filters[], int filter_num, bool own_memory)
-{
+RC CompositeConditionFilter::init(const ConditionFilter *filters[], int filter_num, bool own_memory) {
   filters_ = filters;
   filter_num_ = filter_num;
   memory_owner_ = own_memory;
   return RC::SUCCESS;
 }
-RC CompositeConditionFilter::init(const ConditionFilter *filters[], int filter_num)
-{
+RC CompositeConditionFilter::init(const ConditionFilter *filters[], int filter_num) {
   return init(filters, filter_num, false);
 }
 
-RC CompositeConditionFilter::init(Table &table, const ConditionSqlNode *conditions, int condition_num)
-{
+RC CompositeConditionFilter::init(Table &table, const ConditionSqlNode *conditions, int condition_num) {
   if (condition_num == 0) {
     return RC::SUCCESS;
   }
@@ -212,8 +202,7 @@ RC CompositeConditionFilter::init(Table &table, const ConditionSqlNode *conditio
   return init((const ConditionFilter **)condition_filters, condition_num, true);
 }
 
-bool CompositeConditionFilter::filter(const Record &rec) const
-{
+bool CompositeConditionFilter::filter(const Record &rec) const {
   for (int i = 0; i < filter_num_; i++) {
     if (!filters_[i]->filter(rec)) {
       return false;

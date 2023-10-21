@@ -18,29 +18,26 @@ See the Mulan PSL v2 for more details. */
 #include <string>
 
 #include "common/conf/ini.h"
-#include "common/log/log.h"
 #include "common/lang/mutex.h"
 #include "common/lang/string.h"
+#include "common/log/log.h"
 #include "common/seda/callback.h"
 #include "event/session_event.h"
 #include "event/sql_event.h"
-#include "net/server.h"
 #include "net/communicator.h"
+#include "net/server.h"
 #include "session/session.h"
 
 using namespace common;
 
 // Constructor
-SessionStage::SessionStage(const char *tag) : Stage(tag) 
-{}
+SessionStage::SessionStage(const char *tag) : Stage(tag) {}
 
 // Destructor
-SessionStage::~SessionStage()
-{}
+SessionStage::~SessionStage() {}
 
 // Parse properties, instantiate a stage object
-Stage *SessionStage::make_stage(const std::string &tag)
-{
+Stage *SessionStage::make_stage(const std::string &tag) {
   SessionStage *stage = new (std::nothrow) SessionStage(tag.c_str());
   if (stage == nullptr) {
     LOG_ERROR("new ExecutorStage failed");
@@ -51,8 +48,7 @@ Stage *SessionStage::make_stage(const std::string &tag)
 }
 
 // Set properties for this object set in stage specific properties
-bool SessionStage::set_properties()
-{
+bool SessionStage::set_properties() {
   //  std::string stageNameStr(stage_name_);
   //  std::map<std::string, std::string> section = g_properties()->get(
   //    stageNameStr);
@@ -64,17 +60,12 @@ bool SessionStage::set_properties()
   return true;
 }
 // Initialize stage params and validate outputs
-bool SessionStage::initialize() { 
-    return true; 
-}
+bool SessionStage::initialize() { return true; }
 
 // Cleanup after disconnection
-void SessionStage::cleanup() {
+void SessionStage::cleanup() {}
 
-}
-
-void SessionStage::handle_event(StageEvent *event) 
-{
+void SessionStage::handle_event(StageEvent *event) {
   // right now, we just support only one event.
   handle_request(event);
 
@@ -82,8 +73,7 @@ void SessionStage::handle_event(StageEvent *event)
   return;
 }
 
-void SessionStage::handle_request(StageEvent *event)
-{
+void SessionStage::handle_request(StageEvent *event) {
   SessionEvent *sev = dynamic_cast<SessionEvent *>(event);
   if (nullptr == sev) {
     LOG_ERROR("Cannot cat event to sessionEvent");
@@ -98,7 +88,6 @@ void SessionStage::handle_request(StageEvent *event)
   Session::set_current_session(sev->session());
   sev->session()->set_current_request(sev);
   SQLStageEvent sql_event(sev, sql);
-
   // (void) handle_sql(&sql_event);
 
   // FIXME: Ensure this
@@ -107,9 +96,9 @@ void SessionStage::handle_request(StageEvent *event)
     sev->sql_result()->set_return_code(res);
   }
 
-  Communicator *communicator    = sev->get_communicator();
-  bool          need_disconnect = false;
-  RC            rc              = communicator->write_result(sev, need_disconnect);
+  Communicator *communicator = sev->get_communicator();
+  bool need_disconnect = false;
+  RC rc = communicator->write_result(sev, need_disconnect);
   LOG_INFO("write result return %s", strrc(rc));
   if (need_disconnect) {
     Server::close_connection(communicator);
@@ -135,29 +124,35 @@ RC SessionStage::handle_sql(SQLStageEvent *sql_event) {
     return rc;
   }
 
+  /// Frontend parsing --> output a `ParsedSqlResult` containing the SQL query
   rc = parse_stage_.handle_request(sql_event);
   if (OB_FAIL(rc)) {
     LOG_TRACE("failed to do parse. rc=%s", strrc(rc));
     return rc;
   }
 
+  /// Binder --> binding the node we get from the last stage with catalog / table infos
+  /// To generate the statement / context
   rc = resolve_stage_.handle_request(sql_event);
   if (OB_FAIL(rc)) {
     LOG_TRACE("failed to do resolve. rc=%s", strrc(rc));
     return rc;
   }
 
+  /// Planner / Optimizer --> potentially generate the logical / physical plan based on the statement
   rc = optimize_stage_.handle_request(sql_event);
   if (rc != RC::UNIMPLENMENT && rc != RC::SUCCESS) {
     LOG_TRACE("failed to do optimize. rc=%s", strrc(rc));
     return rc;
   }
 
+  /// Execution --> sql execution via volcano model
   rc = execute_stage_.handle_request(sql_event);
   if (OB_FAIL(rc)) {
     LOG_TRACE("failed to do execute. rc=%s", strrc(rc));
     return rc;
   }
 
+  /// Hopefully, gracefully return
   return rc;
 }

@@ -101,6 +101,11 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
         NE
         NOT
         LIKE
+        MIN
+        MAX
+        AVG
+        SUM
+        COUNT
         INNER
         JOIN
         ORDER
@@ -128,6 +133,7 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
   char *                            string;
   int                               number;
   float                             floats;
+  enum agg                          agg;
 }
 
 %token <number> NUMBER
@@ -143,6 +149,7 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
 %type <value>               value
 %type <number>              number
 %type <comp>                comp_op
+%type <agg>                 agg
 %type <rel_attr>            rel_attr
 %type <attr_infos>          attr_def_list
 %type <attr_info>           attr_def
@@ -676,9 +683,37 @@ select_attr:
       RelAttrSqlNode attr;
       attr.relation_name  = "";
       attr.attribute_name = "*";
+      attr.aggregate_func = agg::NONE;
       $$->emplace_back(attr);
     }
+    // TODO: Add the syntax for cases like `select agg(c1), count(*) from t1;`
+    | agg LBRACE '*' RBRACE attr_list {
+      /* AGG_FUNC(*) */
+      $$ = new std::vector<RelAttrSqlNode>;
+      RelAttrSqlNode attr;
+      attr.relation_name = "";
+      attr.attribute_name = "*";
+      attr.aggregate_func = $1;
+      $$->emplace_back(attr);
+      if ($5 != nullptr) {
+        for (const auto &e : *$5) {
+          $$->emplace_back(e);
+        }
+      }
+      delete $5;
+    }
+    | rel_attr COMMA agg LBRACE '*' RBRACE {
+      /* AGG_FUNC(*) */
+      $$ = new std::vector<RelAttrSqlNode>;
+      RelAttrSqlNode attr;
+      attr.relation_name = "";
+      attr.attribute_name = "*";
+      attr.aggregate_func = $3;
+      $$->emplace_back(attr);
+      $$->emplace_back(*$1);
+    }
     | rel_attr attr_list {
+      /* Implicity AGG in `rel_attr` */
       if ($2 != nullptr) {
         $$ = $2;
       } else {
@@ -687,20 +722,75 @@ select_attr:
       $$->emplace_back(*$1);
       delete $1;
     }
+    // FIXME: Memory leak
+    | agg LBRACE rel_attr COMMA rel_attr RBRACE {
+      $$ = new std::vector<RelAttrSqlNode>;
+      RelAttrSqlNode attr;
+      attr.agg_valid_flag = false;
+      $$->emplace_back(attr);
+    }
+    | agg LBRACE '*' COMMA rel_attr RBRACE {
+      $$ = new std::vector<RelAttrSqlNode>;
+      RelAttrSqlNode attr;
+      attr.agg_valid_flag = false;
+      $$->emplace_back(attr);
+    }
+    ;
+
+agg:
+    MIN {
+      $$ = agg::AGG_MIN;
+    }
+    | MAX {
+      $$ = agg::AGG_MAX;
+    }
+    | AVG {
+      $$ = agg::AGG_AVG;
+    }
+    | SUM {
+      $$ = agg::AGG_SUM;
+    }
+    | COUNT {
+      $$ = agg::AGG_COUNT;
+    }
     ;
 
 rel_attr:
     ID {
       $$ = new RelAttrSqlNode;
+      $$->relation_name = "";
       $$->attribute_name = $1;
+      $$->aggregate_func = agg::NONE;
       free($1);
     }
     | ID DOT ID {
       $$ = new RelAttrSqlNode;
       $$->relation_name  = $1;
       $$->attribute_name = $3;
+      $$->aggregate_func = agg::NONE;
       free($1);
       free($3);
+    }
+    | agg LBRACE ID RBRACE {
+      $$ = new RelAttrSqlNode;
+      $$->relation_name = "";
+      $$->attribute_name = $3;
+      $$->aggregate_func = $1;
+      free($3);
+    }
+    | agg LBRACE ID DOT ID RBRACE {
+      $$ = new RelAttrSqlNode;
+      $$->relation_name = $3;
+      $$->attribute_name = $5;
+      $$->aggregate_func = $1;
+      free($3);
+      free($5);
+    }
+    // Invalid syntax, miniob requires the output to be FAILURE
+    // So we must at least parse the syntax here 😅
+    | agg LBRACE RBRACE {
+      $$ = new RelAttrSqlNode;
+      $$->agg_valid_flag = false;
     }
     ;
 

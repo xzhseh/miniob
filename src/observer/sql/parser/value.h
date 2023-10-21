@@ -22,11 +22,11 @@ See the Mulan PSL v2 for more details. */
  */
 enum AttrType {
   UNDEFINED,
-  CHARS,          ///< string type
-  INTS,           ///< int type (4 bytes)
-  FLOATS,         ///< float type (4 bytes)
-  DATE,           ///< date type (4 bytes)
-  BOOLEANS,       ///< boolean type (currently used internally, will not be parsed by parser)
+  CHARS,     ///< string type
+  INTS,      ///< int type (4 bytes)
+  FLOATS,    ///< float type (4 bytes)
+  DATE,      ///< date type (4 bytes)
+  BOOLEANS,  ///< boolean type (currently used internally, will not be parsed by parser)
 };
 
 const char *attr_type_to_string(AttrType type);
@@ -34,10 +34,10 @@ AttrType attr_type_from_string(const char *s);
 
 /**
  * @brief Class Value
- * 
+ *
  */
 class Value {
-public:
+ public:
   Value(AttrType attr_type, char *data, int length = 4) : attr_type_(attr_type) {
     if (attr_type == DATE) {
       this->set_date(data);
@@ -55,13 +55,9 @@ public:
   Value(const Value &other) = default;
   Value &operator=(const Value &other) = default;
 
-  void set_type(AttrType type) {
-    this->attr_type_ = type;
-  }
+  void set_type(AttrType type) { this->attr_type_ = type; }
 
-  void set_data(const char *data, int length) {
-    this->set_data(const_cast<char *>(data), length);
-  }
+  void set_data(const char *data, int length) { this->set_data(const_cast<char *>(data), length); }
 
   void set_data(char *data, int length);
   void set_int(int val);
@@ -75,19 +71,15 @@ public:
   std::string to_string() const;
 
   int compare(const Value &other) const;
-  RC          like(const Value &other, bool &result) const;
+  RC like(const Value &other, bool &result) const;
 
   const char *data() const;
 
-  int length() const {
-    return length_;
-  }
+  int length() const { return length_; }
 
-  AttrType attr_type() const {
-    return attr_type_;
-  }
+  AttrType attr_type() const { return attr_type_; }
 
-public:
+ public:
   /**
    * 获取对应的值
    * 如果当前的类型与期望获取的类型不符，就会执行转换操作
@@ -99,7 +91,7 @@ public:
   /// TODO(Zihao): Consider changing the return type to int?
   int get_date() const;
 
-private:
+ private:
   AttrType attr_type_ = UNDEFINED;
 
   // The length of the current stored value
