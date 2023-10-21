@@ -207,26 +207,7 @@ RC LogicalPlanGenerator::create_plan(SelectStmt *select_stmt, unique_ptr<Logical
       return RC::INTERNAL;
     }
   }
-  std::vector<ProjectAliasCell> project_alias_cells;
-  const auto &alias_vec = select_stmt->alias_vec();
-  for (size_t i = 0; i < all_fields.size(); i++) {
-    const auto &alias_cell = alias_vec[i];
-    ProjectAliasCell project_alias_cell;
-    project_alias_cell.field = all_fields[i].meta();
-    project_alias_cell.table = all_fields[i].table();
-    if (alias_cell.is_alias) {
-      if (!alias_cell.field_alias.empty()) {
-        project_alias_cell.field_is_alias = true;
-        project_alias_cell.field_alias = alias_cell.field_alias;
-      }
-      if (!alias_cell.table_alias.empty()) {
-        project_alias_cell.table_is_alias = true;
-        project_alias_cell.table_alias = alias_cell.table_alias;
-      }
-    }
-    project_alias_cells.emplace_back(project_alias_cell);
-  }
-  unique_ptr<LogicalOperator> project_oper(new ProjectLogicalOperator(project_alias_cells));
+  unique_ptr<LogicalOperator> project_oper(new ProjectLogicalOperator(select_stmt->query_fields()));
   if (order_by_op) {
     project_oper->add_child(std::move(order_by_op));
   } else if (agg_oper) {

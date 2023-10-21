@@ -29,3 +29,5 @@ CREATE TABLE join_table_2(id int, num int);
 INSERT INTO join_table_1 VALUES (1, 'a');
 INSERT INTO join_table_2 VALUES (1, 2);
 Select * from join_table_1 as t1, join_table_2 as t2 where join_table_1.id=join_table_2.id;
+
+select * from table_alias_1 t1 where id in (select t2.id from table_alias_2 t2 where t2.col2 >= t1.col1);
