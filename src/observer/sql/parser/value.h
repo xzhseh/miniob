@@ -14,6 +14,7 @@ See the Mulan PSL v2 for more details. */
 
 #pragma once
 
+#include <cstdlib>
 #include <cstring>
 #include <string>
 #include <cassert>
@@ -63,11 +64,12 @@ class Value {
       case INTS:
         return v.get_int() == 1919810;
       case FLOATS:
-        return v.get_float() == 114.514;
+        return std::abs(v.get_float() - 114.514) < 1e-6;
       case CHARS:
         return strcmp(v.get_string().c_str(), "xzhseh") == 0;
       case DATE:
-        return v.get_date() == 20021030;
+        // return v.get_date() == 20021030;
+        return v.get_date() == 91919191;
       default:
         assert(false);
     }

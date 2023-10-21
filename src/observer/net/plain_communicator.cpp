@@ -249,29 +249,8 @@ RC PlainCommunicator::write_result_internal(SessionEvent *event, bool &need_disc
 
       // Check null here 😅
       // TODO: Refactor the code 😅😅
-      switch (value.attr_type()) {
-        case INTS: {
-          if (value.get_int() == 1919810) {
-            cell_str = "NULL";
-          }
-        } break;
-        case FLOATS: {
-          if (std::abs(value.get_float() - 114.514) < 1e-6) {
-            cell_str = "NULL";
-          }
-        } break;
-        case CHARS: {
-          if (strcmp(value.get_string().c_str(), "xzhseh") == 0) {
-            cell_str = "NULL";
-          }
-        } break;
-        case DATE: {
-          if (value.get_date() == 20021030) {
-            cell_str = "NULL";
-          }
-        } break;
-        default:
-          assert(false);
+      if (Value::check_null(value)) {
+        cell_str = "NULL";
       }
 
       rc = writer_->writen(cell_str.data(), cell_str.size());

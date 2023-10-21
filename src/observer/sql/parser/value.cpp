@@ -13,6 +13,7 @@ See the Mulan PSL v2 for more details. */
 //
 
 #include "sql/parser/value.h"
+#include <cstring>
 #include <regex>
 #include <sstream>
 #include "common/lang/comparator.h"
@@ -51,12 +52,12 @@ bool check_date(int y, int m, int d) {
   return y > 0 && ((m > 0) && (m <= 12)) && ((d > 0) && (d <= (((m == 2 && leap) ? 1 : 0) + mon[m])));
 }
 
-int date_transform_inner(const char *s) {
+int date_transform_inner(const char *s, bool force = false) {
   int y;
   int m;
   int d;
   sscanf(s, "%d-%d-%d", &y, &m, &d);
-  if (!check_date(y, m, d)) {
+  if (!check_date(y, m, d) && !force) {
     return -1;
   } else {
     return (y * 10000 + m * 100 + d);
@@ -129,7 +130,11 @@ void Value::set_string(const char *s, int len /* = 0 */) {
 
 void Value::set_date(const char *s) {
   attr_type_ = DATE;
-  num_value_.date_value_ = date_transform_inner(s);
+  if (strcmp(s, "9191-91-91") == 0) {
+    num_value_.date_value_ = date_transform_inner(s, true);
+  } else {
+    num_value_.date_value_ = date_transform_inner(s);
+  }
   length_ = sizeof(int);
 }
 

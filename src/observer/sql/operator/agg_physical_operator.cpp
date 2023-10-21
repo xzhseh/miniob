@@ -118,7 +118,6 @@ RC AggPhysicalOperator::next() {
         break;
       }
       for (const auto &field_expr : exprs_) {
-        // for (int i = 0; i < aggregate_types_.size(); ++i) {
         auto &[field_meta, n] = aggregate_keys_[i];
         if (field_expr.field().meta() == field_meta) {
           assert(n >= 1);

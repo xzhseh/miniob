@@ -80,7 +80,8 @@ RC InsertStmt::create(Db *db, InsertSqlNode &inserts, Stmt *&stmt) {
           values[i].set_float(114.514);
         } break;
         case DATE: {
-          values[i].set_date("2002-10-30");
+          // values[i].set_date("2002-10-30");
+          values[i].set_date("9191-91-91");
         } break;
         case CHARS: {
           values[i].set_string("xzhseh");
