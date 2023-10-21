@@ -59,6 +59,27 @@ class Value {
   Value(const Value &other) = default;
   Value &operator=(const Value &other) = default;
 
+  static void set_null(Value &v, const AttrType &field_type) {
+    // Currently the null values are hard-coded 😅
+    // TODO: Refactor this later
+    switch (field_type) {
+      case INTS: {
+        v.set_int(1919810);
+      } break;
+      case FLOATS: {
+        v.set_float(114.514);
+      } break;
+      case DATE: {
+        v.set_date("9191-91-91");
+      } break;
+      case CHARS: {
+        v.set_string("xzhseh");
+      } break;
+      default:
+        assert(false);
+    }
+  }
+
   static bool check_null(const Value &v) {
     switch (v.attr_type()) {
       case INTS:
