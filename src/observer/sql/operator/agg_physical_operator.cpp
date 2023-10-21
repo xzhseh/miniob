@@ -221,6 +221,22 @@ RC AggPhysicalOperator::next() {
     }
   }
 
+  // For agg::AGG_SUM
+  if (agg_value_map_.count(agg::AGG_SUM) == 1) {
+    auto &v_t = agg_value_map_[agg::AGG_SUM];
+    if (v_t.attr_type() == AttrType::INTS) {
+      if (g_null_flag && v_t.get_int() == 0) {
+        v_t.set_int(1919810);
+      }
+    } else if (v_t.attr_type() == AttrType::FLOATS) {
+      if (g_null_flag && v_t.get_float() == 0) {
+        v_t.set_float(114.514);
+      }
+    } else {
+      assert(false);  // Not yet support
+    }
+  }
+
   std::vector<Value> ret;
   for (int i = 0; i < aggregate_types_.size(); ++i) {
     ret.push_back(agg_value_map_[aggregate_types_[i]]);
