@@ -33,7 +33,7 @@ class ProjectLogicalOperator : public LogicalOperator {
 
   LogicalOperatorType type() const override { return LogicalOperatorType::PROJECTION; }
 
-  std::vector<std::unique_ptr<Expression>> &expressions() { return expressions_; }
+  std::vector<std::unique_ptr<Expression>> &expressions() override { return expressions_; }
   const std::vector<std::unique_ptr<Expression>> &expressions() const { return expressions_; }
   const std::vector<Field> &fields() const { return fields_; }
 
