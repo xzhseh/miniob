@@ -108,6 +108,9 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
         COUNT
         INNER
         JOIN
+        ORDER
+        BY
+        ASC
 
 /** union 中定义各种数据类型，真实生成的代码也是union类型，所以不能有非POD类型的数据 **/
 %union {
@@ -125,7 +128,8 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
   std::vector<RelAttrSqlNode> *     rel_attr_list;
   std::vector<std::string> *        relation_list;
   std::vector<JoinSqlNode> *        join_list;
-  std::vector<UpdateValueNode> *     update_value_list;
+  std::vector<UpdateValueNode> *    update_value_list;
+  std::vector<OrderBySqlNode> *     order_by_list_type;
   char *                            string;
   int                               number;
   float                             floats;
@@ -151,6 +155,9 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
 %type <attr_info>           attr_def
 %type <value_list>          value_list
 %type <update_value_list>   update_value_list
+%type <order_by_list_type>       order_by_clause
+%type <order_by_list_type>       order_by_list
+%type <order_by_list_type>       order_by_item
 %type <condition_list>      where
 %type <condition_list>      condition_list
 %type <rel_attr_list>       select_attr
@@ -183,6 +190,7 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
 %type <sql_node>            command_wrapper
 // commands should be a list but I use a single command instead
 %type <sql_node>            commands
+
 
 %left '+' '-'
 %left '*' '/'
@@ -470,7 +478,7 @@ update_value_list:
 ;
 
 select_stmt:        /*  select 语句的语法解析树*/
-    SELECT select_attr FROM ID rel_list where
+    SELECT select_attr FROM ID rel_list where order_by_clause
     {
       $$ = new ParsedSqlNode(SCF_SELECT);
       if ($2 != nullptr) {
@@ -488,10 +496,15 @@ select_stmt:        /*  select 语句的语法解析树*/
         $$->selection.conditions.swap(*$6);
         delete $6;
       }
+
+      if($7 != nullptr) {
+	$$->selection.order_bys.insert($$->selection.order_bys.end(),$7->begin(),$7->end());
+	delete $7;
+      }
       free($4);
     }
     |
-    SELECT select_attr FROM ID inner_join_constr inner_join_list where
+    SELECT select_attr FROM ID inner_join_constr inner_join_list where order_by_clause
         {
           $$ = new ParsedSqlNode(SCF_SELECT);
           if ($2 != nullptr) {
@@ -516,11 +529,15 @@ select_stmt:        /*  select 语句的语法解析树*/
 	    delete $6;
 	  }
 
-
           if ($7 != nullptr) {
             $$->selection.conditions.insert($$->selection.conditions.end(),$7->begin(),$7->end());
             delete $7;
           }
+
+          if ($8 != nullptr) {
+	    $$->selection.order_bys.insert($$->selection.order_bys.end(),$8->begin(),$8->end());
+	    delete $8;
+	  }
     }
     ;
 inner_join_constr:
@@ -553,6 +570,60 @@ inner_join_list:
       free($3);
     }
     ;
+order_by_clause:
+   /* empty */
+    {
+	$$ = nullptr;
+    }
+    | ORDER BY order_by_list {
+        $$ = $3;
+    }
+    ;
+
+order_by_list:
+    order_by_item {
+        $$ = new std::vector<OrderBySqlNode>;
+	$$->insert($$->begin(), (*$1).begin(), (*$1).end());
+	delete $1;
+    }
+    | order_by_item COMMA order_by_list {
+        if ($3 != nullptr) {
+	    $$ = $3;
+	} else {
+	    $$ = new std::vector<OrderBySqlNode>;
+	}
+	$$->insert($$->begin(), (*$1).begin(), (*$1).end());
+	delete $1;
+    }
+    ;
+
+order_by_item:
+    rel_attr {
+        $$ = new std::vector<OrderBySqlNode>;
+        OrderBySqlNode item;
+        item.order_by_attributes.emplace_back(*$1);
+        item.order_by_asc.emplace_back(true);
+        $$->emplace_back(item);
+        delete $1;
+    }
+    | rel_attr ASC {
+         	$$ = new std::vector<OrderBySqlNode>;
+                OrderBySqlNode item;
+                item.order_by_attributes.emplace_back(*$1);
+                item.order_by_asc.emplace_back(true);
+                $$->emplace_back(item);
+                delete $1;
+    }
+    | rel_attr DESC {
+                $$ = new std::vector<OrderBySqlNode>;
+                OrderBySqlNode item;
+                item.order_by_attributes.emplace_back(*$1);
+                item.order_by_asc.emplace_back(false);
+                $$->emplace_back(item);
+                delete $1;
+    }
+    ;
+
 calc_stmt:
     CALC expression_list
     {

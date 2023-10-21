@@ -31,6 +31,8 @@ See the Mulan PSL v2 for more details. */
 #include "sql/operator/join_logical_operator.h"
 #include "sql/operator/join_physical_operator.h"
 #include "sql/operator/logical_operator.h"
+#include "sql/operator/order_by_logical_operator.h"
+#include "sql/operator/order_by_physical_operator.h"
 #include "sql/operator/physical_operator.h"
 #include "sql/operator/predicate_logical_operator.h"
 #include "sql/operator/predicate_physical_operator.h"
@@ -85,6 +87,10 @@ RC PhysicalPlanGenerator::create(LogicalOperator &logical_operator, unique_ptr<P
 
     case LogicalOperatorType::AGG: {
       return create_plan(static_cast<AggLogicalOperator &>(logical_operator), oper);
+    } break;
+
+    case LogicalOperatorType::ORDER_BY: {
+      return create_plan(static_cast<OrderByLogicalOperator &>(logical_operator), oper);
     } break;
 
     default: {
@@ -226,7 +232,6 @@ RC PhysicalPlanGenerator::create_plan(InsertLogicalOperator &insert_oper, unique
   oper.reset(insert_phy_oper);
   return RC::SUCCESS;
 }
-
 RC PhysicalPlanGenerator::create_plan(UpdateLogicalOperator &update_oper, std::unique_ptr<PhysicalOperator> &oper) {
   vector<unique_ptr<LogicalOperator>> &child_opers = update_oper.children();
 
@@ -382,4 +387,30 @@ RC PhysicalPlanGenerator::create_plan(AggLogicalOperator &logical_oper, std::uni
   oper.reset(agg_oper);
 
   return rc;
+}
+
+RC PhysicalPlanGenerator::create_plan(OrderByLogicalOperator &logical_oper, unique_ptr<PhysicalOperator> &oper) {
+  RC rc = RC::SUCCESS;
+  vector<unique_ptr<LogicalOperator>> &child_opers = logical_oper.children();
+  if (child_opers.size() != 1) {
+    LOG_WARN("order by operator should have 1 child, but have %d", child_opers.size());
+    return RC::INTERNAL;
+  }
+  OrderByPhysicalOperator *order_by_oper = new OrderByPhysicalOperator(logical_oper.order_by_exprs());
+
+  // In fact just one child
+  for (auto &child_oper : child_opers) {
+    unique_ptr<PhysicalOperator> child_physical_oper;
+    rc = create(*child_oper, child_physical_oper);
+    if (rc != RC::SUCCESS) {
+      LOG_WARN("failed to create physical child oper. rc=%s", strrc(rc));
+      return rc;
+    }
+
+    order_by_oper->add_child(std::move(child_physical_oper));
+
+    oper.reset(order_by_oper);
+    return rc;
+  }
+  return RC::SUCCESS;
 }

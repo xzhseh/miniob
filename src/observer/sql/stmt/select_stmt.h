@@ -32,6 +32,11 @@ struct JoinStmt {
   Field right_field;
 };
 
+struct OrderByStmt {
+  Field field;
+  bool asc;
+};
+
 /**
  * @brief 表示select语句
  * @ingroup Statement
@@ -47,13 +52,11 @@ class SelectStmt : public Stmt {
   static RC create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt);
 
  public:
-  const std::vector<Table *> &tables() const { return tables_; }
-
-  const std::vector<Field> &query_fields() const { return query_fields_; }
-
-  const std::vector<JoinStmt> &join_stmts() const { return join_stmts_; }
-
-  FilterStmt *filter_stmt() const { return filter_stmt_; }
+  [[nodiscard]] const std::vector<Table *> &tables() const { return tables_; }
+  [[nodiscard]] const std::vector<Field> &query_fields() const { return query_fields_; }
+  [[nodiscard]] const std::vector<JoinStmt> &join_stmts() const { return join_stmts_; }
+  [[nodiscard]] FilterStmt *filter_stmt() const { return filter_stmt_; }
+  [[nodiscard]] const std::vector<OrderByStmt> &order_by() const { return order_by_; }
 
   AggStmt *agg_stmt() const { return agg_stmt_; }
 
@@ -61,6 +64,7 @@ class SelectStmt : public Stmt {
   std::vector<Field> query_fields_;
   std::vector<Table *> tables_;
   std::vector<JoinStmt> join_stmts_;
+  std::vector<OrderByStmt> order_by_;
   FilterStmt *filter_stmt_ = nullptr;
   AggStmt *agg_stmt_ = nullptr;
 };

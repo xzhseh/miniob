@@ -525,4 +525,5 @@ RC Table::update_record(const Record &old_record, Record &new_record) {
     LOG_ERROR("Failed to update record. table=%s, rc=%d:%s", name(), rc, strrc(rc));
     return rc;
   }
+  return rc;
 }

@@ -117,7 +117,7 @@ class Record {
     return *this;
   }
 
-  void set_data(char *data, int len = 0) {
+  void set_data(char *data, int len) {
     this->data_ = data;
     this->len_ = len;
   }
@@ -142,6 +142,14 @@ class Record {
   }
   RID &rid() { return rid_; }
   const RID &rid() const { return rid_; }
+
+  Record copy() const {
+    Record record;
+    record.set_rid(rid_);
+    record.set_data_owner((char *)malloc(len_), len_);
+    memcpy(record.data_, data_, len_);
+    return record;
+  }
 
  private:
   RID rid_;
