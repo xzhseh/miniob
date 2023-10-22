@@ -15,8 +15,8 @@ See the Mulan PSL v2 for more details. */
 #pragma once
 
 #include <memory>
-#include <vector>
 #include <unordered_map>
+#include <vector>
 
 #include "common/rc.h"
 #include "sql/stmt/agg_stmt.h"

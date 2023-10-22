@@ -140,8 +140,8 @@ RC PhysicalPlanGenerator::create_plan(TableGetLogicalOperator &table_get_oper, u
       }
 
       const Field &field = field_expr->field();
-      
-      index              = table->find_index_by_field(field.field_name());
+
+      index = table->find_index_by_field(field.field_name());
       if (nullptr != index) {
         break;
       }

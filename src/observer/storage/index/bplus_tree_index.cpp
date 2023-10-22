@@ -13,15 +13,15 @@ See the Mulan PSL v2 for more details. */
 //
 
 #include "storage/index/bplus_tree_index.h"
-#include "common/log/log.h"
-#include <list>
-#include <iostream>
 #include <iomanip>
+#include <iostream>
+#include <list>
+#include "common/log/log.h"
 
 BplusTreeIndex::~BplusTreeIndex() noexcept { close(); }
 
-RC BplusTreeIndex::create(const char *file_name, const IndexMeta &index_meta, std::vector<const FieldMeta*> field_metas)
-{
+RC BplusTreeIndex::create(const char *file_name, const IndexMeta &index_meta,
+                          std::vector<const FieldMeta *> field_metas) {
   if (inited_) {
     LOG_WARN("Failed to create index due to the index has been created before. file_name:%s, index:%s",
         file_name,
@@ -33,10 +33,10 @@ RC BplusTreeIndex::create(const char *file_name, const IndexMeta &index_meta, st
   vector<AttrType> types;
   vector<int> lengths;
   vector<int> offsets;
-  for(size_t i = 0; i < field_metas_.size(); i++) {
-     types.push_back(field_metas_[i].type());
-     lengths.push_back(field_metas_[i].len());
-     offsets.push_back(field_metas_[i].offset());
+  for (size_t i = 0; i < field_metas_.size(); i++) {
+    types.push_back(field_metas_[i].type());
+    lengths.push_back(field_metas_[i].len());
+    offsets.push_back(field_metas_[i].offset());
   }
   RC rc = index_handler_.create(file_name, types, lengths, offsets, index_meta.unique());
   if (RC::SUCCESS != rc) {
@@ -53,8 +53,8 @@ RC BplusTreeIndex::create(const char *file_name, const IndexMeta &index_meta, st
   return RC::SUCCESS;
 }
 
-RC BplusTreeIndex::open(const char *file_name, const IndexMeta &index_meta, std::vector<const FieldMeta*>field_metas)
-{
+RC BplusTreeIndex::open(const char *file_name, const IndexMeta &index_meta,
+                        std::vector<const FieldMeta *> field_metas) {
   if (inited_) {
     LOG_WARN("Failed to open index due to the index has been initedd before. file_name:%s, index:%s",
         file_name,
@@ -78,21 +78,20 @@ RC BplusTreeIndex::open(const char *file_name, const IndexMeta &index_meta, std:
       "Successfully open index, file_name:%s, index:%s", file_name, index_meta.name());
   return RC::SUCCESS;
 }
-void printBinary(char* number, int len) {
-    std::cout << "Binary representation of the number (in hexadecimal): ";
-    for (int i = 0; i < len; ++i) {
-        unsigned char byte = static_cast<unsigned char>(number[i]);
-        std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(byte) << " ";
+void printBinary(char *number, int len) {
+  std::cout << "Binary representation of the number (in hexadecimal): ";
+  for (int i = 0; i < len; ++i) {
+    unsigned char byte = static_cast<unsigned char>(number[i]);
+    std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(byte) << " ";
 
-        for (int j = 7; j >= 0; --j) {
-            std::cout << ((byte >> j) & 1);
-        }
-        std::cout << " ";
+    for (int j = 7; j >= 0; --j) {
+      std::cout << ((byte >> j) & 1);
     }
-    std::cout << std::dec << std::endl;
+    std::cout << " ";
+  }
+  std::cout << std::dec << std::endl;
 }
-char *BplusTreeIndex::make_user_key(const char *record)
-{
+char *BplusTreeIndex::make_user_key(const char *record) {
   char *key = (char *)this->index_handler_.alloc();
   if (key == nullptr) {
     LOG_WARN("Failed to alloc memory for key.");
@@ -101,29 +100,24 @@ char *BplusTreeIndex::make_user_key(const char *record)
   int attr_length{};
   for (const auto &field_meta : field_metas_) {
     memcpy(key + attr_length, record + field_meta.offset(), field_meta.len());
-    std::cout<<"type: "<<field_meta.type()<<", offset: "<<field_meta.offset()<<", length: "<<field_meta.len()<<std::endl;
+    std::cout << "type: " << field_meta.type() << ", offset: " << field_meta.offset()
+              << ", length: " << field_meta.len() << std::endl;
     attr_length += field_meta.len();
   }
   printBinary(key, attr_length);
   return key;
 }
 
+void BplusTreeIndex::free_user_key(char *user_key) { this->index_handler_.free(user_key); }
 
-void BplusTreeIndex::free_user_key(char *user_key)
-{
-  this->index_handler_.free(user_key);
-}
-
-int BplusTreeIndex::user_key_len()
-{
+int BplusTreeIndex::user_key_len() {
   int attr_length{};
   for (const auto &field_meta : field_metas_) {
     attr_length += field_meta.len();
   }
   return attr_length;
 }
-RC BplusTreeIndex::close()
-{
+RC BplusTreeIndex::close() {
   if (inited_) {
     LOG_INFO("Begin to close index, index:%s", index_meta_.name());
     index_handler_.close();
@@ -132,8 +126,7 @@ RC BplusTreeIndex::close()
   LOG_INFO("Successfully close index.");
   return RC::SUCCESS;
 }
-RC BplusTreeIndex::check_unique_constraint(const char *record)
-{
+RC BplusTreeIndex::check_unique_constraint(const char *record) {
   RC rc = RC::SUCCESS;
   std::list<RID> rids{};
   char *user_key = make_user_key(record);
@@ -145,19 +138,17 @@ RC BplusTreeIndex::check_unique_constraint(const char *record)
   return rc;
 }
 
-RC BplusTreeIndex::insert_entry(const char *record, const RID *rid)
-{
-  if(check_unique_constraint(record) != RC::SUCCESS) {
+RC BplusTreeIndex::insert_entry(const char *record, const RID *rid) {
+  if (check_unique_constraint(record) != RC::SUCCESS) {
     return RC::CONSTRAINT_UNIQUE;
-  } 
+  }
   char *user_key = make_user_key(record);
   RC rc = index_handler_.insert_entry(user_key, rid);
   free_user_key(user_key);
   return rc;
 }
 
-RC BplusTreeIndex::delete_entry(const char *record, const RID *rid)
-{  
+RC BplusTreeIndex::delete_entry(const char *record, const RID *rid) {
   char *user_key = make_user_key(record);
   RC rc = index_handler_.delete_entry(user_key, rid);
   free_user_key(user_key);
