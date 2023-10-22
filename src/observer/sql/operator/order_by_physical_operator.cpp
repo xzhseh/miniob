@@ -95,11 +95,11 @@ bool OrderByPhysicalOperator::compare_tuple(const std::unique_ptr<Tuple> &left, 
     if (Value::check_null(left_value) && !Value::check_null(right_value)) {
       // NULL < NOT NULL
       // Regardless of ASC / DESC
-      return (is_asc) ? true : false;
+      return (is_asc);
     } else if (!Value::check_null(left_value) && Value::check_null(right_value)) {
       // Same as above
       // NOT NULL > NULL
-      return (is_asc) ? false : true;
+      return !(is_asc);
     } else if (Value::check_null(left_value) && Value::check_null(right_value)) {
       // Nothing to do, we do not compare NULL & NULL
       continue;
@@ -116,5 +116,5 @@ bool OrderByPhysicalOperator::compare_tuple(const std::unique_ptr<Tuple> &left, 
       return compare_result > 0;
     }
   }
-  return this->order_by_exprs_->back().asc;
+  return true;
 }
