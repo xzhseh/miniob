@@ -19,9 +19,8 @@ See the Mulan PSL v2 for more details. */
 /**
  * @brief Vacuous(真空的)，顾名思义就是没有实现事务功能
  */
-class VacuousTrxKit : public TrxKit
-{
-public:
+class VacuousTrxKit : public TrxKit {
+ public:
   VacuousTrxKit() = default;
   virtual ~VacuousTrxKit() = default;
 
@@ -35,9 +34,8 @@ public:
   void destroy_trx(Trx *trx) override;
 };
 
-class VacuousTrx : public Trx
-{
-public:
+class VacuousTrx : public Trx {
+ public:
   VacuousTrx() = default;
   virtual ~VacuousTrx() = default;
 

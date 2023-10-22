@@ -28,15 +28,14 @@ class ExplainStmt;
 class UpdateStmt;
 class LogicalOperator;
 
-class LogicalPlanGenerator
-{
-public:
+class LogicalPlanGenerator {
+ public:
   LogicalPlanGenerator() = default;
   virtual ~LogicalPlanGenerator() = default;
 
   RC create(Stmt *stmt, std::unique_ptr<LogicalOperator> &logical_operator);
 
-private:
+ private:
   RC create_plan(UpdateStmt *calc_stmt, std::unique_ptr<LogicalOperator> &logical_operator);
   RC create_plan(CalcStmt *calc_stmt, std::unique_ptr<LogicalOperator> &logical_operator);
   RC create_plan(SelectStmt *select_stmt, std::unique_ptr<LogicalOperator> &logical_operator);

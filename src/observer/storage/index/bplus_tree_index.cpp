@@ -18,10 +18,7 @@ See the Mulan PSL v2 for more details. */
 #include <iostream>
 #include <iomanip>
 
-BplusTreeIndex::~BplusTreeIndex() noexcept
-{
-  close();
-}
+BplusTreeIndex::~BplusTreeIndex() noexcept { close(); }
 
 RC BplusTreeIndex::create(const char *file_name, const IndexMeta &index_meta, std::vector<const FieldMeta*> field_metas)
 {
@@ -167,9 +164,8 @@ RC BplusTreeIndex::delete_entry(const char *record, const RID *rid)
   return rc;
 }
 
-IndexScanner *BplusTreeIndex::create_scanner(
-    const char *left_key, int left_len, bool left_inclusive, const char *right_key, int right_len, bool right_inclusive)
-{
+IndexScanner *BplusTreeIndex::create_scanner(const char *left_key, int left_len, bool left_inclusive,
+                                             const char *right_key, int right_len, bool right_inclusive) {
   BplusTreeIndexScanner *index_scanner = new BplusTreeIndexScanner(index_handler_);
   RC rc = index_scanner->open(left_key, left_len, left_inclusive, right_key, right_len, right_inclusive);
   if (rc != RC::SUCCESS) {
@@ -180,33 +176,21 @@ IndexScanner *BplusTreeIndex::create_scanner(
   return index_scanner;
 }
 
-RC BplusTreeIndex::sync()
-{
-  return index_handler_.sync();
-}
+RC BplusTreeIndex::sync() { return index_handler_.sync(); }
 
 ////////////////////////////////////////////////////////////////////////////////
-BplusTreeIndexScanner::BplusTreeIndexScanner(BplusTreeHandler &tree_handler) : tree_scanner_(tree_handler)
-{}
+BplusTreeIndexScanner::BplusTreeIndexScanner(BplusTreeHandler &tree_handler) : tree_scanner_(tree_handler) {}
 
-BplusTreeIndexScanner::~BplusTreeIndexScanner() noexcept
-{
-  tree_scanner_.close();
-}
+BplusTreeIndexScanner::~BplusTreeIndexScanner() noexcept { tree_scanner_.close(); }
 
-RC BplusTreeIndexScanner::open(
-    const char *left_key, int left_len, bool left_inclusive, const char *right_key, int right_len, bool right_inclusive)
-{
+RC BplusTreeIndexScanner::open(const char *left_key, int left_len, bool left_inclusive, const char *right_key,
+                               int right_len, bool right_inclusive) {
   return tree_scanner_.open(left_key, left_len, left_inclusive, right_key, right_len, right_inclusive);
 }
 
-RC BplusTreeIndexScanner::next_entry(RID *rid)
-{
-  return tree_scanner_.next_entry(*rid);
-}
+RC BplusTreeIndexScanner::next_entry(RID *rid) { return tree_scanner_.next_entry(*rid); }
 
-RC BplusTreeIndexScanner::destroy()
-{
+RC BplusTreeIndexScanner::destroy() {
   delete this;
   return RC::SUCCESS;
 }

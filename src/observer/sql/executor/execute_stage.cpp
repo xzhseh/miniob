@@ -12,27 +12,27 @@ See the Mulan PSL v2 for more details. */
 // Created by Longda on 2021/4/13.
 //
 
-#include <string>
 #include <sstream>
+#include <string>
 
 #include "sql/executor/execute_stage.h"
 
 #include "common/log/log.h"
-#include "session/session.h"
-#include "event/storage_event.h"
-#include "event/sql_event.h"
 #include "event/session_event.h"
-#include "sql/stmt/stmt.h"
-#include "sql/stmt/select_stmt.h"
-#include "storage/default/default_handler.h"
+#include "event/sql_event.h"
+#include "event/storage_event.h"
+#include "session/session.h"
 #include "sql/executor/command_executor.h"
 #include "sql/operator/calc_physical_operator.h"
+#include "sql/parser/parse_defs.h"
+#include "sql/stmt/select_stmt.h"
+#include "sql/stmt/stmt.h"
+#include "storage/default/default_handler.h"
 
 using namespace std;
 using namespace common;
 
-RC ExecuteStage::handle_request(SQLStageEvent *sql_event)
-{
+RC ExecuteStage::handle_request(SQLStageEvent *sql_event) {
   RC rc = RC::SUCCESS;
   const unique_ptr<PhysicalOperator> &physical_operator = sql_event->physical_operator();
   if (physical_operator != nullptr) {
@@ -52,8 +52,7 @@ RC ExecuteStage::handle_request(SQLStageEvent *sql_event)
   return rc;
 }
 
-RC ExecuteStage::handle_request_with_physical_operator(SQLStageEvent *sql_event)
-{
+RC ExecuteStage::handle_request_with_physical_operator(SQLStageEvent *sql_event) {
   RC rc = RC::SUCCESS;
 
   Stmt *stmt = sql_event->stmt();
@@ -66,21 +65,49 @@ RC ExecuteStage::handle_request_with_physical_operator(SQLStageEvent *sql_event)
   TupleSchema schema;
   switch (stmt->type()) {
     case StmtType::SELECT: {
-      SelectStmt *select_stmt = static_cast<SelectStmt *>(stmt);
+      auto *select_stmt = dynamic_cast<SelectStmt *>(stmt);
+
+      // FIXME: Refactor this (This is currently hard-coded for aggregation case)
+      if (select_stmt->agg_stmt() != nullptr) {
+        // Construct the schema based on the agg_stmt
+        // rather than the query_fields at present
+        auto &keys = select_stmt->agg_stmt()->get_keys();
+        auto &types = select_stmt->agg_stmt()->get_types();
+        int n = keys.size();
+        for (int i = 0; i < n; ++i) {
+          auto &[f, n] = keys[i];
+          auto name = (n > 1) ? "*" : f->name();
+          const std::string s = std::string(agg_to_string(types[i])) + "(" + name + ")";
+          // std::cout << "current s: " << s << std::endl;
+          schema.append_cell(s.c_str());
+        }
+        break;
+      }
+
       bool with_table_name = select_stmt->tables().size() > 1;
 
-      for (const Field &field : select_stmt->query_fields()) {
+      for (size_t i = 0; i < select_stmt->query_fields().size(); i++) {
+        const auto &field = select_stmt->query_fields()[i];
+        const auto &alias = select_stmt->alias_vec()[i];
         if (with_table_name) {
-          schema.append_cell(field.table_name(), field.field_name());
+          if (alias.is_alias) {
+            schema.append_cell(alias.table_alias.c_str(), alias.field_alias.c_str());
+          } else {
+            schema.append_cell(field.table_name(), field.field_name());
+          }
         } else {
-          schema.append_cell(field.field_name());
+          if (alias.is_alias) {
+            schema.append_cell(alias.field_alias.c_str());
+          } else {
+            schema.append_cell(field.field_name());
+          }
         }
       }
     } break;
 
     case StmtType::CALC: {
       CalcPhysicalOperator *calc_operator = static_cast<CalcPhysicalOperator *>(physical_operator.get());
-      for (const unique_ptr<Expression> & expr : calc_operator->expressions()) {
+      for (const unique_ptr<Expression> &expr : calc_operator->expressions()) {
         schema.append_cell(expr->name().c_str());
       }
     } break;

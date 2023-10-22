@@ -1,4 +1,4 @@
-#line 2 "lex_sql.cpp"
+#line 1 "lex_sql.cpp"
 /*
 这里的代码会被复制到lex_sql.cpp的最开始位置
 定义yy_size_t的原因是因为flex生成的代码，会使用yy_size_t与其他类型的数字
@@ -22,7 +22,7 @@ do {                                                         \
 }                                                            \
 while (0);
 
-#line 26 "lex_sql.cpp"
+#line 25 "lex_sql.cpp"
 
 #define  YY_INT_ALIGNED short int
 
@@ -93,6 +93,7 @@ typedef int16_t flex_int16_t;
 typedef uint16_t flex_uint16_t;
 typedef int32_t flex_int32_t;
 typedef uint32_t flex_uint32_t;
+typedef uint64_t flex_uint64_t;
 #else
 typedef signed char flex_int8_t;
 typedef short int flex_int16_t;
@@ -257,7 +258,7 @@ struct yy_buffer_state
 	/* Number of characters read into yy_ch_buf, not including EOB
 	 * characters.
 	 */
-	int yy_n_chars;
+	yy_size_t yy_n_chars;
 
 	/* Whether we "own" the buffer - i.e., we know we created it,
 	 * and can realloc() it to grow it, and should free() it to
@@ -334,7 +335,7 @@ static void yy_init_buffer ( YY_BUFFER_STATE b, FILE *file , yyscan_t yyscanner 
 
 YY_BUFFER_STATE yy_scan_buffer ( char *base, yy_size_t size , yyscan_t yyscanner );
 YY_BUFFER_STATE yy_scan_string ( const char *yy_str , yyscan_t yyscanner );
-YY_BUFFER_STATE yy_scan_bytes ( const char *bytes, int len , yyscan_t yyscanner );
+YY_BUFFER_STATE yy_scan_bytes ( const char *bytes, yy_size_t len , yyscan_t yyscanner );
 
 void *yyalloc ( yy_size_t , yyscan_t yyscanner );
 void *yyrealloc ( void *, yy_size_t , yyscan_t yyscanner );
@@ -381,7 +382,7 @@ static void yynoreturn yy_fatal_error ( const char* msg , yyscan_t yyscanner );
  */
 #define YY_DO_BEFORE_ACTION \
 	yyg->yytext_ptr = yy_bp; \
-	yyleng = (int) (yy_cp - yy_bp); \
+	yyleng = (yy_size_t) (yy_cp - yy_bp); \
 	yyg->yy_hold_char = *yy_cp; \
 	*yy_cp = '\0'; \
 	yyg->yy_c_buf_p = yy_cp;
@@ -487,6 +488,8 @@ static const flex_int16_t yy_base[201] =
       284,  227,  200,  186,  184,  444,  176,  428,  451,  457,
       156,  458,  514,  162,  514,  484,  486,  488,  158,  105
 
+      272,  240,  213,  489,  212,  473,  475,  493,  178,  504,
+      564,  135,  564,  528,  530,  532,   99,   77
     } ;
 
 static const flex_int16_t yy_def[201] =
@@ -513,6 +516,8 @@ static const flex_int16_t yy_def[201] =
       199,  199,  199,  199,  199,  198,  199,  199,  198,  198,
       199,  198,  195,  198,    0,  195,  195,  195,  195,  195
 
+      217,  217,  217,  216,  217,  217,  216,  216,  217,  216,
+      213,  216,    0,  213,  213,  213,  213,  213
     } ;
 
 static const flex_int16_t yy_nxt[585] =
@@ -722,8 +727,8 @@ struct yyguts_t
     size_t yy_buffer_stack_max; /**< capacity of stack. */
     YY_BUFFER_STATE * yy_buffer_stack; /**< Stack as an array. */
     char yy_hold_char;
-    int yy_n_chars;
-    int yyleng_r;
+    yy_size_t yy_n_chars;
+    yy_size_t yyleng_r;
     char *yy_c_buf_p;
     int yy_init;
     int yy_start;
@@ -780,7 +785,7 @@ FILE *yyget_out ( yyscan_t yyscanner );
 
 void yyset_out  ( FILE * _out_str , yyscan_t yyscanner );
 
-			int yyget_leng ( yyscan_t yyscanner );
+			yy_size_t yyget_leng ( yyscan_t yyscanner );
 
 char *yyget_text ( yyscan_t yyscanner );
 
@@ -859,7 +864,7 @@ static int input ( yyscan_t yyscanner );
 	if ( YY_CURRENT_BUFFER_LVALUE->yy_is_interactive ) \
 		{ \
 		int c = '*'; \
-		int n; \
+		yy_size_t n; \
 		for ( n = 0; n < max_size && \
 			     (c = getc( yyin )) != EOF && c != '\n'; ++n ) \
 			buf[n] = (char) c; \
@@ -1288,8 +1293,8 @@ RETURN_TOKEN(LE);
 	YY_BREAK
 case 51:
 YY_RULE_SETUP
-#line 130 "lex_sql.l"
-RETURN_TOKEN(NE);
+#line 129 "lex_sql.l"
+RETURN_TOKEN(ORDER);
 	YY_BREAK
 case 52:
 YY_RULE_SETUP
@@ -1312,9 +1317,15 @@ YY_RULE_SETUP
 RETURN_TOKEN(GT);
 	YY_BREAK
 case 56:
-#line 137 "lex_sql.l"
+YY_RULE_SETUP
+#line 134 "lex_sql.l"
+RETURN_TOKEN(LBRACE);
+	YY_BREAK
 case 57:
-#line 138 "lex_sql.l"
+YY_RULE_SETUP
+#line 135 "lex_sql.l"
+RETURN_TOKEN(RBRACE);
+	YY_BREAK
 case 58:
 #line 139 "lex_sql.l"
 case 59:
@@ -1328,10 +1339,9 @@ YY_RULE_SETUP
 { yylval->string = strdup(yytext); RETURN_TOKEN(DATE_STR); }
 	YY_BREAK
 case 61:
-/* rule 61 can match eol */
 YY_RULE_SETUP
-#line 141 "lex_sql.l"
-{ yylval->string = strdup(yytext); RETURN_TOKEN(SSS); }
+#line 140 "lex_sql.l"
+RETURN_TOKEN(NE);
 	YY_BREAK
 case 62:
 /* rule 62 can match eol */
@@ -1340,6 +1350,16 @@ YY_RULE_SETUP
 { yylval->string = strdup(yytext); RETURN_TOKEN(SSS); }
 	YY_BREAK
 case 63:
+YY_RULE_SETUP
+#line 142 "lex_sql.l"
+RETURN_TOKEN(LT);
+	YY_BREAK
+case 64:
+YY_RULE_SETUP
+#line 143 "lex_sql.l"
+RETURN_TOKEN(GE);
+	YY_BREAK
+case 65:
 YY_RULE_SETUP
 #line 144 "lex_sql.l"
 LOG_DEBUG("Unknown character [%c]", yytext[0]); return yytext[0];
@@ -1538,7 +1558,7 @@ static int yy_get_next_buffer (yyscan_t yyscanner)
 
 	else
 		{
-			int num_to_read =
+			yy_size_t num_to_read =
 			YY_CURRENT_BUFFER_LVALUE->yy_buf_size - number_to_move - 1;
 
 		while ( num_to_read <= 0 )
@@ -1552,7 +1572,7 @@ static int yy_get_next_buffer (yyscan_t yyscanner)
 
 			if ( b->yy_is_our_buffer )
 				{
-				int new_size = b->yy_buf_size * 2;
+				yy_size_t new_size = b->yy_buf_size * 2;
 
 				if ( new_size <= 0 )
 					b->yy_buf_size += b->yy_buf_size / 8;
@@ -1610,7 +1630,7 @@ static int yy_get_next_buffer (yyscan_t yyscanner)
 
 	if ((yyg->yy_n_chars + number_to_move) > YY_CURRENT_BUFFER_LVALUE->yy_buf_size) {
 		/* Extend the array by 50%, plus the number we really need. */
-		int new_size = yyg->yy_n_chars + number_to_move + (yyg->yy_n_chars >> 1);
+		yy_size_t new_size = yyg->yy_n_chars + number_to_move + (yyg->yy_n_chars >> 1);
 		YY_CURRENT_BUFFER_LVALUE->yy_ch_buf = (char *) yyrealloc(
 			(void *) YY_CURRENT_BUFFER_LVALUE->yy_ch_buf, (yy_size_t) new_size , yyscanner );
 		if ( ! YY_CURRENT_BUFFER_LVALUE->yy_ch_buf )
@@ -1717,7 +1737,7 @@ static int yy_get_next_buffer (yyscan_t yyscanner)
 
 		else
 			{ /* need more input */
-			int offset = (int) (yyg->yy_c_buf_p - yyg->yytext_ptr);
+			yy_size_t offset = yyg->yy_c_buf_p - yyg->yytext_ptr;
 			++yyg->yy_c_buf_p;
 
 			switch ( yy_get_next_buffer( yyscanner ) )
@@ -2095,12 +2115,12 @@ YY_BUFFER_STATE yy_scan_string (const char * yystr , yyscan_t yyscanner)
  * @param yyscanner The scanner object.
  * @return the newly allocated buffer state object.
  */
-YY_BUFFER_STATE yy_scan_bytes  (const char * yybytes, int  _yybytes_len , yyscan_t yyscanner)
+YY_BUFFER_STATE yy_scan_bytes  (const char * yybytes, yy_size_t  _yybytes_len , yyscan_t yyscanner)
 {
 	YY_BUFFER_STATE b;
 	char *buf;
 	yy_size_t n;
-	int i;
+	yy_size_t i;
     
 	/* Get memory for full buffer, including space for trailing EOB's. */
 	n = (yy_size_t) (_yybytes_len + 2);
@@ -2144,7 +2164,7 @@ static void yynoreturn yy_fatal_error (const char* msg , yyscan_t yyscanner)
 	do \
 		{ \
 		/* Undo effects of setting up yytext. */ \
-        int yyless_macro_arg = (n); \
+        yy_size_t yyless_macro_arg = (n); \
         YY_LESS_LINENO(yyless_macro_arg);\
 		yytext[yyleng] = yyg->yy_hold_char; \
 		yyg->yy_c_buf_p = yytext + yyless_macro_arg; \
@@ -2212,7 +2232,7 @@ FILE *yyget_out  (yyscan_t yyscanner)
 /** Get the length of the current token.
  * @param yyscanner The scanner object.
  */
-int yyget_leng  (yyscan_t yyscanner)
+yy_size_t yyget_leng  (yyscan_t yyscanner)
 {
     struct yyguts_t * yyg = (struct yyguts_t*)yyscanner;
     return yyleng;

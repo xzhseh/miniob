@@ -102,8 +102,19 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
         NE
         NOT
         LIKE
+        MIN
+        MAX
+        AVG
+        SUM
+        COUNT
         INNER
         JOIN
+        NULL_IS
+        OB_NULL
+        ORDER
+        BY
+        ASC
+        AS
 
 /** union 中定义各种数据类型，真实生成的代码也是union类型，所以不能有非POD类型的数据 **/
 %union {
@@ -119,15 +130,18 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
   std::vector<Value> *              value_list;
   std::vector<ConditionSqlNode> *   condition_list;
   std::vector<RelAttrSqlNode> *     rel_attr_list;
-  std::vector<std::string> *        relation_list;
   std::vector<IndexAttr> *          attr_name_list;
   IndexAttr*                        index_attr;
   std::vector<IndexAttr> *          index_attr_name_list;
+  std::vector<RelationSqlNode> *        relation_list;
   std::vector<JoinSqlNode> *        join_list;
-  std::vector<UpdateValueNode> *     update_value_list;
+  std::vector<UpdateValueNode> *    update_value_list;
+  std::vector<OrderBySqlNode> *     order_by_list_type;
   char *                            string;
   int                               number;
   float                             floats;
+  enum agg                          agg;
+  bool                              null;
 }
 
 %token <number> NUMBER
@@ -146,11 +160,15 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
 %type <index_attr>          index_attr
 %type <index_attr_name_list>     index_attr_name_list 
 %type <attr_name_list>      attr_name_list           
+%type <agg>                 agg
 %type <rel_attr>            rel_attr
 %type <attr_infos>          attr_def_list
 %type <attr_info>           attr_def
 %type <value_list>          value_list
 %type <update_value_list>   update_value_list
+%type <order_by_list_type>       order_by_clause
+%type <order_by_list_type>       order_by_list
+%type <order_by_list_type>       order_by_item
 %type <condition_list>      where
 %type <condition_list>      condition_list
 %type <rel_attr_list>       select_attr
@@ -181,8 +199,11 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
 %type <sql_node>            help_stmt
 %type <sql_node>            exit_stmt
 %type <sql_node>            command_wrapper
+%type <string>              option_as
 // commands should be a list but I use a single command instead
 %type <sql_node>            commands
+%type <null>                null
+
 
 %left '+' '-'
 %left '*' '/'
@@ -381,26 +402,45 @@ attr_def_list:
       delete $2;
     }
     ;
+
 attr_def:
     /* i.e., char(255) */
-    ID type LBRACE number RBRACE {
+    ID type LBRACE number RBRACE null {
       $$ = new AttrInfoSqlNode;
       $$->type = (AttrType)$2;
       $$->name = $1;
       $$->length = $4;
+      $$->is_null = $6;
       free($1);
     }
-    | ID type {
+    | ID type null {
       $$ = new AttrInfoSqlNode;
       $$->type = (AttrType) $2;
       $$->name = $1;
       $$->length = 4;
+      $$->is_null = $3;
       free($1);
     }
     ;
+
+null:
+    // Could be empty
+  {
+    $$ = false;
+  }
+  | OB_NULL {
+    $$ = true;
+  }
+  | NOT OB_NULL {
+    // Note that we do NOT need to deal with `NOT NULL` here
+    // Since this property will be enable if NULL is not explicitly declared
+    $$ = false;
+  }
+
 number:
     NUMBER { $$ = $1; }
     ;
+
 type:
     INT_T      { $$ = INTS; }
     | STRING_T { $$ = CHARS; }
@@ -457,6 +497,12 @@ value:
       /* Note the length here is by default 10 */
       $$ = new Value(DATE, tmp);
       free(tmp);
+    }
+    | OB_NULL {
+      // Note that we can not get the actual schema of this column right here
+      // Will adjust the value to the actual type later
+      $$ = new Value(0);
+      $$->set_null();
     }
     ;
 delete_stmt:    /*  delete 语句的语法解析树*/
@@ -518,45 +564,62 @@ update_value_list:
 ;
 
 select_stmt:        /*  select 语句的语法解析树*/
-    SELECT select_attr FROM ID rel_list where
+    SELECT select_attr FROM ID option_as rel_list where order_by_clause
     {
       $$ = new ParsedSqlNode(SCF_SELECT);
       if ($2 != nullptr) {
         $$->selection.attributes.swap(*$2);
         delete $2;
       }
-      if ($5 != nullptr) {
-        $$->selection.relations.swap(*$5);
-        delete $5;
+      if ($6 != nullptr) {
+        $$->selection.relations.swap(*$6);
+        delete $6;
       }
-      $$->selection.relations.push_back($4);
+      RelationSqlNode relation;
+      relation.relation_name = $4;
+      if($5 != nullptr) {
+      	relation.alias_name = $5;
+      	free($5);
+      }
+      $$->selection.relations.push_back(relation);
       std::reverse($$->selection.relations.begin(), $$->selection.relations.end());
 
-      if ($6 != nullptr) {
-        $$->selection.conditions.swap(*$6);
-        delete $6;
+      if ($7 != nullptr) {
+        $$->selection.conditions.swap(*$7);
+        delete $7;
+      }
+
+      if($8 != nullptr) {
+	$$->selection.order_bys.insert($$->selection.order_bys.end(),$8->begin(),$8->end());
+	delete $8;
       }
       free($4);
     }
     |
-    SELECT select_attr FROM ID inner_join_constr inner_join_list where
+    SELECT select_attr FROM ID inner_join_constr inner_join_list where order_by_clause
         {
           $$ = new ParsedSqlNode(SCF_SELECT);
           if ($2 != nullptr) {
             $$->selection.attributes.swap(*$2);
             delete $2;
           }
-          $$->selection.relations.push_back($4);
+          RelationSqlNode relation_node;
+          relation_node.relation_name = $4;
+          $$->selection.relations.push_back(relation_node);
           delete $4;
 
-          $$->selection.relations.push_back((*$5)[0].relation_name);
+          RelationSqlNode join_relation_node;
+          join_relation_node.relation_name = (*$5)[0].relation_name;
+          $$->selection.relations.push_back(join_relation_node);
           $$->selection.conditions.swap((*$5)[0].conditions);
           delete $5;
 
           if ($6 != nullptr) {
             std::reverse($6->begin(), $6->end());
 	    for (auto &join_relation : *$6) {
-	      $$->selection.relations.push_back(join_relation.relation_name);
+	      RelationSqlNode join_relation_node;
+              join_relation_node.relation_name = join_relation.relation_name;
+	      $$->selection.relations.push_back(join_relation_node);
 	      for (auto &condition : join_relation.conditions) {
 	      	$$->selection.conditions.emplace_back(condition);
 	      }
@@ -564,11 +627,15 @@ select_stmt:        /*  select 语句的语法解析树*/
 	    delete $6;
 	  }
 
-
           if ($7 != nullptr) {
             $$->selection.conditions.insert($$->selection.conditions.end(),$7->begin(),$7->end());
             delete $7;
           }
+
+          if ($8 != nullptr) {
+	    $$->selection.order_bys.insert($$->selection.order_bys.end(),$8->begin(),$8->end());
+	    delete $8;
+	  }
     }
     ;
 inner_join_constr:
@@ -601,6 +668,60 @@ inner_join_list:
       free($3);
     }
     ;
+order_by_clause:
+   /* empty */
+    {
+	$$ = nullptr;
+    }
+    | ORDER BY order_by_list {
+        $$ = $3;
+    }
+    ;
+
+order_by_list:
+    order_by_item {
+        $$ = new std::vector<OrderBySqlNode>;
+	$$->insert($$->begin(), (*$1).begin(), (*$1).end());
+	delete $1;
+    }
+    | order_by_item COMMA order_by_list {
+        if ($3 != nullptr) {
+	    $$ = $3;
+	} else {
+	    $$ = new std::vector<OrderBySqlNode>;
+	}
+	$$->insert($$->begin(), (*$1).begin(), (*$1).end());
+	delete $1;
+    }
+    ;
+
+order_by_item:
+    rel_attr {
+        $$ = new std::vector<OrderBySqlNode>;
+        OrderBySqlNode item;
+        item.order_by_attributes.emplace_back(*$1);
+        item.order_by_asc.emplace_back(true);
+        $$->emplace_back(item);
+        delete $1;
+    }
+    | rel_attr ASC {
+         	$$ = new std::vector<OrderBySqlNode>;
+                OrderBySqlNode item;
+                item.order_by_attributes.emplace_back(*$1);
+                item.order_by_asc.emplace_back(true);
+                $$->emplace_back(item);
+                delete $1;
+    }
+    | rel_attr DESC {
+                $$ = new std::vector<OrderBySqlNode>;
+                OrderBySqlNode item;
+                item.order_by_attributes.emplace_back(*$1);
+                item.order_by_asc.emplace_back(false);
+                $$->emplace_back(item);
+                delete $1;
+    }
+    ;
+
 calc_stmt:
     CALC expression_list
     {
@@ -654,15 +775,52 @@ expression:
     }
     ;
 
+option_as:
+    /* empty */
+    {
+      $$ = nullptr;
+    }
+    | AS ID {
+      $$ = $2;
+    }
+    ;
 select_attr:
     '*' {
       $$ = new std::vector<RelAttrSqlNode>;
       RelAttrSqlNode attr;
       attr.relation_name  = "";
       attr.attribute_name = "*";
+      attr.aggregate_func = agg::NONE;
       $$->emplace_back(attr);
     }
+    // TODO: Add the syntax for cases like `select agg(c1), count(*) from t1;`
+    | agg LBRACE '*' RBRACE attr_list  {
+      /* AGG_FUNC(*) */
+      $$ = new std::vector<RelAttrSqlNode>;
+      RelAttrSqlNode attr;
+      attr.relation_name = "";
+      attr.attribute_name = "*";
+      attr.aggregate_func = $1;
+      $$->emplace_back(attr);
+      if ($5 != nullptr) {
+        for (const auto &e : *$5) {
+          $$->emplace_back(e);
+        }
+      }
+      delete $5;
+    }
+    | rel_attr COMMA agg LBRACE '*' RBRACE {
+      /* AGG_FUNC(*) */
+      $$ = new std::vector<RelAttrSqlNode>;
+      RelAttrSqlNode attr;
+      attr.relation_name = "";
+      attr.attribute_name = "*";
+      attr.aggregate_func = $3;
+      $$->emplace_back(attr);
+      $$->emplace_back(*$1);
+    }
     | rel_attr attr_list {
+      /* Implicity AGG in `rel_attr` */
       if ($2 != nullptr) {
         $$ = $2;
       } else {
@@ -671,20 +829,84 @@ select_attr:
       $$->emplace_back(*$1);
       delete $1;
     }
+    // FIXME: Memory leak
+    | agg LBRACE rel_attr COMMA rel_attr RBRACE {
+      $$ = new std::vector<RelAttrSqlNode>;
+      RelAttrSqlNode attr;
+      attr.agg_valid_flag = false;
+      $$->emplace_back(attr);
+    }
+    | agg LBRACE '*' COMMA rel_attr RBRACE {
+      $$ = new std::vector<RelAttrSqlNode>;
+      RelAttrSqlNode attr;
+      attr.agg_valid_flag = false;
+      $$->emplace_back(attr);
+    }
+    ;
+
+agg:
+    MIN {
+      $$ = agg::AGG_MIN;
+    }
+    | MAX {
+      $$ = agg::AGG_MAX;
+    }
+    | AVG {
+      $$ = agg::AGG_AVG;
+    }
+    | SUM {
+      $$ = agg::AGG_SUM;
+    }
+    | COUNT {
+      $$ = agg::AGG_COUNT;
+    }
     ;
 
 rel_attr:
-    ID {
+    ID option_as {
       $$ = new RelAttrSqlNode;
+      $$->relation_name = "";
       $$->attribute_name = $1;
+      $$->aggregate_func = agg::NONE;
+      if($2 != nullptr) {
+      	$$->alias_name = $2;
+      	free($2);
+      }
       free($1);
     }
-    | ID DOT ID {
+    | ID DOT ID option_as {
       $$ = new RelAttrSqlNode;
       $$->relation_name  = $1;
       $$->attribute_name = $3;
+      $$->aggregate_func = agg::NONE;
+      if($4 != nullptr) {
+	$$->alias_name = $4;
+	free($4);
+      }
       free($1);
       free($3);
+    }
+    // TODO : Add alias name for agg ?
+    | agg LBRACE ID RBRACE {
+      $$ = new RelAttrSqlNode;
+      $$->relation_name = "";
+      $$->attribute_name = $3;
+      $$->aggregate_func = $1;
+      free($3);
+    }
+    | agg LBRACE ID DOT ID RBRACE {
+      $$ = new RelAttrSqlNode;
+      $$->relation_name = $3;
+      $$->attribute_name = $5;
+      $$->aggregate_func = $1;
+      free($3);
+      free($5);
+    }
+    // Invalid syntax, miniob requires the output to be FAILURE
+    // So we must at least parse the syntax here 😅
+    | agg LBRACE RBRACE {
+      $$ = new RelAttrSqlNode;
+      $$->agg_valid_flag = false;
     }
     ;
 
@@ -710,14 +932,19 @@ rel_list:
     {
       $$ = nullptr;
     }
-    | COMMA ID rel_list {
-      if ($3 != nullptr) {
-        $$ = $3;
+    | COMMA ID option_as rel_list {
+      if ($4 != nullptr) {
+        $$ = $4;
       } else {
-        $$ = new std::vector<std::string>;
+        $$ = new std::vector<RelationSqlNode>;
       }
-
-      $$->push_back($2);
+      RelationSqlNode relation;
+      relation.relation_name = $2;
+      if($3 != nullptr) {
+      	relation.alias_name = $3;
+      		free($3);
+      }
+      $$->push_back(relation);
       free($2);
     }
     ;
@@ -806,6 +1033,8 @@ comp_op:
     | NE { $$ = NOT_EQUAL; }
     | LIKE { $$ = LIKE_OP;}
     | NOT LIKE { $$ = NOT_LIKE_OP;}
+    | NULL_IS { $$ = IS; }
+    | NULL_IS NOT { $$ = IS_NOT; }
     ;
 
 load_data_stmt:

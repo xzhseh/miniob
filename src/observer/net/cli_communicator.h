@@ -22,9 +22,8 @@ See the Mulan PSL v2 for more details. */
  * @details 直接通过终端/标准输入输出进行通讯。从这里的实现来看，是不需要libevent的一些实现的，
  * 因此communicator需要重构，或者需要重构server中的各个通讯启动模式。
  */
-class CliCommunicator : public PlainCommunicator
-{
-public:
+class CliCommunicator : public PlainCommunicator {
+ public:
   CliCommunicator() = default;
   virtual ~CliCommunicator() = default;
 
@@ -32,6 +31,6 @@ public:
   RC read_event(SessionEvent *&event) override;
   RC write_result(SessionEvent *event, bool &need_disconnect) override;
 
-private:
-  int write_fd_ = -1; ///< 与使用远程通讯模式不同，如果读数据使用标准输入，那么输出应该是标准输出
+ private:
+  int write_fd_ = -1;  ///< 与使用远程通讯模式不同，如果读数据使用标准输入，那么输出应该是标准输出
 };

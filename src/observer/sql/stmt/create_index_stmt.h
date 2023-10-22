@@ -47,7 +47,7 @@ public:
 public:
   static RC create(Db *db, const CreateIndexSqlNode &create_index, Stmt *&stmt);
 
-private:
+ private:
   Table *table_ = nullptr;
   std::vector<const FieldMeta *> field_metas_;
   std::string index_name_;

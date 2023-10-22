@@ -14,9 +14,9 @@ See the Mulan PSL v2 for more details. */
 
 #pragma once
 
-#include <vector>
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "common/rc.h"
 #include "sql/expr/tuple.h"
@@ -35,12 +35,10 @@ class Trx;
  * @brief 物理算子类型
  * @ingroup PhysicalOperator
  */
-enum class PhysicalOperatorType
-{
+enum class PhysicalOperatorType {
   TABLE_SCAN,
   INDEX_SCAN,
   NESTED_LOOP_JOIN,
-  INNER_JOIN,
   EXPLAIN,
   PREDICATE,
   PROJECT,
@@ -49,15 +47,16 @@ enum class PhysicalOperatorType
   DELETE,
   INSERT,
   UPDATE,
+  ORDER_BY,
+  AGG,
 };
 
 /**
  * @brief 与LogicalOperator对应，物理算子描述执行计划将如何执行
  * @ingroup PhysicalOperator
  */
-class PhysicalOperator
-{
-public:
+class PhysicalOperator {
+ public:
   PhysicalOperator() = default;
 
   virtual ~PhysicalOperator();
@@ -76,16 +75,10 @@ public:
 
   virtual Tuple *current_tuple() = 0;
 
-  void add_child(std::unique_ptr<PhysicalOperator> oper)
-  {
-    children_.emplace_back(std::move(oper));
-  }
+  void add_child(std::unique_ptr<PhysicalOperator> oper) { children_.emplace_back(std::move(oper)); }
 
-  std::vector<std::unique_ptr<PhysicalOperator>> &children()
-  {
-    return children_;
-  }
+  std::vector<std::unique_ptr<PhysicalOperator>> &children() { return children_; }
 
-protected:
+ protected:
   std::vector<std::unique_ptr<PhysicalOperator>> children_;
 };

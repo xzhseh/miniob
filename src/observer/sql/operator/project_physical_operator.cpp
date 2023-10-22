@@ -12,13 +12,13 @@ See the Mulan PSL v2 for more details. */
 // Created by WangYunlai on 2022/07/01.
 //
 
-#include "common/log/log.h"
 #include "sql/operator/project_physical_operator.h"
+#include "common/log/log.h"
+#include "sql/expr/tuple.h"
 #include "storage/record/record.h"
 #include "storage/table/table.h"
 
-RC ProjectPhysicalOperator::open(Trx *trx)
-{
+RC ProjectPhysicalOperator::open(Trx *trx) {
   if (children_.empty()) {
     return RC::SUCCESS;
   }
@@ -33,31 +33,34 @@ RC ProjectPhysicalOperator::open(Trx *trx)
   return RC::SUCCESS;
 }
 
-RC ProjectPhysicalOperator::next()
-{
+RC ProjectPhysicalOperator::next() {
   if (children_.empty()) {
     return RC::RECORD_EOF;
   }
   return children_[0]->next();
 }
 
-RC ProjectPhysicalOperator::close()
-{
+RC ProjectPhysicalOperator::close() {
   if (!children_.empty()) {
     children_[0]->close();
   }
   return RC::SUCCESS;
 }
-Tuple *ProjectPhysicalOperator::current_tuple()
-{
+Tuple *ProjectPhysicalOperator::current_tuple() {
+  // std::cout << "[project] Current children tuple: " << children_[0]->current_tuple()->to_string() << std::endl;
+  if (dynamic_cast<ValueListTuple *>(children_[0]->current_tuple()) != nullptr) {
+    // The child is of type aggregation, produce the value tuple
+    return children_[0]->current_tuple();
+  }
+
   tuple_.set_tuple(children_[0]->current_tuple());
+  // std::cout << "[project] Current tuple: " << tuple_.to_string() << std::endl;
   return &tuple_;
 }
 
-void ProjectPhysicalOperator::add_projection(const Table *table, const FieldMeta *field_meta)
-{
+void ProjectPhysicalOperator::add_projection(const Table *table, const FieldMeta *field_meta) {
   // 对单表来说，展示的(alias) 字段总是字段名称，
   // 对多表查询来说，展示的alias 需要带表名字
-  TupleCellSpec *spec = new TupleCellSpec(table->name(), field_meta->name(), field_meta->name());
+  auto *spec = new TupleCellSpec(table->name(), field_meta->name(), field_meta->name());
   tuple_.add_cell_spec(spec);
 }

@@ -22,9 +22,8 @@ See the Mulan PSL v2 for more details. */
  * 看起来直接使用fdopen也可以实现缓存写，不过fdopen会在close时直接关闭fd。
  * @note 在执行close时，描述符fd并不会被关闭
  */
-class BufferedWriter
-{
-public:
+class BufferedWriter {
+ public:
   BufferedWriter(int fd);
   BufferedWriter(int fd, int32_t size);
   ~BufferedWriter();
@@ -38,7 +37,7 @@ public:
    * @brief 写数据到文件/socket
    * @details 缓存满会自动刷新缓存
    * @param data 要写入的数据
-   * @param size 要写入的数据大小 
+   * @param size 要写入的数据大小
    * @param write_size 实际写入的数据大小
    */
   RC write(const char *data, int32_t size, int32_t &write_size);
@@ -57,11 +56,9 @@ public:
    */
   RC flush();
 
-  void clear() {
-    buffer_.reset();
-  }
+  void clear() { buffer_.reset(); }
 
-private:
+ private:
   /**
    * @brief 刷新缓存
    * @details 期望缓存可以刷新size大小的数据，实际刷新的数据量可能小于size也可能大于size。
@@ -70,7 +67,7 @@ private:
    */
   RC flush_internal(int32_t size);
 
-private:
+ private:
   int fd_ = -1;
   RingBuffer buffer_;
 };

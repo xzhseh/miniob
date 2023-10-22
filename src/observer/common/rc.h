@@ -76,8 +76,7 @@ See the Mulan PSL v2 for more details. */
   DEFINE_RC(LOGBUF_FULL)                    \
   DEFINE_RC(CONSTRAINT_UNIQUE)                   
 
-enum class RC
-{
+enum class RC {
 #define DEFINE_RC(name) name,
   DEFINE_RCS
 #undef DEFINE_RC

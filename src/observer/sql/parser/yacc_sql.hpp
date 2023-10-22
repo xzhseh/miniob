@@ -101,14 +101,25 @@ extern int yydebug;
     NE = 302,                      /* NE  */
     NOT = 303,                     /* NOT  */
     LIKE = 304,                    /* LIKE  */
-    INNER = 305,                   /* INNER  */
-    JOIN = 306,                    /* JOIN  */
-    NUMBER = 307,                  /* NUMBER  */
-    FLOAT = 308,                   /* FLOAT  */
-    ID = 309,                      /* ID  */
-    SSS = 310,                     /* SSS  */
-    DATE_STR = 311,                /* DATE_STR  */
-    UMINUS = 312                   /* UMINUS  */
+    MIN = 305,                     /* MIN  */
+    MAX = 306,                     /* MAX  */
+    AVG = 307,                     /* AVG  */
+    SUM = 308,                     /* SUM  */
+    COUNT = 309,                   /* COUNT  */
+    INNER = 310,                   /* INNER  */
+    JOIN = 311,                    /* JOIN  */
+    NULL_IS = 312,                 /* NULL_IS  */
+    OB_NULL = 313,                 /* OB_NULL  */
+    ORDER = 314,                   /* ORDER  */
+    BY = 315,                      /* BY  */
+    ASC = 316,                     /* ASC  */
+    AS = 317,                      /* AS  */
+    NUMBER = 318,                  /* NUMBER  */
+    FLOAT = 319,                   /* FLOAT  */
+    ID = 320,                      /* ID  */
+    SSS = 321,                     /* SSS  */
+    DATE_STR = 322,                /* DATE_STR  */
+    UMINUS = 323                   /* UMINUS  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -117,7 +128,7 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 109 "yacc_sql.y"
+#line 120 "yacc_sql.y"
 
   ParsedSqlNode *                   sql_node;
   ConditionSqlNode *                condition;
@@ -131,17 +142,20 @@ union YYSTYPE
   std::vector<Value> *              value_list;
   std::vector<ConditionSqlNode> *   condition_list;
   std::vector<RelAttrSqlNode> *     rel_attr_list;
-  std::vector<std::string> *        relation_list;
   std::vector<IndexAttr> *          attr_name_list;
   IndexAttr*                        index_attr;
   std::vector<IndexAttr> *          index_attr_name_list;
+  std::vector<RelationSqlNode> *        relation_list;
   std::vector<JoinSqlNode> *        join_list;
-  std::vector<UpdateValueNode> *     update_value_list;
+  std::vector<UpdateValueNode> *    update_value_list;
+  std::vector<OrderBySqlNode> *     order_by_list_type;
   char *                            string;
   int                               number;
   float                             floats;
+  enum agg                          agg;
+  bool                              null;
 
-#line 145 "yacc_sql.hpp"
+#line 159 "yacc_sql.hpp"
 
 };
 typedef union YYSTYPE YYSTYPE;

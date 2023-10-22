@@ -17,18 +17,17 @@ See the Mulan PSL v2 for more details. */
 #include <string>
 #include <vector>
 
+#include "common/lang/serializable.h"
 #include "common/rc.h"
 #include "storage/field/field_meta.h"
 #include "storage/index/index_meta.h"
-#include "common/lang/serializable.h"
 
 /**
  * @brief 表元数据
- * 
+ *
  */
-class TableMeta : public common::Serializable
-{
-public:
+class TableMeta : public common::Serializable {
+ public:
   TableMeta() = default;
   ~TableMeta() = default;
 
@@ -40,7 +39,7 @@ public:
 
   RC add_index(const IndexMeta &index);
 
-public:
+ public:
   int32_t table_id() const { return table_id_; }
   const char *name() const;
   const FieldMeta *trx_field() const;
@@ -48,12 +47,9 @@ public:
   const FieldMeta *field(const char *name) const;
   std::vector<const FieldMeta*> fields(const std::vector<std::string>& field_names) const;
   const FieldMeta *find_field_by_offset(int offset) const;
-  const std::vector<FieldMeta> *field_metas() const
-  {
-    return &fields_;
-  }
+  const std::vector<FieldMeta> *field_metas() const { return &fields_; }
   auto trx_fields() const -> const std::pair<const FieldMeta *, int>;
-  
+
   int field_num() const;  // sys field included
   int sys_field_num() const;
 
@@ -64,15 +60,15 @@ public:
 
   int record_size() const;
 
-public:
+ public:
   int serialize(std::ostream &os) const override;
   int deserialize(std::istream &is) override;
   int get_serial_size() const override;
   void to_string(std::string &output) const override;
   void desc(std::ostream &os) const;
 
-protected:
-  int32_t     table_id_ = -1;
+ protected:
+  int32_t table_id_ = -1;
   std::string name_;
   std::vector<FieldMeta> fields_;  // 包含sys_fields
   std::vector<IndexMeta> indexes_;

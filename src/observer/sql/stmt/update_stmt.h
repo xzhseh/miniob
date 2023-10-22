@@ -24,26 +24,25 @@ class FilterStmt;
  * @brief 更新语句
  * @ingroup Statement
  */
-class UpdateStmt : public Stmt
-{
-public:
+class UpdateStmt : public Stmt {
+ public:
   // FIXME: Please ensure this
   // UpdateStmt() = default;
   UpdateStmt(Table *table, std::vector<Value> values, std::vector<FieldMeta> field_meta, FilterStmt *filter_stmt);
   StmtType type() const override { return StmtType::UPDATE; }
 
-public:
-  static RC create(Db *db, const UpdateSqlNode &update_sql, Stmt *&stmt);
+ public:
+  static RC create(Db *db, UpdateSqlNode &update_sql, Stmt *&stmt);
 
-public:
-  Table      *table() const { return table_; }
+ public:
+  Table *table() const { return table_; }
   FilterStmt *filter_stmt() const { return filter_stmt_; }
   const auto &values() const { return values_; }
   const auto &field_metas() const { return field_metas_; }
 
-private:
-  Table                 *table_ = nullptr;
-  std::vector<Value>     values_;
+ private:
+  Table *table_ = nullptr;
+  std::vector<Value> values_;
   std::vector<FieldMeta> field_metas_;
-  FilterStmt            *filter_stmt_ = nullptr;
+  FilterStmt *filter_stmt_ = nullptr;
 };
