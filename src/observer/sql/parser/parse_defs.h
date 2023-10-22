@@ -75,6 +75,11 @@ struct RelationSqlNode {
   std::string alias_name;
 };
 
+struct IndexAttr 
+{
+  std::string attribute_name;
+};
+
 /**
  * @brief 描述比较运算符
  * @ingroup SQLParser
@@ -229,8 +234,9 @@ struct DropTableSqlNode {
  */
 struct CreateIndexSqlNode {
   std::string index_name;      ///< Index name
+  std::vector<IndexAttr>     attribute_names;    ///< attributes in create index
   std::string relation_name;   ///< Relation name
-  std::string attribute_name;  ///< Attribute name
+  bool is_unique;              ///< unique flag
 };
 
 /**

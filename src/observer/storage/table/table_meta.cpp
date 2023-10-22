@@ -122,8 +122,21 @@ const FieldMeta *TableMeta::field(const char *name) const {
   }
   return nullptr;
 }
-
-const FieldMeta *TableMeta::find_field_by_offset(int offset) const {
+std::vector<const FieldMeta*> TableMeta::fields(const std::vector<std::string>& field_names) const {
+  std::vector<const FieldMeta*> fields;
+  for(const FieldMeta &field : fields_) {
+    for(const auto& filed_name : field_names) {
+      if(0 == strcmp(field.name(), filed_name.c_str())) {
+        // life cycle is safe ?
+        fields.push_back(&field);
+        break;
+      }
+    }
+  }
+  return fields;
+}
+const FieldMeta *TableMeta::find_field_by_offset(int offset) const
+{
   for (const FieldMeta &field : fields_) {
     if (field.offset() == offset) {
       return &field;
@@ -150,9 +163,19 @@ const IndexMeta *TableMeta::index(const char *name) const {
   return nullptr;
 }
 
-const IndexMeta *TableMeta::find_index_by_field(const char *field) const {
+const IndexMeta *TableMeta::find_index_by_field(std::vector<std::string>& fields) const
+{
   for (const IndexMeta &index : indexes_) {
-    if (0 == strcmp(index.field(), field)) {
+    bool is_same = true;
+    if(index.fields().size() == fields.size()) {
+      for(size_t i = 0; i < fields.size(); i++) {
+        if(index.fields()[i] != fields[i]) {
+          is_same = false;
+          break;
+        }
+      }
+    }
+    if(is_same && index.fields().size() == fields.size()) {
       return &index;
     }
   }

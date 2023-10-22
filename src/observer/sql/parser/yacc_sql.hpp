@@ -87,38 +87,39 @@ extern int yydebug;
     WHERE = 288,                   /* WHERE  */
     AND = 289,                     /* AND  */
     SET = 290,                     /* SET  */
-    ON = 291,                      /* ON  */
-    LOAD = 292,                    /* LOAD  */
-    DATA = 293,                    /* DATA  */
-    INFILE = 294,                  /* INFILE  */
-    EXPLAIN = 295,                 /* EXPLAIN  */
-    EQ = 296,                      /* EQ  */
-    LT = 297,                      /* LT  */
-    GT = 298,                      /* GT  */
-    LE = 299,                      /* LE  */
-    GE = 300,                      /* GE  */
-    NE = 301,                      /* NE  */
-    NOT = 302,                     /* NOT  */
-    LIKE = 303,                    /* LIKE  */
-    MIN = 304,                     /* MIN  */
-    MAX = 305,                     /* MAX  */
-    AVG = 306,                     /* AVG  */
-    SUM = 307,                     /* SUM  */
-    COUNT = 308,                   /* COUNT  */
-    INNER = 309,                   /* INNER  */
-    JOIN = 310,                    /* JOIN  */
-    NULL_IS = 311,                 /* NULL_IS  */
-    OB_NULL = 312,                 /* OB_NULL  */
-    ORDER = 313,                   /* ORDER  */
-    BY = 314,                      /* BY  */
-    ASC = 315,                     /* ASC  */
-    AS = 316,                      /* AS  */
-    NUMBER = 317,                  /* NUMBER  */
-    FLOAT = 318,                   /* FLOAT  */
-    ID = 319,                      /* ID  */
-    SSS = 320,                     /* SSS  */
-    DATE_STR = 321,                /* DATE_STR  */
-    UMINUS = 322                   /* UMINUS  */
+    UNIQUE = 291,                  /* UNIQUE  */
+    ON = 292,                      /* ON  */
+    LOAD = 293,                    /* LOAD  */
+    DATA = 294,                    /* DATA  */
+    INFILE = 295,                  /* INFILE  */
+    EXPLAIN = 296,                 /* EXPLAIN  */
+    EQ = 297,                      /* EQ  */
+    LT = 298,                      /* LT  */
+    GT = 299,                      /* GT  */
+    LE = 300,                      /* LE  */
+    GE = 301,                      /* GE  */
+    NE = 302,                      /* NE  */
+    NOT = 303,                     /* NOT  */
+    LIKE = 304,                    /* LIKE  */
+    MIN = 305,                     /* MIN  */
+    MAX = 306,                     /* MAX  */
+    AVG = 307,                     /* AVG  */
+    SUM = 308,                     /* SUM  */
+    COUNT = 309,                   /* COUNT  */
+    INNER = 310,                   /* INNER  */
+    JOIN = 311,                    /* JOIN  */
+    NULL_IS = 312,                 /* NULL_IS  */
+    OB_NULL = 313,                 /* OB_NULL  */
+    ORDER = 314,                   /* ORDER  */
+    BY = 315,                      /* BY  */
+    ASC = 316,                     /* ASC  */
+    AS = 317,                      /* AS  */
+    NUMBER = 318,                  /* NUMBER  */
+    FLOAT = 319,                   /* FLOAT  */
+    ID = 320,                      /* ID  */
+    SSS = 321,                     /* SSS  */
+    DATE_STR = 322,                /* DATE_STR  */
+    UMINUS = 323                   /* UMINUS  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -127,7 +128,7 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 119 "yacc_sql.y"
+#line 120 "yacc_sql.y"
 
   ParsedSqlNode *                   sql_node;
   ConditionSqlNode *                condition;
@@ -141,6 +142,9 @@ union YYSTYPE
   std::vector<Value> *              value_list;
   std::vector<ConditionSqlNode> *   condition_list;
   std::vector<RelAttrSqlNode> *     rel_attr_list;
+  std::vector<IndexAttr> *          attr_name_list;
+  IndexAttr*                        index_attr;
+  std::vector<IndexAttr> *          index_attr_name_list;
   std::vector<RelationSqlNode> *        relation_list;
   std::vector<JoinSqlNode> *        join_list;
   std::vector<UpdateValueNode> *    update_value_list;
@@ -151,7 +155,7 @@ union YYSTYPE
   enum agg                          agg;
   bool                              null;
 
-#line 155 "yacc_sql.hpp"
+#line 159 "yacc_sql.hpp"
 
 };
 typedef union YYSTYPE YYSTYPE;

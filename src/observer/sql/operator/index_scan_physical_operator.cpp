@@ -47,7 +47,7 @@ RC IndexScanPhysicalOperator::open(Trx *trx) {
     LOG_WARN("failed to create index scanner");
     return RC::INTERNAL;
   }
-
+  
   record_handler_ = table_->record_handler();
   if (nullptr == record_handler_) {
     LOG_WARN("invalid record handler");

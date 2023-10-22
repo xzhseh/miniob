@@ -88,6 +88,7 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
         WHERE
         AND
         SET
+        UNIQUE
         ON
         LOAD
         DATA
@@ -129,6 +130,9 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
   std::vector<Value> *              value_list;
   std::vector<ConditionSqlNode> *   condition_list;
   std::vector<RelAttrSqlNode> *     rel_attr_list;
+  std::vector<IndexAttr> *          attr_name_list;
+  IndexAttr*                        index_attr;
+  std::vector<IndexAttr> *          index_attr_name_list;
   std::vector<RelationSqlNode> *        relation_list;
   std::vector<JoinSqlNode> *        join_list;
   std::vector<UpdateValueNode> *    update_value_list;
@@ -153,6 +157,9 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
 %type <value>               value
 %type <number>              number
 %type <comp>                comp_op
+%type <index_attr>          index_attr
+%type <index_attr_name_list>     index_attr_name_list 
+%type <attr_name_list>      attr_name_list           
 %type <agg>                 agg
 %type <rel_attr>            rel_attr
 %type <attr_infos>          attr_def_list
@@ -289,17 +296,65 @@ desc_table_stmt:
     }
     ;
 
-create_index_stmt:    /* create index 语句的语法解析树 */
-    CREATE INDEX ID ON ID LBRACE ID RBRACE
+create_index_stmt:    /*create index 语句的语法解析树*/
+    CREATE INDEX ID ON ID LBRACE attr_name_list RBRACE
     {
       $$ = new ParsedSqlNode(SCF_CREATE_INDEX);
       CreateIndexSqlNode &create_index = $$->create_index;
       create_index.index_name = $3;
       create_index.relation_name = $5;
-      create_index.attribute_name = $7;
+      create_index.attribute_names.swap(*$7);
+      create_index.is_unique = false;
       free($3);
       free($5);
       free($7);
+    }
+    |
+    CREATE UNIQUE INDEX ID ON ID LBRACE attr_name_list RBRACE
+    {
+        $$ = new ParsedSqlNode(SCF_CREATE_INDEX);
+        CreateIndexSqlNode& create_index = $$->create_index;
+        create_index.index_name = $4;
+        create_index.relation_name = $6;
+        create_index.attribute_names.swap(*$8);
+        create_index.is_unique = true;
+        free($4);
+        free($6);
+        free($8);
+    }
+    ;
+attr_name_list:
+    index_attr index_attr_name_list {
+      if($2 != nullptr) {
+        $$ = $2;
+      } else {
+        $$ = new std::vector<IndexAttr>;
+      }
+      $$->push_back(*$1);
+      delete $1;
+    }
+    ;
+index_attr:
+  ID {
+    $$ = new IndexAttr;
+    $$->attribute_name = $1;
+    free($1);
+  }
+  ;
+index_attr_name_list:
+    /* empty */
+    {
+      $$ = nullptr;
+    }
+    | COMMA index_attr index_attr_name_list {
+      if ($3 != nullptr) {
+        $$ = $3;
+      } else {
+        $$ = new std::vector<IndexAttr>;
+      }
+
+      $$->emplace_back(*$2);
+      delete $2;
     }
     ;
 
