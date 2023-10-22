@@ -133,7 +133,7 @@ RC PhysicalPlanGenerator::create_plan(TableGetLogicalOperator &table_get_oper, u
     }
   }
   // support one index scan but not multi-index scan
-  if (false) {
+  if (nullptr != index && predicates.size() == 1) {
     ASSERT(value_expr != nullptr, "got an index but value expr is null ?");
 
     const Value &value = value_expr->get_value();

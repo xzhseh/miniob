@@ -150,6 +150,9 @@ RC BplusTreeIndex::check_unique_constraint(const char *record)
 
 RC BplusTreeIndex::insert_entry(const char *record, const RID *rid)
 {
+  if(check_unique_constraint(record) != RC::SUCCESS) {
+    return RC::CONSTRAINT_UNIQUE;
+  } 
   char *user_key = make_user_key(record);
   RC rc = index_handler_.insert_entry(user_key, rid);
   free_user_key(user_key);
