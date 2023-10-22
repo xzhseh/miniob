@@ -15,6 +15,8 @@ See the Mulan PSL v2 for more details. */
 #include "storage/index/bplus_tree_index.h"
 #include "common/log/log.h"
 #include <list>
+#include <iostream>
+#include <iomanip>
 
 BplusTreeIndex::~BplusTreeIndex() noexcept
 {
@@ -79,6 +81,19 @@ RC BplusTreeIndex::open(const char *file_name, const IndexMeta &index_meta, std:
       "Successfully open index, file_name:%s, index:%s", file_name, index_meta.name());
   return RC::SUCCESS;
 }
+void printBinary(char* number, int len) {
+    std::cout << "Binary representation of the number (in hexadecimal): ";
+    for (int i = 0; i < len; ++i) {
+        unsigned char byte = static_cast<unsigned char>(number[i]);
+        std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(byte) << " ";
+
+        for (int j = 7; j >= 0; --j) {
+            std::cout << ((byte >> j) & 1);
+        }
+        std::cout << " ";
+    }
+    std::cout << std::dec << std::endl;
+}
 char *BplusTreeIndex::make_user_key(const char *record)
 {
   char *key = (char *)this->index_handler_.alloc();
@@ -89,10 +104,14 @@ char *BplusTreeIndex::make_user_key(const char *record)
   int attr_length{};
   for (const auto &field_meta : field_metas_) {
     memcpy(key + attr_length, record + field_meta.offset(), field_meta.len());
+    std::cout<<"type: "<<field_meta.type()<<", offset: "<<field_meta.offset()<<", length: "<<field_meta.len()<<std::endl;
     attr_length += field_meta.len();
   }
+  printBinary(key, attr_length);
   return key;
 }
+
+
 void BplusTreeIndex::free_user_key(char *user_key)
 {
   this->index_handler_.free(user_key);

@@ -125,14 +125,15 @@ RC PhysicalPlanGenerator::create_plan(TableGetLogicalOperator &table_get_oper, u
       }
 
       const Field &field = field_expr->field();
+      
       index              = table->find_index_by_field(field.field_name());
       if (nullptr != index) {
         break;
       }
     }
   }
-  // 先移除这个
-  if (nullptr != index) {
+  // support one index scan but not multi-index scan
+  if (false) {
     ASSERT(value_expr != nullptr, "got an index but value expr is null ?");
 
     const Value &value = value_expr->get_value();

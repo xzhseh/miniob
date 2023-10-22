@@ -659,11 +659,6 @@ public:
   RC close();
 
 private:
-  /**
-   * 如果key的类型是CHARS, 扩展或缩减user_key的大小刚好是schema中定义的大小
-   */
-  RC fix_user_key(const char *user_key, int key_len, bool want_greater, char **fixed_key, bool *should_inclusive);
-
   void fetch_item(RID &rid);
   bool touch_end();
 
