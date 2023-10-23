@@ -24,6 +24,7 @@ See the Mulan PSL v2 for more details. */
 class Record;
 class TupleCellSpec;
 class Trx;
+class Tuple;
 
 /**
  * @brief 物理算子

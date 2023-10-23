@@ -94,9 +94,14 @@ enum CompOp {
   NOT_LIKE_OP,  ///< "NOT LIKE"
   IS,
   IS_NOT,
-  NO_OP
+  IN_OP,
+  EXISTS_OP,
+  NOT_IN,
+  NOT_EXISTS,
+  NO_OP,  ///< no comparison
 };
 
+struct SelectSqlNode;
 /**
  * @brief 表示一个条件比较
  * @ingroup SQLParser
@@ -113,8 +118,15 @@ struct ConditionSqlNode {
   CompOp comp;                ///< comparison operator
   int right_is_attr;          ///< TRUE if right-hand side is an attribute
                               ///< 1时，操作符右边是属性名，0时，是属性值
+                              ///< 2时，是子查询
+                              ///< 3时，是常量列表
   RelAttrSqlNode right_attr;  ///< right-hand side attribute if right_is_attr = TRUE 右边的属性
   Value right_value;          ///< right-hand side value if right_is_attr = FALSE
+
+  std::vector<Value> const_value_list;  ///< const value list for IN/NOT IN,EXISTS/NOT EXISTS
+  // Use unique_ptr will cause compile error,hard to handle
+  // The memory will leak, but it doesn't matter
+  SelectSqlNode *sub_select = {nullptr};  ///< sub select for IN/NOT IN,EXISTS/NOT EXISTS
 };
 
 struct OrderBySqlNode {
@@ -138,6 +150,9 @@ struct SelectSqlNode {
   std::vector<RelationSqlNode> relations;    ///< 查询的表
   std::vector<ConditionSqlNode> conditions;  ///< 查询条件，使用AND串联起来多个条件
   std::vector<OrderBySqlNode> order_bys;     ///< order by clause
+
+  SelectSqlNode() = default;
+  SelectSqlNode(const SelectSqlNode &other) = default;
 };
 
 /**

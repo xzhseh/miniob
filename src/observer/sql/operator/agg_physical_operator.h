@@ -22,7 +22,7 @@ class AggPhysicalOperator : public PhysicalOperator {
         aggregate_types_(std::move(aggregate_types)),
         exprs_(std::move(exprs)) {}
 
-  virtual ~AggPhysicalOperator() = default;
+  ~AggPhysicalOperator() override = default;
 
   PhysicalOperatorType type() const override { return PhysicalOperatorType::AGG; }
 

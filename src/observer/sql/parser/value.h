@@ -18,6 +18,7 @@ See the Mulan PSL v2 for more details. */
 #include <cstdlib>
 #include <cstring>
 #include <string>
+#include <vector>
 #include "common/rc.h"
 
 /// Note that after adding the null flag
@@ -35,6 +36,18 @@ enum AttrType {
 
 const char *attr_type_to_string(AttrType type);
 AttrType attr_type_from_string(const char *s);
+
+class Value;
+
+enum class SubResultType {
+  SUB_QUERY,
+  CONST_VALUE_LIST,
+  UNDEFINED,
+};
+struct SubResult {
+  SubResultType type{SubResultType::UNDEFINED};
+  std::vector<Value> const_value_list;  // type == CONST_VALUE_LIST
+};
 
 /**
  * @brief Class Value
@@ -113,6 +126,8 @@ class Value {
   void set_date(const char *s);
   void set_value(const Value &value);
 
+  void set_sub_query_result(const SubResult &sub_result);
+
   std::string to_string() const;
 
   int compare(const Value &other) const;
@@ -156,4 +171,6 @@ class Value {
   //   1. Explicitly declare `not null`
   //   2. Does NOT explicitly declare `null`
   bool is_null_{false};
+  // For support subquery and so on
+  SubResult sub_result_;
 };

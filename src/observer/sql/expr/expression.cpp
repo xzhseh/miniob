@@ -13,6 +13,8 @@ See the Mulan PSL v2 for more details. */
 //
 
 #include "sql/expr/expression.h"
+#include "event/sql_event.h"
+#include "session/session_stage.h"
 #include "sql/expr/tuple.h"
 #include "sql/parser/parse_defs.h"
 

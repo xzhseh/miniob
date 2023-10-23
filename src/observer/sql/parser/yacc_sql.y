@@ -115,6 +115,8 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
         BY
         ASC
         AS
+	IN
+	EXISTS
 
 /** union 中定义各种数据类型，真实生成的代码也是union类型，所以不能有非POD类型的数据 **/
 %union {
@@ -157,6 +159,7 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
 %type <value>               value
 %type <number>              number
 %type <comp>                comp_op
+%type <comp>                in_op
 %type <index_attr>          index_attr
 %type <index_attr_name_list>     index_attr_name_list 
 %type <attr_name_list>      attr_name_list           
@@ -1022,6 +1025,37 @@ condition:
       delete $1;
       delete $3;
     }
+    | rel_attr in_op LBRACE select_stmt RBRACE
+    {
+      $$ = new ConditionSqlNode;
+      $$->left_is_attr = 1;
+      $$->left_attr = *$1;
+      $$->right_is_attr = 2;
+      $$->sub_select = new SelectSqlNode($4->selection);
+      $$->comp = $2;
+      delete $1;
+    }
+    | rel_attr in_op LBRACE value value_list RBRACE
+    {
+      $$ = new ConditionSqlNode;
+      $$->left_is_attr = 1;
+      $$->left_attr = *$1;
+      $$->right_is_attr = 3;
+      if($5 != nullptr) {
+	$$->const_value_list.swap(*$5);
+	delete $5;
+      }
+      $$->const_value_list.push_back(*$4);
+      $$->comp = $2;
+      delete $1;
+      delete $4;
+    }
+    ;
+in_op:
+    IN { $$ = IN_OP; }
+    | NOT IN { $$ = NOT_IN; }
+    | EXISTS { $$ = EXISTS_OP; }
+    | NOT EXISTS { $$ = NOT_EXISTS; }
     ;
 
 comp_op:

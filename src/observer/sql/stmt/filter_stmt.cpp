@@ -100,7 +100,7 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
 
   filter_unit = new FilterUnit;
 
-  if (condition.left_is_attr) {
+  if (condition.left_is_attr == 1) {
     Table *table = nullptr;
     const FieldMeta *field = nullptr;
     rc = get_table_and_field(db, default_table, tables, condition.left_attr, table, field, rel_attr);
@@ -117,7 +117,7 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
     filter_unit->set_left(filter_obj);
   }
 
-  if (condition.right_is_attr) {
+  if (condition.right_is_attr == 1) {
     Table *table = nullptr;
     const FieldMeta *field = nullptr;
     rc = get_table_and_field(db, default_table, tables, condition.right_attr, table, field, rel_attr);
@@ -128,10 +128,29 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
     FilterObj filter_obj;
     filter_obj.init_attr(Field(table, field));
     filter_unit->set_right(filter_obj);
-  } else {
+  } else if (condition.right_is_attr == 0) {
     FilterObj filter_obj;
     filter_obj.init_value(condition.right_value);
     filter_unit->set_right(filter_obj);
+  } else if (condition.right_is_attr == 2) {
+    // Sub query
+    FilterObj filter_obj;
+    // It's select stmt
+    std::shared_ptr<ParsedSqlNode> sub_query(new ParsedSqlNode);
+    sub_query->flag = SqlCommandFlag::SCF_SELECT;
+    sub_query->selection = *condition.sub_select;
+    filter_obj.init_sub_query(sub_query);
+  } else if (condition.right_is_attr == 3) {
+    // const value list
+    FilterObj filter_obj;
+    std::vector<Value> value_list;
+    for (const auto &value : condition.const_value_list) {
+      value_list.push_back(value);
+    }
+    filter_obj.init_value_list(value_list);
+  } else {
+    LOG_WARN("invalid right_is_attr: %d", condition.right_is_attr);
+    return RC::INVALID_ARGUMENT;
   }
 
   filter_unit->set_comp(comp);

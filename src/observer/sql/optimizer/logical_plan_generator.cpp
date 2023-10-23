@@ -229,11 +229,14 @@ RC LogicalPlanGenerator::create_plan(FilterStmt *filter_stmt, unique_ptr<Logical
     const FilterObj &filter_obj_left = filter_unit->left();
     const FilterObj &filter_obj_right = filter_unit->right();
 
-    unique_ptr<Expression> left(filter_obj_left.is_attr
+    // Left is attr and value. Const value list and sub query are not supported yet.
+    assert(filter_obj_left.type == FilterObjType::ATTR || filter_obj_left.type == FilterObjType::VALUE);
+    unique_ptr<Expression> left(filter_obj_left.type == FilterObjType::ATTR
                                     ? static_cast<Expression *>(new FieldExpr(filter_obj_left.field))
                                     : static_cast<Expression *>(new ValueExpr(filter_obj_left.value)));
 
-    unique_ptr<Expression> right(filter_obj_right.is_attr
+    // Right is a little bit complex than left. It can be attr, value, const value list and sub query.
+    unique_ptr<Expression> right(filter_obj_left.type == FilterObjType::ATTR
                                      ? static_cast<Expression *>(new FieldExpr(filter_obj_right.field))
                                      : static_cast<Expression *>(new ValueExpr(filter_obj_right.value)));
 
