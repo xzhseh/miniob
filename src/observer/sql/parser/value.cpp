@@ -212,12 +212,6 @@ std::string Value::to_string() const {
 }
 
 int Value::compare(const Value &other) const {
-  if (this->is_null() || other.is_null()) {
-    // The current value is NULL
-    // FIXME: Please ensure this
-    return -1;
-  }
-
   if (this->attr_type_ == other.attr_type_) {
     switch (this->attr_type_) {
       case INTS: {

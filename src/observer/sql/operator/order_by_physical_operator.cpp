@@ -101,7 +101,7 @@ bool OrderByPhysicalOperator::compare_tuple(const std::unique_ptr<Tuple> &left, 
       // NOT NULL > NULL
       return !(is_asc);
     } else if (Value::check_null(left_value) && Value::check_null(right_value)) {
-      // Nothing to do, we do not compare NULL & NULL
+      // NULL equal to NULL
       continue;
     }
 
@@ -110,11 +110,14 @@ bool OrderByPhysicalOperator::compare_tuple(const std::unique_ptr<Tuple> &left, 
     if (compare_result == 0) {
       continue;
     }
-    if (is_asc) {
-      return compare_result < 0;
+    if(compare_result < 0 ){
+      // Left is less than right
+      return is_asc;
     } else {
-      return compare_result > 0;
+      // Left is greater than right
+      return !is_asc;
     }
   }
+  // This true means left equal to right
   return true;
 }
