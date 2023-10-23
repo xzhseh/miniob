@@ -21,7 +21,7 @@ See the Mulan PSL v2 for more details. */
 #include "common/log/log.h"
 #include "storage/field/field.h"
 
-const char *ATTR_TYPE_NAME[] = {"undefined", "chars", "ints", "floats", "date", "booleans"};
+const char *ATTR_TYPE_NAME[] = {"undefined", "chars", "ints", "floats", "date", "booleans", "text"};
 
 const char *attr_type_to_string(AttrType type) {
   if (type >= UNDEFINED && type <= DATE) {
@@ -71,6 +71,11 @@ void Value::set_data(char *data, int length) {
       set_string(data, length);
       break;
     }
+    case TEXT: {
+      printf("\n %d \n", length);
+      set_text(data, length);
+      break;
+    }
     case INTS: {
       num_value_.int_value_ = *(int *)data;
       length_ = length;
@@ -97,6 +102,17 @@ void Value::set_data(char *data, int length) {
       break;
     }
   }
+}
+
+void Value::set_text(const char* s, int len) {
+  attr_type_ = TEXT;
+  if (len > 0) {
+    len = strnlen(s, len);
+    str_value_.assign(s, len);
+  } else {
+    str_value_.assign(s);
+  }
+  length_ = str_value_.length();
 }
 
 void Value::set_int(int val) {
@@ -153,7 +169,10 @@ void Value::set_value(const Value &value) {
     case FLOATS: {
       set_float(value.get_float());
     } break;
-    case CHARS: {
+    case CHARS:{
+      set_string(value.get_string().c_str());
+    } break;
+    case TEXT:{
       set_string(value.get_string().c_str());
     } break;
     case BOOLEANS: {
@@ -176,6 +195,10 @@ const char *Value::data() const {
     case CHARS: {
       return str_value_.c_str();
     } break;
+    case TEXT: {
+      return str_value_.c_str();
+    }
+    break;
     default: {
       return (const char *)&num_value_;
     } break;
@@ -188,6 +211,9 @@ std::string Value::to_string() const {
     case INTS: {
       os << num_value_.int_value_;
     } break;
+    case TEXT: {
+      os<<str_value_;
+    }break;
     case FLOATS: {
       os << common::double_to_str(num_value_.float_value_);
     } break;
@@ -232,6 +258,12 @@ int Value::compare(const Value &other) const {
                                       (void *)other.str_value_.c_str(),
                                       other.str_value_.length());
       } break;
+      case TEXT: {
+        return common::compare_string((void *)this->str_value_.c_str(),
+                                      this->str_value_.length(),
+                                      (void *)other.str_value_.c_str(),
+                                      other.str_value_.length());        
+      }break;
       case BOOLEANS: {
         return common::compare_int((void *)&this->num_value_.bool_value_, (void *)&other.num_value_.bool_value_);
       }
@@ -310,6 +342,14 @@ int Value::get_int() const {
         return 0;
       }
     }
+    case TEXT: {
+      try {
+        return (int)(std::stol(str_value_));
+      } catch (std::exception const &ex) {
+        LOG_TRACE("failed to convert string to number. s=%s, ex=%s", str_value_.c_str(), ex.what());
+        return 0;
+      }     
+    }
     case INTS: {
       return num_value_.int_value_;
     }
@@ -340,6 +380,14 @@ float Value::get_float() const {
         return 0.0;
       }
     } break;
+    case TEXT: {
+       try {
+        return std::stof(str_value_);
+      } catch (std::exception const &ex) {
+        LOG_TRACE("failed to convert string to float. s=%s, ex=%s", str_value_.c_str(), ex.what());
+        return 0.0;
+      }     
+    }break;
     case INTS: {
       return float(num_value_.int_value_);
     } break;
@@ -382,6 +430,24 @@ bool Value::get_boolean() const {
         return !str_value_.empty();
       }
     } break;
+    case TEXT: {
+      try {
+        float val = std::stof(str_value_);
+        if (val >= EPSILON || val <= -EPSILON) {
+          return true;
+        }
+
+        int int_val = std::stol(str_value_);
+        if (int_val != 0) {
+          return true;
+        }
+
+        return !str_value_.empty();
+      } catch (std::exception const &ex) {
+        LOG_TRACE("failed to convert string to float or integer. s=%s, ex=%s", str_value_.c_str(), ex.what());
+        return !str_value_.empty();
+      }
+    }break;
     case INTS: {
       return num_value_.int_value_ != 0;
     } break;

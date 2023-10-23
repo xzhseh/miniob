@@ -83,6 +83,13 @@ void set_initial_value_for_map(std::unordered_map<agg, Value> &m, AttrType t, ag
             assert(false);  // Not yet supported
           }
           break;
+        case AttrType::TEXT:
+          if (a_t == agg::AGG_MIN || a_t == agg::AGG_MAX) {
+            ret = v;
+          } else {
+            assert(false);  // Not yet supported
+          }
+          break;
         case AttrType::DATE:
           if (a_t == agg::AGG_MIN || a_t == agg::AGG_MAX) {
             ret = v;

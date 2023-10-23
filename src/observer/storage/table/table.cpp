@@ -299,7 +299,7 @@ RC Table::make_record(int value_num, const Value *values, Record &record)
     const FieldMeta *field    = table_meta_.field(i + normal_field_start_index);
     const Value     &value    = values[i];
     size_t           copy_len = field->len();
-    if (field->type() == CHARS) {
+    if (field->type() == CHARS || field->type() == TEXT) {
       const size_t data_len = value.length();
       if (copy_len > data_len) {
         copy_len = data_len + 1;
@@ -307,6 +307,9 @@ RC Table::make_record(int value_num, const Value *values, Record &record)
     }
     // Invalid date value
     if (field->type() == DATE && value.get_date() == -1) {
+      return RC::VARIABLE_NOT_VALID;
+    }
+    if (field->type() == TEXT && strlen(value.get_string().c_str()) > 65535 ){
       return RC::VARIABLE_NOT_VALID;
     }
     memcpy(record_data + field->offset(), value.data(), copy_len);

@@ -52,7 +52,7 @@ RC UpdatePhysicalOperator::next() {
       for (int j = 0; j < value.length(); ++j) {
         data[offset + j] = value.data()[j];
       }
-      if (value.attr_type() == AttrType::CHARS && value.length() < field_meta.len()) {
+      if ((value.attr_type() == AttrType::CHARS || value.attr_type() == AttrType::TEXT) && value.length() < field_meta.len()) {
         data[offset + value.length()] = '\0';
       }
     }

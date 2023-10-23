@@ -23,10 +23,16 @@ RC FieldExpr::get_value(const Tuple &tuple, Value &value) const {
   if (value.attr_type() == DATE && value.get_date() == -1) {
     rc = RC::INVALID_ARGUMENT;
   }
+  if (value.attr_type() == TEXT && strlen(value.get_string().c_str()) > 65535) {
+    rc = RC::INVALID_ARGUMENT;
+  } 
   return rc;
 }
 
 RC ValueExpr::get_value(const Tuple &tuple, Value &value) const {
+  if (value.attr_type() == TEXT && strlen(value.get_string().c_str()) > 65535) {
+    return RC::INVALID_ARGUMENT;
+  } 
   if (value_.attr_type() == DATE && value_.get_date() == -1) {
     return RC::INVALID_ARGUMENT;
   } else {
@@ -93,6 +99,12 @@ RC ComparisonExpr::compare_value(const Value &left, const Value &right, bool &re
   if (right.attr_type() == DATE && right.get_date() == -1) {
     return RC::INVALID_ARGUMENT;
   }
+  if (left.attr_type() == TEXT && strlen(left.get_string().c_str()) > 65535) {
+    return RC::INVALID_ARGUMENT;
+  } 
+  if (right.attr_type() == TEXT && strlen(right.get_string().c_str()) > 65535) {
+    return RC::INVALID_ARGUMENT;
+  } 
 
   // std::cout << "[expression] left: " << left.to_string() << " right: " << right.to_string() << std::endl;
 

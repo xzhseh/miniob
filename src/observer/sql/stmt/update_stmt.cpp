@@ -51,7 +51,7 @@ RC UpdateStmt::create(Db *db, UpdateSqlNode &update, Stmt *&stmt) {
     }
 
     // Check if update_attr and update_value are of the same type
-    const AttrType field_type = field_meta->type();
+    AttrType field_type = field_meta->type();
 
     if (update_value.is_null()) {
       if (!field_meta->is_null()) {
@@ -67,7 +67,13 @@ RC UpdateStmt::create(Db *db, UpdateSqlNode &update, Stmt *&stmt) {
       assert(update_value.attr_type() == field_type && "The type should be the same");
     }
 
-    const AttrType value_type = update_value.attr_type();
+    AttrType value_type = update_value.attr_type();
+    if(value_type == CHARS && field_type == TEXT) {
+      value_type = TEXT;
+      field_type = TEXT;
+      update_value.set_type(TEXT);
+    }
+
 
     if (field_type != value_type) {
       LOG_ERROR("field type mismatch. table=%s, field=%s, field type=%d, value_type=%d",
