@@ -64,14 +64,14 @@ RC bind_order_by(Db *db, const std::vector<Table *> &tables, const std::vector<O
     const char *field_name = attr.attribute_name.c_str();
 
     if (common::is_blank(table_name)) {
-      // Table name is empty
+      // Table name is empty means that only single table is involved
       if (common::is_blank(field_name)) {
         // Field name is empty
         LOG_WARN("invalid order by. both table and field are blank");
         return RC::INVALID_ARGUMENT;
       }
-
       // find field in every table
+      assert(tables.size() == 1 && "The size of `tables` must be one");
       for (Table *table : tables) {
         const FieldMeta *field_meta = table->table_meta().field(field_name);
         if (nullptr != field_meta) {
@@ -83,7 +83,7 @@ RC bind_order_by(Db *db, const std::vector<Table *> &tables, const std::vector<O
         }
       }
     } else {
-      // Table name is not empty
+      // Table name is not empty eg : select t1.c1 from t1 order by t1.c1
       Table *table = db->find_table(table_name);
       if (nullptr == table) {
         LOG_WARN("no such table. db=%s, table_name=%s", db->name(), table_name);
