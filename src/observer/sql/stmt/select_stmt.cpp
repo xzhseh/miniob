@@ -72,15 +72,17 @@ RC bind_order_by(Db *db, const std::vector<Table *> &tables, const std::vector<O
       }
       // find field in every table
       assert(tables.size() == 1 && "The size of `tables` must be one");
+      const FieldMeta *field_meta = nullptr;
       for (Table *table : tables) {
-        const FieldMeta *field_meta = table->table_meta().field(field_name);
+        field_meta = table->table_meta().field(field_name);
         if (nullptr != field_meta) {
           order_by_stmts.push_back({Field(table, field_meta), is_asc});
           break;
-        } else {
-          LOG_WARN("no such field. field=%s.%s.%s", db->name(), table->name(), field_name);
-          return RC::SCHEMA_FIELD_MISSING;
         }
+      }
+      if (nullptr == field_meta) {
+        LOG_WARN("no such field. field=%s.%s", tables[0]->name(), field_name);
+        return RC::SCHEMA_FIELD_MISSING;
       }
     } else {
       // Table name is not empty eg : select t1.c1 from t1 order by t1.c1
