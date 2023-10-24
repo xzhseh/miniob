@@ -33,4 +33,4 @@ SQLStageEvent::~SQLStageEvent() noexcept {
   }
 }
 
-SQLStageEvent::SQLStageEvent(std::unique_ptr<ParsedSqlNode> sql_node) { sql_node_ = std::move(sql_node); }
+SQLStageEvent::SQLStageEvent(std::shared_ptr<ParsedSqlNode> sql_node) { sql_node_ = std::move(sql_node); }

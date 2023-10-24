@@ -14,6 +14,7 @@ See the Mulan PSL v2 for more details. */
 
 #include "sql/optimizer/logical_plan_generator.h"
 #include <memory>
+#include "sql/expr/sub_query_expr.h"
 #include "sql/operator/agg_logical_operator.h"
 #include "sql/operator/calc_logical_operator.h"
 #include "sql/operator/delete_logical_operator.h"
@@ -235,10 +236,25 @@ RC LogicalPlanGenerator::create_plan(FilterStmt *filter_stmt, unique_ptr<Logical
                                     ? static_cast<Expression *>(new FieldExpr(filter_obj_left.field))
                                     : static_cast<Expression *>(new ValueExpr(filter_obj_left.value)));
 
-    // Right is a little bit complex than left. It can be attr, value, const value list and sub query.
-    unique_ptr<Expression> right(filter_obj_left.type == FilterObjType::ATTR
-                                     ? static_cast<Expression *>(new FieldExpr(filter_obj_right.field))
-                                     : static_cast<Expression *>(new ValueExpr(filter_obj_right.value)));
+    unique_ptr<Expression> right = nullptr;
+    switch (filter_obj_right.type) {
+      case FilterObjType::ATTR:
+        right = unique_ptr<Expression>(new FieldExpr(filter_obj_right.field));
+        break;
+      case FilterObjType::VALUE:
+        right = unique_ptr<Expression>(new ValueExpr(filter_obj_right.value));
+        break;
+      case FilterObjType::VALUE_LIST:
+        right = unique_ptr<Expression>(new SubQueryExpr(filter_obj_right.value_list));
+        break;
+      case FilterObjType::SUB_QUERY:
+        // Unsafe ,but it's ok for now.
+        right = unique_ptr<Expression>(new SubQueryExpr(filter_obj_right.sub_query));
+        break;
+      default:
+        assert(false);
+    }
+    assert(right != nullptr);
 
     ComparisonExpr *cmp_expr = new ComparisonExpr(filter_unit->comp(), std::move(left), std::move(right));
     cmp_exprs.emplace_back(cmp_expr);

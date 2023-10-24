@@ -140,6 +140,7 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
     sub_query->flag = SqlCommandFlag::SCF_SELECT;
     sub_query->selection = *condition.sub_select;
     filter_obj.init_sub_query(sub_query);
+    filter_unit->set_right(filter_obj);
   } else if (condition.right_is_attr == 3) {
     // const value list
     FilterObj filter_obj;
@@ -148,6 +149,7 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
       value_list.push_back(value);
     }
     filter_obj.init_value_list(value_list);
+    filter_unit->set_right(filter_obj);
   } else {
     LOG_WARN("invalid right_is_attr: %d", condition.right_is_attr);
     return RC::INVALID_ARGUMENT;

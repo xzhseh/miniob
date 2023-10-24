@@ -465,4 +465,3 @@ int Value::get_date() const {
   assert(attr_type_ == DATE && "Currently expect `attr_type_` to be of type `DATE`");
   return num_value_.date_value_;
 }
-void Value::set_sub_query_result(const SubResult &sub_result) { this->sub_result_ = sub_result; }
