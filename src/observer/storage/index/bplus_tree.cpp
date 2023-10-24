@@ -13,11 +13,10 @@ See the Mulan PSL v2 for more details. */
 // Rewritten by Longda & Wangyunlai
 //
 #include "storage/index/bplus_tree.h"
+#include <numeric>
 #include "common/lang/lower_bound.h"
 #include "common/log/log.h"
 #include "sql/parser/parse_defs.h"
-#include "common/lang/lower_bound.h"
-#include <numeric>
 #include "storage/buffer/disk_buffer_pool.h"
 
 using namespace std;
@@ -643,9 +642,9 @@ RC BplusTreeHandler::sync() {
   return disk_buffer_pool_->flush_all_pages();
 }
 
-RC BplusTreeHandler::create(const char *file_name, std::vector<AttrType> attr_types, std::vector<int> attr_lengths, std::vector<int> offsets, bool unique, int internal_max_size /* = -1*/,
-    int leaf_max_size /* = -1 */)
-{
+RC BplusTreeHandler::create(const char *file_name, std::vector<AttrType> attr_types, std::vector<int> attr_lengths,
+                            std::vector<int> offsets, bool unique, int internal_max_size /* = -1*/,
+                            int leaf_max_size /* = -1 */) {
   unique_ = unique;
   BufferPoolManager &bpm = BufferPoolManager::instance();
   RC rc = bpm.create_file(file_name);
@@ -688,11 +687,11 @@ RC BplusTreeHandler::create(const char *file_name, std::vector<AttrType> attr_ty
   char *pdata = header_frame->data();
   IndexFileHeader *file_header = (IndexFileHeader *)pdata;
   file_header->attr_num = attr_lengths.size();
-  for(int i = 0; i < file_header->attr_num; i++) {
+  for (int i = 0; i < file_header->attr_num; i++) {
     file_header->attr_lengths[i] = attr_lengths[i];
     file_header->attr_types[i] = attr_types[i];
   }
-  for(int i = file_header->attr_num; i < MAX_ATTR_NUM; i++) {
+  for (int i = file_header->attr_num; i < MAX_ATTR_NUM; i++) {
     file_header->attr_lengths[i] = 0;
     file_header->attr_types[i] = AttrType::UNDEFINED;
   }
@@ -725,17 +724,10 @@ RC BplusTreeHandler::create(const char *file_name, std::vector<AttrType> attr_ty
   LOG_INFO("Successfully create index %s", file_name);
   return RC::SUCCESS;
 }
-void *BplusTreeHandler::alloc()
-{
-  return this->mem_pool_item_->alloc();
-}
+void *BplusTreeHandler::alloc() { return this->mem_pool_item_->alloc(); }
 
-void BplusTreeHandler::free(void *buf)
-{
-  this->mem_pool_item_->free(buf);
-}
-RC BplusTreeHandler::open(const char *file_name)
-{
+void BplusTreeHandler::free(void *buf) { this->mem_pool_item_->free(buf); }
+RC BplusTreeHandler::open(const char *file_name) {
   if (disk_buffer_pool_ != nullptr) {
     LOG_WARN("%s has been opened before index.open.", file_name);
     return RC::RECORD_OPENNED;
@@ -773,11 +765,11 @@ RC BplusTreeHandler::open(const char *file_name)
   disk_buffer_pool->unpin_page(frame);
   vector<int> attr_lengths;
   vector<AttrType> attr_types;
-  for(int i = 0; i < file_header_.attr_num; i++) {
+  for (int i = 0; i < file_header_.attr_num; i++) {
     attr_lengths.push_back(file_header_.attr_lengths[i]);
     attr_types.push_back(file_header_.attr_types[i]);
   }
-  
+
   key_comparator_.init(attr_types, attr_lengths);
   key_printer_.init(attr_types, attr_lengths);
   LOG_INFO("Successfully open index %s", file_name);
@@ -1258,7 +1250,7 @@ RC BplusTreeHandler::insert_entry(const char *user_key, const RID *rid) {
     LOG_WARN("Invalid arguments, key is empty or rid is empty");
     return RC::INVALID_ARGUMENT;
   }
-  
+
   MemPoolItem::unique_ptr pkey = make_key(user_key, *rid);
   if (pkey == nullptr) {
     LOG_WARN("Failed to alloc memory for key.");
@@ -1517,7 +1509,7 @@ RC BplusTreeHandler::delete_entry(const char *user_key, const RID *rid) {
   char *key = static_cast<char *>(pkey.get());
 
   memcpy(key, user_key, file_header_.attr_total_length);
-  
+
   memcpy(key + file_header_.attr_total_length, rid, sizeof(*rid));
 
   BplusTreeOperationType op = BplusTreeOperationType::DELETE;
@@ -1575,7 +1567,6 @@ RC BplusTreeScanner::open(const char *left_user_key, int left_len, bool left_inc
 
     iter_index_ = 0;
   } else {
-
     MemPoolItem::unique_ptr left_pkey;
     if (left_inclusive) {
       left_pkey = tree_handler_.make_key(left_user_key, *RID::min());

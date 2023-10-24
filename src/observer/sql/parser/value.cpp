@@ -104,7 +104,7 @@ void Value::set_data(char *data, int length) {
   }
 }
 
-void Value::set_text(const char* s, int len) {
+void Value::set_text(const char *s, int len) {
   attr_type_ = TEXT;
   if (len > 0) {
     len = strnlen(s, len);
@@ -169,10 +169,10 @@ void Value::set_value(const Value &value) {
     case FLOATS: {
       set_float(value.get_float());
     } break;
-    case CHARS:{
+    case CHARS: {
       set_string(value.get_string().c_str());
     } break;
-    case TEXT:{
+    case TEXT: {
       set_string(value.get_string().c_str());
     } break;
     case BOOLEANS: {
@@ -197,8 +197,7 @@ const char *Value::data() const {
     } break;
     case TEXT: {
       return str_value_.c_str();
-    }
-    break;
+    } break;
     default: {
       return (const char *)&num_value_;
     } break;
@@ -212,8 +211,8 @@ std::string Value::to_string() const {
       os << num_value_.int_value_;
     } break;
     case TEXT: {
-      os<<str_value_;
-    }break;
+      os << str_value_;
+    } break;
     case FLOATS: {
       os << common::double_to_str(num_value_.float_value_);
     } break;
@@ -262,8 +261,8 @@ int Value::compare(const Value &other) const {
         return common::compare_string((void *)this->str_value_.c_str(),
                                       this->str_value_.length(),
                                       (void *)other.str_value_.c_str(),
-                                      other.str_value_.length());        
-      }break;
+                                      other.str_value_.length());
+      } break;
       case BOOLEANS: {
         return common::compare_int((void *)&this->num_value_.bool_value_, (void *)&other.num_value_.bool_value_);
       }
@@ -348,7 +347,7 @@ int Value::get_int() const {
       } catch (std::exception const &ex) {
         LOG_TRACE("failed to convert string to number. s=%s, ex=%s", str_value_.c_str(), ex.what());
         return 0;
-      }     
+      }
     }
     case INTS: {
       return num_value_.int_value_;
@@ -381,13 +380,13 @@ float Value::get_float() const {
       }
     } break;
     case TEXT: {
-       try {
+      try {
         return std::stof(str_value_);
       } catch (std::exception const &ex) {
         LOG_TRACE("failed to convert string to float. s=%s, ex=%s", str_value_.c_str(), ex.what());
         return 0.0;
-      }     
-    }break;
+      }
+    } break;
     case INTS: {
       return float(num_value_.int_value_);
     } break;
@@ -447,7 +446,7 @@ bool Value::get_boolean() const {
         LOG_TRACE("failed to convert string to float or integer. s=%s, ex=%s", str_value_.c_str(), ex.what());
         return !str_value_.empty();
       }
-    }break;
+    } break;
     case INTS: {
       return num_value_.int_value_ != 0;
     } break;

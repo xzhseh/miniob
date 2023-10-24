@@ -76,11 +76,11 @@ class Index {
    */
   virtual RC sync() = 0;
 
-protected:
-  RC init(const IndexMeta &index_meta, std::vector<const FieldMeta*> field_meta);
+ protected:
+  RC init(const IndexMeta &index_meta, std::vector<const FieldMeta *> field_meta);
 
  protected:
-  IndexMeta index_meta_;  ///< 索引的元数据
+  IndexMeta index_meta_;                ///< 索引的元数据
   std::vector<FieldMeta> field_metas_;  ///< 当前实现仅考虑一个字段的索引
 };
 

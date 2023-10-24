@@ -45,7 +45,7 @@ class TableMeta : public common::Serializable {
   const FieldMeta *trx_field() const;
   const FieldMeta *field(int index) const;
   const FieldMeta *field(const char *name) const;
-  std::vector<const FieldMeta*> fields(const std::vector<std::string>& field_names) const;
+  std::vector<const FieldMeta *> fields(const std::vector<std::string> &field_names) const;
   const FieldMeta *find_field_by_offset(int offset) const;
   const std::vector<FieldMeta> *field_metas() const { return &fields_; }
   auto trx_fields() const -> const std::pair<const FieldMeta *, int>;
@@ -54,7 +54,7 @@ class TableMeta : public common::Serializable {
   int sys_field_num() const;
 
   const IndexMeta *index(const char *name) const;
-  const IndexMeta *find_index_by_field(std::vector<std::string>& fields) const;
+  const IndexMeta *find_index_by_field(std::vector<std::string> &fields) const;
   const IndexMeta *index(int i) const;
   int index_num() const;
 

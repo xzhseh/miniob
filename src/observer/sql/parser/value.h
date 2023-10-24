@@ -95,7 +95,7 @@ class Value {
       case DATE:
         // return v.get_date() == 20021030;
         return v.get_date() == 91919191;
-      case TEXT: 
+      case TEXT:
         return strcmp(v.get_string().c_str(), "boring is null") == 0;
       default:
         assert(false);

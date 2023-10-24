@@ -91,34 +91,28 @@ class AttrComparator {
  * @details BplusTree的键值除了字段属性，还有RID，是为了避免属性值重复而增加的。
  * @ingroup BPlusTree
  */
-class KeyComparator 
-{
-public:
-  void init(std::vector<AttrType> types, std::vector<int> lengths)
-  {
-    if(types.size() != lengths.size()) {
+class KeyComparator {
+ public:
+  void init(std::vector<AttrType> types, std::vector<int> lengths) {
+    if (types.size() != lengths.size()) {
       LOG_ERROR("not match size");
     }
     attr_comparators_.clear();
 
-    for(size_t i = 0; i < types.size(); i++) {
+    for (size_t i = 0; i < types.size(); i++) {
       AttrComparator comparator;
       comparator.init(types[i], lengths[i]);
       attr_comparators_.push_back(comparator);
     }
   }
-  const std::vector<AttrComparator>& attr_comparators() const
-  {
-    return attr_comparators_;
-  }
+  const std::vector<AttrComparator> &attr_comparators() const { return attr_comparators_; }
 
-  int operator()(const char *v1, const char *v2) const
-  {
+  int operator()(const char *v1, const char *v2) const {
     int attr_offset = 0;
     int result = 0;
-    for(int i = 0; i < attr_comparators_.size(); i++) {
+    for (int i = 0; i < attr_comparators_.size(); i++) {
       result = attr_comparators_[i](v1 + attr_offset, v2 + attr_offset);
-      if(result != 0) {
+      if (result != 0) {
         return result;
       }
       attr_offset += attr_comparators_[i].attr_length();
@@ -127,21 +121,20 @@ public:
     const RID *rid2 = (const RID *)(v2 + attr_offset);
     return RID::compare(rid1, rid2);
   }
-  int compare_not_with_rid(const char *v1, const char *v2) const
-  {
+  int compare_not_with_rid(const char *v1, const char *v2) const {
     int attr_offset = 0;
     int result = 0;
-    for(int i = 0; i < attr_comparators_.size(); i++) {
+    for (int i = 0; i < attr_comparators_.size(); i++) {
       result = attr_comparators_[i](v1 + attr_offset, v2 + attr_offset);
-      if(result != 0) {
+      if (result != 0) {
         return result;
       }
       attr_offset += attr_comparators_[i].attr_length();
-    } 
+    }
     return result;
   }
 
-private:
+ private:
   std::vector<AttrComparator> attr_comparators_;
 };
 
@@ -203,28 +196,23 @@ class AttrPrinter {
  * @brief 键值打印,调试使用(BplusTree)
  * @ingroup BPlusTree
  */
-class KeyPrinter 
-{
-public:
-  void init(std::vector<AttrType> types, std::vector<int> lengths)
-  {
+class KeyPrinter {
+ public:
+  void init(std::vector<AttrType> types, std::vector<int> lengths) {
     attr_printers_.clear();
-    for(size_t i = 0; i < types.size(); i++) {
+    for (size_t i = 0; i < types.size(); i++) {
       AttrPrinter attr_printer;
       attr_printer.init(types[i], lengths[i]);
       attr_printers_.push_back(attr_printer);
     }
   }
 
-  const std::vector<AttrPrinter> &attr_printer() const
-  {
-    return attr_printers_;
-  }
+  const std::vector<AttrPrinter> &attr_printer() const { return attr_printers_; }
 
   std::string operator()(const char *v) const {
     std::stringstream ss;
     int ofs = 0;
-    for(size_t i = 0; i < attr_printers_.size(); i++) {
+    for (size_t i = 0; i < attr_printers_.size(); i++) {
       ss << "{key:" << attr_printers_[i](v + ofs) << ",";
       ofs += attr_printers_[i].attr_length();
     }
@@ -234,7 +222,7 @@ public:
     return ss.str();
   }
 
-private:
+ private:
   std::vector<AttrPrinter> attr_printers_;
 };
 
@@ -246,10 +234,8 @@ private:
  */
 
 #define MAX_ATTR_NUM 4
-struct IndexFileHeader 
-{
-  IndexFileHeader()
-  {
+struct IndexFileHeader {
+  IndexFileHeader() {
     memset(this, 0, sizeof(IndexFileHeader));
     root_page = BP_INVALID_PAGE_NUM;
   }
@@ -258,16 +244,17 @@ struct IndexFileHeader
   int32_t leaf_max_size;      ///< 叶子节点最大的键值对数
   int32_t attr_total_length;
   int32_t attr_num;
-  int32_t attr_lengths[MAX_ATTR_NUM];        ///< 键值的长度
-  int32_t key_length;         ///< attr length + sizeof(RID)
-  AttrType attr_types[MAX_ATTR_NUM];         ///< 键值的类型
+  int32_t attr_lengths[MAX_ATTR_NUM];  ///< 键值的长度
+  int32_t key_length;                  ///< attr length + sizeof(RID)
+  AttrType attr_types[MAX_ATTR_NUM];   ///< 键值的类型
 
   const std::string to_string() {
     std::stringstream ss;
 
     // ss << "attr_length:" << attr_length << ","
-      ss << "key_length:" << key_length << ","
-      //  << "attr_type:" << attr_type << ","
+    ss << "key_length:" << key_length
+       << ","
+       //  << "attr_type:" << attr_type << ","
        << "root_page:" << root_page << ","
        << "internal_max_size:" << internal_max_size << ","
        << "leaf_max_size:" << leaf_max_size << ";";
@@ -493,13 +480,8 @@ class BplusTreeHandler {
    * 此函数创建一个名为fileName的索引。
    * attrType描述被索引属性的类型，attrLength描述被索引属性的长度
    */
-  RC create(const char *file_name, 
-            std::vector<AttrType> attr_type, 
-            std::vector<int> attr_length, 
-            std::vector<int> offsets,
-            bool unique,
-            int internal_max_size = -1, 
-            int leaf_max_size = -1);
+  RC create(const char *file_name, std::vector<AttrType> attr_type, std::vector<int> attr_length,
+            std::vector<int> offsets, bool unique, int internal_max_size = -1, int leaf_max_size = -1);
 
   /**
    * 打开名为fileName的索引文件。
@@ -538,7 +520,7 @@ class BplusTreeHandler {
   RC get_entry(const char *user_key, int key_len, std::list<RID> &rids);
 
   RC sync();
-  
+
   void *alloc();
 
   void free(void *buf);
@@ -603,10 +585,10 @@ class BplusTreeHandler {
 
  protected:
   DiskBufferPool *disk_buffer_pool_ = nullptr;
-  bool            header_dirty_ = false; //   
-  bool            unique_;       
+  bool header_dirty_ = false;  //
+  bool unique_;
   IndexFileHeader file_header_;
-  
+
   // 在调整根节点时，需要加上这个锁。
   // 这个锁可以使用递归读写锁，但是这里偷懒先不改
   common::SharedMutex root_lock_;
@@ -646,7 +628,7 @@ class BplusTreeScanner {
 
   RC close();
 
-private:
+ private:
   void fetch_item(RID &rid);
   bool touch_end();
 

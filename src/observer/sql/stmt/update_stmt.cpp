@@ -52,7 +52,7 @@ RC UpdateStmt::create(Db *db, UpdateSqlNode &update, Stmt *&stmt) {
 
     // Check if update_attr and update_value are of the same type
     AttrType field_type = field_meta->type();
-    
+
     if (update_value.is_null()) {
       if (!field_meta->is_null()) {
         // If not null is either implicitly / explicitly enabled
@@ -68,12 +68,11 @@ RC UpdateStmt::create(Db *db, UpdateSqlNode &update, Stmt *&stmt) {
     }
 
     AttrType value_type = update_value.attr_type();
-    if(value_type == CHARS && field_type == TEXT) {
+    if (value_type == CHARS && field_type == TEXT) {
       value_type = TEXT;
       field_type = TEXT;
       update_value.set_type(TEXT);
     }
-
 
     if (field_type != value_type) {
       LOG_ERROR("field type mismatch. table=%s, field=%s, field type=%d, value_type=%d",

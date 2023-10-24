@@ -75,8 +75,7 @@ struct RelationSqlNode {
   std::string alias_name;
 };
 
-struct IndexAttr 
-{
+struct IndexAttr {
   std::string attribute_name;
 };
 
@@ -233,10 +232,10 @@ struct DropTableSqlNode {
  * 正常的SQL语句中，一个索引可能包含了多个字段，这里仅支持一个字段。
  */
 struct CreateIndexSqlNode {
-  std::string index_name;      ///< Index name
-  std::vector<IndexAttr>     attribute_names;    ///< attributes in create index
-  std::string relation_name;   ///< Relation name
-  bool is_unique;              ///< unique flag
+  std::string index_name;                  ///< Index name
+  std::vector<IndexAttr> attribute_names;  ///< attributes in create index
+  std::string relation_name;               ///< Relation name
+  bool is_unique;                          ///< unique flag
 };
 
 /**
