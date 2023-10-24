@@ -1,0 +1,12 @@
+-- below are some requests executed before(partial) --
+-- init data
+create table text_table(id int, info text);
+insert into text_table values (1,'this is a very very long string');
+insert into text_table values (2,'this is a very very long string2');
+insert into text_table values (3,'This is a very very long string3');
+-- delete
+delete from text_table where id=1;
+select * from text_table;
+-- update
+UPDATE text_table set info='a tmp data' where id = 2;
+select * from text_table;

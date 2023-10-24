@@ -73,6 +73,9 @@ RC insert_record_from_file(Table *table, std::vector<std::string> &file_values, 
           record_values[i].set_int(int_value);
         }
       } break;
+      case TEXT: {
+          record_values[i].set_string(file_value.c_str());
+      } break;
       case FLOATS: {
         deserialize_stream.clear();
         deserialize_stream.str(file_value);
