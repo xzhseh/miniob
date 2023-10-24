@@ -71,6 +71,9 @@ class AttrComparator {
       case DATE: {
         return common::compare_int((void *)v1, (void *)v2);
       }
+      case TEXT: {
+        return common::compare_string((void *)v1, attr_length_, (void *)v2, attr_length_);
+      }
       default: {
         ASSERT(false, "unknown attr type. %d", attr_type_);
         return 0;
@@ -156,6 +159,16 @@ class AttrPrinter {
       } break;
       case FLOATS: {
         return std::to_string(*(float *)v);
+      }
+      case TEXT: {
+        std::string str;
+        for (int i = 0; i < attr_length_; i++) {
+          if (v[i] == 0) {
+            break;
+          }
+          str.push_back(v[i]);
+        }
+        return str;
       }
       case CHARS: {
         std::string str;

@@ -66,7 +66,7 @@ struct BPFileHeader {
   static const int MAX_PAGE_NUM = (BP_PAGE_DATA_SIZE - sizeof(page_count) - sizeof(allocated_pages)) * 8;
 
   // Max memory usage ,currently only 511 mb
-  [[maybe_unused]] static const int MAX_MEMORY_USAGE_MB = MAX_PAGE_NUM * BP_PAGE_SIZE / (1024 * 1024);
+  //  [[maybe_unused]] static const long long MAX_MEMORY_USAGE_MB = MAX_PAGE_NUM * BP_PAGE_SIZE / (1024 * 1024);
 
   std::string to_string() const;
 };

@@ -51,8 +51,14 @@ RC InsertStmt::create(Db *db, InsertSqlNode &inserts, Stmt *&stmt) {
   const int sys_field_num = table_meta.sys_field_num();
   for (int i = 0; i < value_num; i++) {
     const FieldMeta *field_meta = table_meta.field(i + sys_field_num);
-    const AttrType field_type = field_meta->type();
-    const AttrType value_type = values[i].attr_type();
+    AttrType field_type = field_meta->type();
+    AttrType value_type = values[i].attr_type();
+    // insert 无法识别 text 和 chars, 需要做转换
+    if (value_type == CHARS && field_type == TEXT) {
+      value_type = TEXT;
+      field_type = TEXT;
+      values[i].set_type(TEXT);
+    }
 
     bool null_flag{false};
 
@@ -87,6 +93,9 @@ RC InsertStmt::create(Db *db, InsertSqlNode &inserts, Stmt *&stmt) {
         } break;
         case CHARS: {
           values[i].set_string("xzhseh");
+        } break;
+        case TEXT: {
+          values[i].set_string("boring is null");
         } break;
         default:
           assert(false);

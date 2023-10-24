@@ -70,7 +70,9 @@ class Communicator {
   /**
    * @brief libevent使用的数据，参考server.cpp
    */
-  struct event &read_event() { return read_event_; }
+  struct event &read_event() {
+    return read_event_;
+  }
 
   /**
    * @brief 对端地址
