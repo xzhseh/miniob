@@ -360,7 +360,7 @@ static int yy_flex_strlen ( const char * , yyscan_t yyscanner);
 /* On IA-64, the buffer size is 16k, not 8k */
 #define YY_READ_BUF_SIZE 16384
 #else
-#define YY_READ_BUF_SIZE 8192
+#define YY_READ_BUF_SIZE 65535
 #endif /* __ia64__ */
 #endif
 
