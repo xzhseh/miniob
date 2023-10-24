@@ -28,6 +28,7 @@ See the Mulan PSL v2 for more details. */
 enum AttrType {
   UNDEFINED,
   CHARS,     ///< string type
+  TEXT,      ///< string type variable length and has max length(6553)
   INTS,      ///< int type (4 bytes)
   FLOATS,    ///< float type (4 bytes)
   DATE,      ///< date type (4 bytes)
@@ -88,6 +89,9 @@ class Value {
       case CHARS: {
         v.set_string("xzhseh");
       } break;
+      case TEXT: {
+        v.set_string("boring is null");
+      } break;
       default:
         assert(false);
     }
@@ -104,6 +108,8 @@ class Value {
       case DATE:
         // return v.get_date() == 20021030;
         return v.get_date() == 91919191;
+      case TEXT:
+        return strcmp(v.get_string().c_str(), "boring is null") == 0;
       default:
         assert(false);
     }
@@ -124,6 +130,7 @@ class Value {
   void set_string(const char *s, int len = 0);
   void set_date(int val);
   void set_date(const char *s);
+  void set_text(const char *s, int len = 0);
   void set_value(const Value &value);
 
   void set_sub_query_result(const SubResult &sub_result);
@@ -163,7 +170,7 @@ class Value {
     bool bool_value_;
   } num_value_;
 
-  // The string value
+  // The string or text value
   std::string str_value_;
 
   // The null flag
