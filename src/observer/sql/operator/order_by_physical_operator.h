@@ -8,6 +8,11 @@
 #include "order_by_logical_operator.h"
 #include "physical_operator.h"
 
+struct SortItem {
+  std::vector<Value> values;
+  std::unique_ptr<Tuple> tuple;
+};
+
 class OrderByPhysicalOperator : public PhysicalOperator {
  public:
   explicit OrderByPhysicalOperator(std::shared_ptr<std::vector<OrderByExpr>> order_by_exprs);
@@ -24,9 +29,9 @@ class OrderByPhysicalOperator : public PhysicalOperator {
   Tuple *current_tuple() override;
 
  private:
-  bool compare_tuple(const std::unique_ptr<Tuple> &left, const std::unique_ptr<Tuple> &right);
+  bool compare_tuple(const SortItem &left, const SortItem &right);
   std::shared_ptr<std::vector<OrderByExpr>> order_by_exprs_;
-  std::vector<std::unique_ptr<Tuple>> result_tuples_;
+  std::vector<SortItem> result_tuples_;
   bool construct_ = false;
 };
 

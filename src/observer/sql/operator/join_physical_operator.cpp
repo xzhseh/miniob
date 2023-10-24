@@ -75,7 +75,7 @@ RC NestedLoopJoinPhysicalOperator::close() {
   RC rc = RC::SUCCESS;
   // FIXME: Ensure this
   if (left_) {
-    RC rc = left_->close();
+    rc = left_->close();
   }
   if (rc != RC::SUCCESS) {
     LOG_WARN("failed to close left oper. rc=%s", strrc(rc));
