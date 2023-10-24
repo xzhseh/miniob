@@ -290,10 +290,14 @@ RC Table::make_record(int value_num, const Value *values, Record &record) {
     const FieldMeta *field = table_meta_.field(i + normal_field_start_index);
     const Value &value = values[i];
     size_t copy_len = field->len();
+<<<<<<< HEAD
     if (field->type() == TEXT && strlen(value.get_string().c_str()) > 65535) {
       return RC::VARIABLE_NOT_VALID;
     }
     if (field->type() == CHARS || field->type() == TEXT) {
+=======
+    if (field->type() == CHARS) {
+>>>>>>> main
       const size_t data_len = value.length();
       if (copy_len > data_len) {
         copy_len = data_len + 1;
