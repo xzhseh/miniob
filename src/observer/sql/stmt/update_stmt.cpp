@@ -52,7 +52,7 @@ RC UpdateStmt::create(Db *db, UpdateSqlNode &update, Stmt *&stmt) {
 
     // Check if update_attr and update_value are of the same type
     AttrType field_type = field_meta->type();
-
+    
     if (update_value.is_null()) {
       if (!field_meta->is_null()) {
         // If not null is either implicitly / explicitly enabled

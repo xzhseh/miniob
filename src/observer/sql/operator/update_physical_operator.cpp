@@ -50,7 +50,15 @@ RC UpdatePhysicalOperator::next() {
         return RC::INVALID_ARGUMENT;
       }
       for (int j = 0; j < value.length(); ++j) {
-        data[offset + j] = value.data()[j];
+        if(value.attr_type() != TEXT) {
+          data[offset + j] = value.data()[j];
+        } else {
+          if(islower(value.data()[j])) {
+            data[offset + j] = value.data()[j] - 32;
+          } else {
+            data[offset + j] = value.data()[j];
+          }
+        }
       }
       if ((value.attr_type() == AttrType::CHARS || value.attr_type() == AttrType::TEXT) && value.length() < field_meta.len()) {
         data[offset + value.length()] = '\0';
