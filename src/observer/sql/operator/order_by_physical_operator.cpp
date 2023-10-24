@@ -63,7 +63,7 @@ RC OrderByPhysicalOperator::next() {
   auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
 
   // Print the duration
-  printf("Code execution time: %ld ms\n", duration);
+  printf("Code execution time: %lld ms\n", duration);
   if (rc != RC::RECORD_EOF) {
     LOG_WARN("failed to get next tuple from child operator: %s", strrc(rc));
     return rc;
