@@ -23,6 +23,10 @@ class AggStmt {
 
   auto get_types() -> const std::vector<agg> & { return aggregate_types_; }
 
+  auto get_group_by_keys() -> const std::vector<Field> & { return group_by_keys_; }
+
+  void set_group_by_keys(std::vector<Field> &&group_by_keys) { group_by_keys_ = std::move(group_by_keys); }
+
  private:
   // FIXME: Any other way / more efficiently to store the aggregation key / type?
 
@@ -33,4 +37,7 @@ class AggStmt {
 
   // `aggregate_types_.size()` === `aggregate_keys_.size()`
   std::vector<agg> aggregate_types_;
+
+  // The unique keys to perform group by
+  std::vector<Field> group_by_keys_;
 };

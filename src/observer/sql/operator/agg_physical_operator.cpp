@@ -199,8 +199,6 @@ RC AggPhysicalOperator::next() {
     }
   }
 
-  std::cout << "Current avg_n: " << avg_n << std::endl;
-
   // For agg::AGG_AVG
   if (agg_value_map_.count(agg::AGG_AVG) == 1) {
     auto &v_t = agg_value_map_[agg::AGG_AVG];

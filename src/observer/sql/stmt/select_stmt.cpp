@@ -15,8 +15,11 @@ See the Mulan PSL v2 for more details. */
 #include "sql/stmt/select_stmt.h"
 #include "common/lang/string.h"
 #include "common/log/log.h"
+#include "sql/parser/parse_defs.h"
+#include "sql/stmt/agg_stmt.h"
 #include "sql/stmt/filter_stmt.h"
 #include "storage/db/db.h"
+#include "storage/field/field_meta.h"
 #include "storage/table/table.h"
 
 SelectStmt::~SelectStmt() {
@@ -73,6 +76,7 @@ RC bind_order_by(Db *db, const std::vector<Table *> &tables, const std::vector<O
 
       // find field in every table
       for (Table *table : tables) {
+        // FIXME: If ever the result is nullptr, we'll just return, is this expected?
         const FieldMeta *field_meta = table->table_meta().field(field_name);
         if (nullptr != field_meta) {
           order_by_stmts.push_back({Field(table, field_meta), is_asc});
@@ -104,6 +108,76 @@ RC bind_order_by(Db *db, const std::vector<Table *> &tables, const std::vector<O
       order_by_stmts.push_back({Field(table, field_meta), is_asc});
     }
   }
+
+  return RC::SUCCESS;
+}
+
+/// Find the corresponding fields and bind they to group by statements
+RC bind_group_by(Db *db, const std::vector<Table *> &tables, const std::vector<RelAttrSqlNode> &group_bys,
+                 AggStmt &agg_stmt) {
+  std::vector<Field> group_by_keys;
+
+  for (const auto &attr : group_bys) {
+    const char *table_name = attr.relation_name.c_str();
+    const char *field_name = attr.attribute_name.c_str();
+
+    if (common::is_blank(table_name)) {
+      // Table name is empty
+      if (common::is_blank(field_name)) {
+        // Field name is empty, this should NEVER happen
+        LOG_WARN("invalid field for group by, both table and field are empty");
+        return RC::INVALID_ARGUMENT;
+      }
+
+      const FieldMeta *field_meta{nullptr};
+
+      // Try to find the specific field from the given tables
+      for (const auto *table : tables) {
+        field_meta = table->table_meta().field(field_name);
+        if (field_meta != nullptr) {
+          // We found the field
+          group_by_keys.emplace_back(table, field_meta);
+        }
+      }
+
+      if (field_meta == nullptr) {
+        // No existing field
+        LOG_WARN("no exist fields for the current group by item. field=%s.%s.%s", db->name(), table_name, field_name);
+        return RC::INVALID_ARGUMENT;
+      }
+    } else {
+      // Table name is not empty
+      if (common::is_blank(field_name)) {
+        // Field name must not be empty
+        LOG_WARN("field name is empty while table name is not, error group by statement");
+        return RC::INVALID_ARGUMENT;
+      }
+
+      const auto *table = db->find_table(table_name);
+
+      if (table == nullptr) {
+        LOG_WARN("no such table exists for group by.");
+        return RC::INVALID_ARGUMENT;
+      }
+
+      const FieldMeta *field_meta = table->table_meta().field(field_name);
+
+      if (field_meta == nullptr) {
+        LOG_WARN("field does not exist for table %s in `bind_group_by`.", table->name());
+        return RC::INVALID_ARGUMENT;
+      }
+
+      group_by_keys.emplace_back(table, field_meta);
+    }
+  }
+
+  agg_stmt.set_group_by_keys(std::move(group_by_keys));
+
+  std::cout << "[Group By]" << std::endl;
+  for (const auto &g : agg_stmt.get_group_by_keys()) {
+    std::cout << "field: " << g.field_name() << " ";
+  }
+  std::cout << std::endl;
 
   return RC::SUCCESS;
 }
@@ -273,15 +347,6 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt) {
     }
   }
 
-  if (agg_flag && non_agg_flag) {
-    return RC::INVALID_ARGUMENT;
-  }
-
-  if (agg_flag) {
-    // Need to reverse the query_fields
-    query_fields = {query_fields.rbegin(), query_fields.rend()};
-  }
-
   assert(query_fields.size() == alias_vec.size());
 
   LOG_INFO("got %d tables in from stmt and %d fields in query stmt", tables.size(), query_fields.size());
@@ -344,11 +409,30 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt) {
     return rc;
   }
 
+  if (agg_flag) {
+    // Need to reverse the query_fields
+    query_fields = {query_fields.rbegin(), query_fields.rend()};
+  }
+
   // create aggregation statement
   AggStmt *agg_stmt{nullptr};
   if (agg_flag) {
     agg_stmt = new AggStmt{aggregate_keys, aggregate_types};
     assert(agg_stmt != nullptr && "`agg_stmt` must not be nullptr");
+  }
+
+  /// This is for query like `select count(c1), c2 from t1;`
+  /// Without group by supported
+  if (agg_flag && non_agg_flag && select_sql.group_bys.empty()) {
+    return RC::INVALID_ARGUMENT;
+  }
+
+  if (agg_stmt != nullptr) {
+    rc = bind_group_by(db, tables, select_sql.group_bys, *agg_stmt);
+    if (rc != RC::SUCCESS) {
+      LOG_WARN("failed to bind group by");
+      return rc;
+    }
   }
 
   // everything alright
