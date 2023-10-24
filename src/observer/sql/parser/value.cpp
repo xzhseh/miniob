@@ -72,7 +72,6 @@ void Value::set_data(char *data, int length) {
       break;
     }
     case TEXT: {
-      printf("\n %d \n", length);
       set_text(data, length);
       break;
     }
