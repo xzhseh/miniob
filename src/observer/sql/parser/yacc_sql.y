@@ -1090,6 +1090,15 @@ condition:
 	$$->comp = $4;
 	delete $5;
       }
+      | LBRACE select_stmt RBRACE comp_op LBRACE select_stmt RBRACE
+      {
+      	$$ = new ConditionSqlNode;
+      	$$->left_is_attr = 2;
+      	$$->left_sub_select = new SelectSqlNode($2->selection);
+      	$$->right_is_attr = 2;
+      	$$->right_sub_select = new SelectSqlNode($6->selection);
+      	$$->comp = $4;
+      }
     ;
 in_op:
     IN { $$ = IN_OP; }

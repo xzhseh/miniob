@@ -93,6 +93,8 @@ RC UpdateStmt::create(Db *db, UpdateSqlNode &update, Stmt *&stmt) {
                              table,
                              &table_map,
                              empty_rel_attr,
+                             // Do nothing now, future support
+                             std::vector<RelationSqlNode>(),
                              update.conditions.data(),
                              static_cast<int>(update.conditions.size()),
                              filter_stmt);

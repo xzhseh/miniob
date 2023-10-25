@@ -91,11 +91,12 @@ class FilterStmt {
 
  public:
   static RC create(Db *db, Table *default_table, std::unordered_map<std::string, Table *> *tables,
-                   const std::vector<RelAttrSqlNode> &rel_attr, const ConditionSqlNode *conditions, int condition_num,
-                   FilterStmt *&stmt);
+                   const std::vector<RelAttrSqlNode> &rel_attr, const std::vector<RelationSqlNode> &relations,
+                   const ConditionSqlNode *conditions, int condition_num, FilterStmt *&stmt);
 
   static RC create_filter_unit(Db *db, Table *default_table, std::unordered_map<std::string, Table *> *tables,
-                               const std::vector<RelAttrSqlNode> &rel_attr, const ConditionSqlNode &condition,
+                               const std::vector<RelAttrSqlNode> &rel_attr,
+                               const std::vector<RelationSqlNode> &relations, const ConditionSqlNode &condition,
                                FilterUnit *&filter_unit);
 
  private:

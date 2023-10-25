@@ -27,15 +27,15 @@ FilterStmt::~FilterStmt() {
 }
 
 RC FilterStmt::create(Db *db, Table *default_table, std::unordered_map<std::string, Table *> *tables,
-                      const std::vector<RelAttrSqlNode> &rel_attr, const ConditionSqlNode *conditions,
-                      int condition_num, FilterStmt *&stmt) {
+                      const std::vector<RelAttrSqlNode> &rel_attr, const std::vector<RelationSqlNode> &relations,
+                      const ConditionSqlNode *conditions, int condition_num, FilterStmt *&stmt) {
   RC rc = RC::SUCCESS;
   stmt = nullptr;
 
   auto *tmp_stmt = new FilterStmt();
   for (int i = 0; i < condition_num; i++) {
     FilterUnit *filter_unit = nullptr;
-    rc = create_filter_unit(db, default_table, tables, rel_attr, conditions[i], filter_unit);
+    rc = create_filter_unit(db, default_table, tables, rel_attr, relations, conditions[i], filter_unit);
     if (rc != RC::SUCCESS) {
       delete tmp_stmt;
       LOG_WARN("failed to create filter unit. condition index=%d", i);
@@ -88,7 +88,8 @@ RC get_table_and_field(Db *db, Table *default_table, std::unordered_map<std::str
 }
 
 RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_map<std::string, Table *> *tables,
-                                  const std::vector<RelAttrSqlNode> &rel_attr, const ConditionSqlNode &condition,
+                                  const std::vector<RelAttrSqlNode> &rel_attr,
+                                  const std::vector<RelationSqlNode> &relations, const ConditionSqlNode &condition,
                                   FilterUnit *&filter_unit) {
   RC rc = RC::SUCCESS;
 
@@ -122,6 +123,9 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
     std::shared_ptr<ParsedSqlNode> sub_query(new ParsedSqlNode);
     sub_query->flag = SqlCommandFlag::SCF_SELECT;
     sub_query->selection = *condition.left_sub_select;
+    for (const auto &relation : relations) {
+      sub_query->selection.relations.push_back(relation);
+    }
     filter_obj.init_sub_query(sub_query);
     filter_unit->set_left(filter_obj);
   } else if (condition.left_is_attr == 3) {
@@ -160,6 +164,9 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
     std::shared_ptr<ParsedSqlNode> sub_query(new ParsedSqlNode);
     sub_query->flag = SqlCommandFlag::SCF_SELECT;
     sub_query->selection = *condition.right_sub_select;
+    for (const auto &relation : relations) {
+      sub_query->selection.relations.push_back(relation);
+    }
     filter_obj.init_sub_query(sub_query);
     filter_unit->set_right(filter_obj);
   } else if (condition.right_is_attr == 3) {

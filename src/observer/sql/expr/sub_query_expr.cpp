@@ -12,13 +12,7 @@ SubQueryExpr::SubQueryExpr(const std::vector<Value> &const_value_list) {
 
 SubQueryExpr::SubQueryExpr(const std::shared_ptr<ParsedSqlNode> &sub_query) {
   this->type_ = SubResultType::SUB_QUERY;
-  SessionStage *stage = dynamic_cast<SessionStage *>(SessionStage::make_stage("SessionStage"));
   this->sub_query_event_ = std::make_unique<SQLStageEvent>(sub_query);
-  RC rc = stage->handle_sub_sql(this->sub_query_event_.get());
-  if (rc != RC::SUCCESS) {
-    LOG_WARN("failed to handle sub sql. rc=%s", strrc(rc));
-    assert(false);
-  }
 }
 
 RC SubQueryExpr::in_or_not(const Value &value, const std::unique_ptr<Expression> &field_expr, bool &result) const {
@@ -76,6 +70,12 @@ RC SubQueryExpr::init() {
   if (this->type_ == SubResultType::UNDEFINED) {
     return RC::INTERNAL;
   }
+  SessionStage *stage = dynamic_cast<SessionStage *>(SessionStage::make_stage("SessionStage"));
+  RC rc = stage->handle_sub_sql(this->sub_query_event_.get());
+  if (rc != RC::SUCCESS) {
+    LOG_WARN("failed to handle sub sql. rc=%s", strrc(rc));
+    return rc;
+  }
   // Handle sub query
   assert(this->type_ == SubResultType::SUB_QUERY);
   assert(this->sub_query_event_ != nullptr);
@@ -86,7 +86,7 @@ RC SubQueryExpr::init() {
   if (result_schema_.cell_num() != 1) {
     return RC::INTERNAL;
   }
-  RC rc = root_oper->open(nullptr);
+  rc = root_oper->open(nullptr);
   if (rc != RC::SUCCESS) {
     LOG_WARN("failed to open root operator. rc=%s", strrc(rc));
     return rc;
@@ -94,14 +94,14 @@ RC SubQueryExpr::init() {
   Tuple *tuple_ptr = nullptr;
   while (true) {
     rc = root_oper->next();
-    tuple_ptr = root_oper->current_tuple();
-    assert(tuple_ptr != nullptr);
+    if (rc == RC::RECORD_EOF) {
+      break;
+    }
     if (rc == RC::SUCCESS) {
+      tuple_ptr = root_oper->current_tuple();
       auto copy_tuple = tuple_ptr->copy();
       assert(copy_tuple != nullptr);
       this->tuple_list.emplace_back(std::move(copy_tuple));
-    } else if (rc == RC::RECORD_EOF) {
-      break;
     } else {
       LOG_WARN("failed to get next tuple. rc=%s", strrc(rc));
       return rc;
