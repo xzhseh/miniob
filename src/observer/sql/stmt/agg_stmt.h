@@ -12,32 +12,24 @@
 
 class AggStmt {
  public:
-  AggStmt() = delete;
+  explicit AggStmt() = default;
 
-  explicit AggStmt(std::vector<std::pair<const FieldMeta *, int>> aggregate_keys, std::vector<agg> aggregate_types);
-
-  /// Note that we do not need to free the `FieldMeta *`, since we only hold the reference
   ~AggStmt() = default;
 
-  auto get_keys() -> const std::vector<std::pair<const FieldMeta *, int>> & { return aggregate_keys_; }
+  auto get_fields() const -> const std::vector<Field> & { return fields_; }
 
-  auto get_types() -> const std::vector<agg> & { return aggregate_types_; }
+  auto get_is_agg() const -> const std::vector<bool> & { return is_agg_; }
 
-  auto get_group_by_keys() -> const std::vector<Field> & { return group_by_keys_; }
+  auto get_agg_types() const -> const std::vector<agg> & { return agg_types_; }
 
-  void set_group_by_keys(std::vector<Field> &&group_by_keys) { group_by_keys_ = std::move(group_by_keys); }
+  void set_fields(std::vector<Field> &&fields) { fields_ = std::move(fields); }
+
+  void set_is_agg(std::vector<bool> &&is_agg) { is_agg_ = std::move(is_agg); }
+
+  void set_agg_types(std::vector<agg> &&agg_types) { agg_types_ = std::move(agg_types); }
 
  private:
-  // FIXME: Any other way / more efficiently to store the aggregation key / type?
-
-  // Currently storing format:
-  //   1. The begin key `field_` (used to compare later)
-  //   2. How many keys are there for this aggregation (including the begin key)
-  std::vector<std::pair<const FieldMeta *, int>> aggregate_keys_;
-
-  // `aggregate_types_.size()` === `aggregate_keys_.size()`
-  std::vector<agg> aggregate_types_;
-
-  // The unique keys to perform group by
-  std::vector<Field> group_by_keys_;
+  std::vector<Field> fields_;
+  std::vector<bool> is_agg_;
+  std::vector<agg> agg_types_;
 };

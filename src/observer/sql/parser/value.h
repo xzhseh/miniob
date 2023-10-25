@@ -89,7 +89,6 @@ class Value {
       case CHARS:
         return strcmp(v.get_string().c_str(), "xzhseh") == 0;
       case DATE:
-        // return v.get_date() == 20021030;
         return v.get_date() == 91919191;
       default:
         assert(false);

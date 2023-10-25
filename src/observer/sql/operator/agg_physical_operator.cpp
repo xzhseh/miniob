@@ -3,25 +3,11 @@
 #include "sql/operator/agg_physical_operator.h"
 #include <climits>
 #include <unordered_map>
+#include <utility>
+#include "common/log/log.h"
 #include "sql/expr/tuple.h"
+#include "sql/parser/parse_defs.h"
 #include "sql/parser/value.h"
-
-RC AggPhysicalOperator::open(Trx *trx) {
-  RC rc = RC::SUCCESS;
-  assert(children_.size() == 1 && "aggregate operator should have exactly one child");
-  child_ = children_[0].get();
-  rc = child_->open(trx);
-  return rc;
-}
-
-RC AggPhysicalOperator::close() {
-  RC rc = RC::SUCCESS;
-  assert(next_flag && "`next_flag` should be true");
-  if (child_ != nullptr) {
-    rc = child_->close();
-  }
-  return rc;
-}
 
 /// FIXME: Refactor this
 Value add_value(Value &lhs, Value &rhs) {
@@ -48,204 +34,212 @@ Value add_value(Value &lhs, Value &rhs) {
     }
   } else {
     // Not yet supported
+    LOG_WARN("%s of type %d is not supported.", lhs.to_string().c_str(), lhs.attr_type());
     assert(false);
   }
   return ret;
 }
 
-void set_initial_value_for_map(std::unordered_map<agg, Value> &m, AttrType t, agg a_t, Value v) {
-  if (m.count(a_t) == 0) {
-    Value ret;
-    if (a_t == agg::AGG_COUNT) {
-      ret.set_int(0);
-    } else {
-      switch (t) {
-        case AttrType::INTS:
-          if (a_t == agg::AGG_MIN || a_t == agg::AGG_MAX) {
-            ret = v;
+void initialize_agg_value(std::vector<Value> &values, std::vector<agg> &value_types) {
+  for (int i = 0; i < values.size(); ++i) {
+    Value &v = values[i];
+    switch (value_types[i]) {
+      case AGG_COUNT: {
+        if (v.attr_type() == UNDEFINED) {
+          // COUNT(*)
+          v.set_int(1);
+        } else {
+          if (!Value::check_null(v)) {
+            v.set_int(1);
           } else {
-            // SUM / AVG
-            ret.set_int(0);
+            // We do NOT count null value for a specific column
+            v.set_int(0);
           }
-          break;
-        case AttrType::FLOATS:
-          if (a_t == agg::AGG_MIN || a_t == agg::AGG_MAX) {
-            ret = v;
-          } else {
-            // SUM / AVG
-            ret.set_float(0);
-          }
-          break;
-        case AttrType::CHARS:
-          if (a_t == agg::AGG_MIN || a_t == agg::AGG_MAX) {
-            ret = v;
-          } else {
-            assert(false);  // Not yet supported
-          }
-          break;
-        case AttrType::DATE:
-          if (a_t == agg::AGG_MIN || a_t == agg::AGG_MAX) {
-            ret = v;
-          } else {
-            // SUM / AVG
-            assert(false);
-          }
-          break;
-        default:
-          assert(false);  // Not yet supported
-      }
+        }
+      } break;
+      case AGG_MIN: case AGG_MAX: case AGG_SUM: case AGG_AVG: {
+        // Do nothing
+      } break;
+      default: assert(false);
     }
-    m[a_t] = ret;
   }
 }
 
-/// Basically we will extract all possible tuples from the child operator
-/// And make the basic aggregation at present
-RC AggPhysicalOperator::next() {
-  bool g_null_flag{false};
-  if (next_flag) {
-    return RC::RECORD_EOF;
+std::pair<AggregateKey, AggregateValue> AggPhysicalOperator::aggregate_key_value_builder(Tuple *tuple) {
+  assert(tuple != nullptr && "`tuple` must not be nullptr");
+
+  AggregateKey a_k{std::vector<Value>()};
+  std::vector<Value> values;
+  std::vector<agg> value_types;
+  std::vector<int> null_count;
+
+  for (int i = 0; i < field_exprs_.size(); ++i) {
+    if (field_exprs_[i].field().meta() == nullptr && field_exprs_[i].field().table() == nullptr) {
+      // COUNT(*), push a UNDEFINED value into the result
+      assert(agg_types_[i] == agg::AGG_COUNT);
+      values.push_back({});
+      value_types.push_back(agg::AGG_COUNT);
+      null_count.push_back(1);
+      continue;
+    }
+
+    // Get the value from the current field expression
+    Value v;
+    field_exprs_[i].get_value(*tuple, v);
+
+    if (is_agg_[i]) {
+      // Normal aggregation
+      values.push_back(v);
+      value_types.push_back(agg_types_[i]);
+      null_count.push_back((Value::check_null(v)) ? 0 : 1);
+    } else {
+      // Add to the aggregate keys
+      a_k.keys_.push_back(v);
+      null_count.push_back(0);
+    }
   }
-  RC rc = RC::SUCCESS;
+
+  initialize_agg_value(values, value_types);
+
+  return {a_k, {values, value_types, 1, null_count}};
+}
+
+void bind_agg_values(std::vector<Value> &lhs, std::vector<Value> &rhs, const std::vector<agg> &value_types) {
+  for (int i = 0; i < lhs.size(); ++i) {
+    switch (value_types[i]) {
+      case AGG_COUNT: case AGG_SUM: case AGG_AVG: {
+        lhs[i] = add_value(lhs[i], rhs[i]);
+      } break;
+      case AGG_MIN: {
+        if (rhs[i].compare(lhs[i]) < 0) {
+          lhs[i] = rhs[i];
+        }
+      } break;
+      case AGG_MAX: {
+        if (lhs[i].compare(rhs[i]) < 0) {
+          lhs[i] = rhs[i];
+        }
+      } break;
+      default: assert(false);
+    }
+  }
+}
+
+/// lhs is the original value, rhs is the value being inserted and combined
+void insert_and_combine_agg_value(AggregateValue &lhs, AggregateValue &rhs) {
+  // Sanity check, comment this out when actual testing
+  for (int i = 0; i < lhs.value_types_.size(); ++i) {
+    assert(lhs.value_types_[i] == rhs.value_types_[i]);
+  }
+
+  bind_agg_values(lhs.values_, rhs.values_, lhs.value_types_);
+
+  lhs.count += rhs.count;
+
+  for (int i = 0; i < lhs.null_count.size(); ++i) {
+    lhs.null_count[i] += rhs.null_count[i];
+  }
+}
+
+RC AggPhysicalOperator::open(Trx *trx) {
+  assert(child_ != nullptr && "`child_ must not be nullptr");
+  RC rc = child_->open(trx);
+  if (rc != RC::SUCCESS) {
+    LOG_WARN("[AggPhysicalOperator] failed to open child operator");
+    return rc;
+  }
+
+  // Begin the initialization
   while ((rc = child_->next()) == RC::SUCCESS) {
-    bool null_flag{false};
     Tuple *tuple = child_->current_tuple();
-    // for (const auto &field_expr : exprs_) {
-    for (int i = 0; i < aggregate_keys_.size(); ++i) {
-      if (null_flag) {
+
+    // First construct the current `AggregateKey` & `AggregateValue`
+    auto [a_k, a_v] = aggregate_key_value_builder(tuple);
+
+    // Update `output_keys_`
+    // We currently have to traverse the `output_keys` to perform the update
+    // This is inefficient but I could not come up with a better solution at present
+    // May be refactor in the future
+    bool exist_flag{false};
+    for (const auto &o_k : output_keys_) {
+      if (o_k == a_k) {
+        exist_flag = true;
         break;
       }
-      for (const auto &field_expr : exprs_) {
-        auto &[field_meta, n] = aggregate_keys_[i];
-        if (field_expr.field().meta() == field_meta) {
-          assert(n >= 1);
-          if (n > 1) {
-            if (aggregate_types_[i] != agg::AGG_COUNT) {
-              rc = RC::INVALID_ARGUMENT;
-              return rc;
-            }
-            // COUNT(*)
-            if (agg_value_map_.count(agg::AGG_COUNT) == 0) {
-              Value t;
-              t.set_int(0);
-              agg_value_map_[agg::AGG_COUNT] = t;
-            }
-            Value v = agg_value_map_[agg::AGG_COUNT];
-            agg_value_map_[agg::AGG_COUNT].set_int(v.get_int() + 1);
-          } else {
-            // Other aggregate function, without `*`
-            assert(n == 1);
-            Value v;
-            field_expr.get_value(*tuple, v);
-            set_initial_value_for_map(agg_value_map_, v.attr_type(), aggregate_types_[i], v);
-            // FIXME: Ensure the sequence of this and the `set_initial_value_for_map`
-            if (Value::check_null(v)) {
-              null_flag = true;
-              g_null_flag = true;
-              break;
-            }
-            switch (aggregate_types_[i]) {
-              case agg::AGG_COUNT: {
-                if (agg_value_map_.count(agg::AGG_COUNT) == 0) {
-                  Value t;
-                  t.set_int(0);
-                  agg_value_map_[agg::AGG_COUNT] = t;
-                }
-                v = agg_value_map_[agg::AGG_COUNT];
-                agg_value_map_[agg::AGG_COUNT].set_int(v.get_int() + 1);
-              } break;
-              case agg::AGG_MIN: {
-                auto v_t = agg_value_map_[agg::AGG_MIN];
-                // FIXME: Ensure this
-                // std::cout << "[agg::min] Current v: " << v.to_string() << std::endl;
-                // std::cout << "[agg::min] Current v_t: " << v_t.to_string() << std::endl;
-                if (v.compare(v_t) < 0) {
-                  agg_value_map_[agg::AGG_MIN] = v;
-                }
-              } break;
-              case agg::AGG_MAX: {
-                auto v_t = agg_value_map_[agg::AGG_MAX];
-                // FIXME: Ensure this
-                // std::cout << "[agg::max] Current v: " << v.to_string() << std::endl;
-                // std::cout << "[agg::max] Current v_t: " << v_t.to_string() << std::endl;
-                if (v.compare(v_t) > 0) {
-                  agg_value_map_[agg::AGG_MAX] = v;
-                }
-              } break;
-              case agg::AGG_SUM: {
-                auto v_t = agg_value_map_[agg::AGG_SUM];
-                auto res = add_value(v, v_t);
-                agg_value_map_[agg::AGG_SUM] = res;
-              } break;
-              case agg::AGG_AVG: {
-                // TODO: Refactor this
-                auto v_t = agg_value_map_[agg::AGG_AVG];
-                // std::cout << "[agg::avg] Current v: " << v.to_string() << std::endl;
-                // std::cout << "[agg::avg] Current v_t: " << v_t.to_string() << std::endl;
-                auto res = add_value(v, v_t);
-                agg_value_map_[agg::AGG_AVG] = res;
-              } break;
-              default:
-                assert(false);  // This is impossible
-            }
-          }
-          // TODO: Please note this
-          break;
+    }
+
+    if (!exist_flag) {
+      output_keys_.push_back(a_k);
+    }
+
+    // See if the current key has existed
+    if (agg_ht_.contains(a_k)) {
+      insert_and_combine_agg_value(agg_ht_[a_k], a_v);
+    } else {
+      agg_ht_[a_k] = a_v;
+    }
+  }
+
+  if (rc != RC::RECORD_EOF) {
+    LOG_WARN("[AggPhysicalOperator::open] failed to read to the end of the child operator.");
+    return rc;
+  }
+
+  // Note we directly return RC::SUCCESS here, since this is just preprocessing
+  return RC::SUCCESS;
+}
+
+RC AggPhysicalOperator::close() {
+  RC rc = RC::SUCCESS;
+  if (child_ != nullptr) {
+    rc = child_->close();
+  }
+  return rc;
+}
+
+RC AggPhysicalOperator::next() {
+  if (output_keys_.empty()) {
+    return RC::RECORD_EOF;
+  }
+
+  AggregateKey a_k = output_keys_.front();
+  std::vector<Value> cur_key = a_k.keys_;
+  AggregateValue a_v = agg_ht_[a_k];
+  std::vector<Value> cur_value = a_v.values_;
+  output_keys_.erase(output_keys_.begin());
+
+  std::vector<Value> output;
+
+  // Basic sanity check
+  assert(cur_value.size() + cur_key.size() == is_agg_.size());
+
+  // Construct the output tuple
+  for (int i = 0; i < is_agg_.size(); ++i) {
+    if (is_agg_[i]) {
+      Value front_value = cur_value.front();
+
+      // Finalize the `agg::AGG_AVG`
+      if (agg_types_[i] == AGG_AVG) {
+        if (front_value.attr_type() == AttrType::INTS) {
+          front_value.set_float(front_value.get_int() * 1.0 / a_v.null_count[i]);
+        } else if (front_value.attr_type() == AttrType::FLOATS) {
+          front_value.set_float(front_value.get_float() / a_v.null_count[i]);
+        } else {
+          assert(false);
         }
       }
-    }
-    if (!null_flag) {
-      avg_n += 1;
-    }
-  }
 
-  // For agg::AGG_AVG
-  if (agg_value_map_.count(agg::AGG_AVG) == 1) {
-    auto &v_t = agg_value_map_[agg::AGG_AVG];
-    if (v_t.attr_type() == AttrType::INTS) {
-      if (g_null_flag && v_t.get_int() == 0) {
-        v_t.set_float(114.514);
-      } else {
-        v_t.set_float(v_t.get_int() * 1.0 / avg_n);
-      }
-    } else if (v_t.attr_type() == AttrType::FLOATS) {
-      if (g_null_flag && v_t.get_float() == 0) {
-        v_t.set_float(114.514);
-      } else {
-        v_t.set_float(v_t.get_float() / avg_n);
-      }
+      output.push_back(front_value);
+      cur_value.erase(cur_value.begin());
     } else {
-      assert(false);  // Not yet support
+      output.push_back(cur_key.front());
+      cur_key.erase(cur_key.begin());
     }
   }
 
-  // For agg::AGG_SUM
-  if (agg_value_map_.count(agg::AGG_SUM) == 1) {
-    auto &v_t = agg_value_map_[agg::AGG_SUM];
-    if (v_t.attr_type() == AttrType::INTS) {
-      if (g_null_flag && v_t.get_int() == 0) {
-        v_t.set_int(1919810);
-      }
-    } else if (v_t.attr_type() == AttrType::FLOATS) {
-      if (g_null_flag && v_t.get_float() == 0) {
-        v_t.set_float(114.514);
-      }
-    } else {
-      assert(false);  // Not yet support
-    }
-  }
+  tuple_.set_cells(output);
 
-  std::vector<Value> ret;
-  for (int i = 0; i < aggregate_types_.size(); ++i) {
-    ret.push_back(agg_value_map_[aggregate_types_[i]]);
-  }
-  tuple_.set_cells(ret);
-  // std::cout << "[agg] Current tuple: " << tuple_.to_string() << std::endl;
-  if (rc == RC::RECORD_EOF) {
-    rc = RC::SUCCESS;
-  }
-  next_flag = true;
-  return rc;
+  return RC::SUCCESS;
 }
 
 Tuple *AggPhysicalOperator::current_tuple() { return &tuple_; }

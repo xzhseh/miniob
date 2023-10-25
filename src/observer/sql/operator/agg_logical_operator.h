@@ -4,28 +4,31 @@
 
 #include "sql/operator/logical_operator.h"
 #include "sql/parser/parse_defs.h"
+#include "storage/field/field.h"
 #include "storage/field/field_meta.h"
 
 class AggLogicalOperator : public LogicalOperator {
  public:
-  AggLogicalOperator() = delete;
-
-  explicit AggLogicalOperator(const std::vector<Field> &all_keys,
-                              const std::vector<std::pair<const FieldMeta *, int>> &aggregate_keys,
-                              const std::vector<agg> &aggregate_types);
+  explicit AggLogicalOperator() = default;
 
   virtual ~AggLogicalOperator() = default;
 
   LogicalOperatorType type() const override { return LogicalOperatorType::AGG; }
 
-  auto get_all_keys() -> std::vector<Field> & { return all_keys_; }
+  auto get_fields() const -> const std::vector<Field> & { return fields_; }
 
-  auto get_agg_keys() -> std::vector<std::pair<const FieldMeta *, int>> & { return aggregate_keys_; }
+  auto get_is_agg() const -> const std::vector<bool> & { return is_agg_; }
 
-  auto get_agg_types() -> std::vector<agg> & { return aggregate_types_; }
+  auto get_agg_types() const -> const std::vector<agg> & { return agg_types_; }
+
+  void set_fields(std::vector<Field> &&fields) { fields_ = std::move(fields); }
+
+  void set_is_agg(std::vector<bool> &&is_agg) { is_agg_ = std::move(is_agg); }
+
+  void set_agg_types(std::vector<agg> &&agg_types) { agg_types_ = std::move(agg_types); }
 
  private:
-  std::vector<Field> all_keys_;
-  std::vector<std::pair<const FieldMeta *, int>> aggregate_keys_;
-  std::vector<agg> aggregate_types_;
+  std::vector<Field> fields_;
+  std::vector<bool> is_agg_;
+  std::vector<agg> agg_types_;
 };

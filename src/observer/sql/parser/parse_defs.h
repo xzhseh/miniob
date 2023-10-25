@@ -66,8 +66,7 @@ struct RelAttrSqlNode {
   std::string relation_name;   ///< relation / table name (may be NULL/EMPTY)
   std::string attribute_name;  ///< attribute / column name
   enum agg aggregate_func;     ///< aggregate function (may be NULL/EMPTY)
-  ///< Whether the parsed aggregate syntax is valid, i.e., COUNT(c1, c2) will be invalid
-  bool agg_valid_flag{true};
+  bool agg_valid_flag{true};   ///< Whether the parsed aggregate syntax is valid, i.e., COUNT(c1, c2) will be invalid
   std::string alias_name;      ///< alias name (may be NULL/EMPTY)
 };
 
