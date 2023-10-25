@@ -136,6 +136,21 @@ bool group_by_sanity_check(const std::vector<RelAttrSqlNode> &group_by_keys, con
   int count{0};
   bool flag{false};
 
+  bool agg_flag{false};
+  bool non_agg_flag{false};
+
+  for (const auto &i_a : agg_stmt.get_is_agg()) {
+    if (i_a) {
+      agg_flag = true;
+    } else {
+      non_agg_flag = true;
+    }
+  }
+
+  if (agg_flag && non_agg_flag && group_by_keys.empty()) {
+    return false;
+  }
+
   for (int i = 0; i < fields.size(); ++i) {
     const auto &field = fields[i];
 
