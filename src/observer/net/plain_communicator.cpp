@@ -245,7 +245,7 @@ RC PlainCommunicator::write_result_internal(SessionEvent *event, bool &need_disc
 
       std::string cell_str = value.to_string();
 
-      // std::cout << "[plain communicator] current cell_str: " << cell_str << std::endl;
+      std::cout << "[plain communicator] current cell_str: " << cell_str << std::endl;
 
       // Check null here 😅
       // TODO: Refactor the code 😅😅

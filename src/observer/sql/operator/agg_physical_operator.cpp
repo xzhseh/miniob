@@ -13,10 +13,23 @@
 /// FIXME: Refactor this
 Value add_value(Value &lhs, Value &rhs) {
   Value ret;
+
+  if (Value::check_null(lhs) && Value::check_null(rhs)) {
+    assert(lhs.attr_type() == rhs.attr_type());
+    Value::set_null(ret, lhs.attr_type());
+    return ret;
+  }
+
   if (lhs.attr_type() == AttrType::INTS) {
     switch (rhs.attr_type()) {
       case AttrType::INTS: {
-        ret.set_int(lhs.get_int() + rhs.get_int());
+        if (Value::check_null(lhs)) {
+          ret.set_int(rhs.get_int());
+        } else if (Value::check_null(rhs)) {
+          ret.set_int(lhs.get_int());
+        } else {
+          ret.set_int(lhs.get_int() + rhs.get_int());
+        }
       } break;
       case AttrType::FLOATS: {
         // INT + FLOAT is impossible even for AVG / SUM
@@ -28,7 +41,13 @@ Value add_value(Value &lhs, Value &rhs) {
   } else if (lhs.attr_type() == AttrType::FLOATS) {
     switch (rhs.attr_type()) {
       case AttrType::FLOATS: {
-        ret.set_float(lhs.get_float() + rhs.get_float());
+        if (Value::check_null(lhs)) {
+          ret.set_float(rhs.get_float());
+        } else if (Value::check_null(rhs)) {
+          ret.set_float(lhs.get_float());
+        } else {
+          ret.set_float(lhs.get_float() + rhs.get_float());
+        }
       } break;
       default:
         assert(false);  // Unsupported
@@ -307,9 +326,13 @@ RC AggPhysicalOperator::next() {
       // Finalize the `agg::AGG_AVG`
       if (agg_types_[i] == AGG_AVG) {
         if (front_value.attr_type() == AttrType::INTS) {
-          front_value.set_float(front_value.get_int() * 1.0 / a_v.null_count[i]);
+          if (!Value::check_null(front_value)) {
+            front_value.set_float(front_value.get_int() * 1.0 / a_v.null_count[i]);
+          }
         } else if (front_value.attr_type() == AttrType::FLOATS) {
-          front_value.set_float(front_value.get_float() / a_v.null_count[i]);
+          if (!Value::check_null(front_value)) {
+            front_value.set_float(front_value.get_float() / a_v.null_count[i]);
+          }
         } else {
           assert(false);
         }

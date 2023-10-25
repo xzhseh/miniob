@@ -415,7 +415,12 @@ attr_def:
       $$ = new AttrInfoSqlNode;
       $$->type = (AttrType)$2;
       $$->name = $1;
-      $$->length = $4;
+      assert($2 == CHARS && "Expect char(number)");
+      if ($6) {
+        $$->length = $4 + 10;
+      } else {
+        $$->length = $4;
+      }
       $$->is_null = $6;
       free($1);
     }
@@ -423,7 +428,11 @@ attr_def:
       $$ = new AttrInfoSqlNode;
       $$->type = (AttrType) $2;
       $$->name = $1;
-      $$->length = 4;
+      if ($2 == CHARS && $3) {
+        $$->length = 10;
+      } else {
+        $$->length = 4;
+      }
       $$->is_null = $3;
       free($1);
     }

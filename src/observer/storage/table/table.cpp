@@ -275,6 +275,7 @@ RC Table::make_record(int value_num, const Value *values, Record &record) {
   for (int i = 0; i < value_num; i++) {
     const FieldMeta *field = table_meta_.field(i + normal_field_start_index);
     const Value &value = values[i];
+    // std::cout << "[Table::make_record] current value: " << value.to_string() << std::endl;
     if (field->type() != value.attr_type()) {
       LOG_ERROR("Invalid value type. table name =%s, field name=%s, type=%d, but given=%d",
                 table_meta_.name(), field->name(), field->type(), value.attr_type());
@@ -284,6 +285,7 @@ RC Table::make_record(int value_num, const Value *values, Record &record) {
 
   // 复制所有字段的值
   int record_size = table_meta_.record_size();
+  // std::cout << "[Table::make_record] current record_size: " << record_size << std::endl;
   char *record_data = (char *)malloc(sizeof(char) * record_size);
 
   for (int i = 0; i < value_num; i++) {
