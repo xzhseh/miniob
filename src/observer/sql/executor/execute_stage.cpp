@@ -79,7 +79,7 @@ RC ExecuteStage::handle_request_with_physical_operator(SQLStageEvent *sql_event)
         for (int i = 0; i < n; ++i) {
           auto &f = keys[i];
           std::string s{""};
-          if (f.table_name() != nullptr && with_table_name) {
+          if (f.table() != nullptr && with_table_name) {
             s += f.table_name();
             s += ".";
           }
