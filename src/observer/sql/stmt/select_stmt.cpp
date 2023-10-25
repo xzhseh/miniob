@@ -494,6 +494,9 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt) {
     }
   }
 
+  // Set potential having node
+  agg_stmt->set_having(std::move(static_cast<ConditionSqlNode>(select_sql.having)));
+
   if (!agg_flag) {
     // No need to plan the aggregation node
     agg_stmt = nullptr;

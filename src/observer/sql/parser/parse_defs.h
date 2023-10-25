@@ -139,6 +139,7 @@ struct SelectSqlNode {
   std::vector<ConditionSqlNode> conditions;  ///< 查询条件，使用AND串联起来多个条件
   std::vector<OrderBySqlNode> order_bys;     ///< order by clause
   std::vector<RelAttrSqlNode> group_bys;     ///< group by clause
+  ConditionSqlNode having;                   ///< Currently treat it as a single condition node
 };
 
 /**

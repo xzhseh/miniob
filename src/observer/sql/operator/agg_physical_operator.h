@@ -102,10 +102,12 @@ class AggPhysicalOperator : public PhysicalOperator {
 
   explicit AggPhysicalOperator(
     PhysicalOperator *child,
+    ConditionSqlNode &&having,
     const std::vector<FieldExpr> &&field_exprs,
     const std::vector<bool> &&is_agg_,
     const std::vector<agg> &&agg_types)
     : child_(child),
+      having_(std::move(having)),
       field_exprs_(std::move(field_exprs)),
       is_agg_(std::move(is_agg_)),
       agg_types_(std::move(agg_types)) {}
@@ -160,6 +162,7 @@ class AggPhysicalOperator : public PhysicalOperator {
   Trx *trx_{nullptr};
   PhysicalOperator* child_{nullptr};
   ValueListTuple tuple_;
+  ConditionSqlNode having_;
   std::vector<AggregateKey> output_keys_;
   std::vector<FieldExpr> field_exprs_;
   std::vector<bool> is_agg_;

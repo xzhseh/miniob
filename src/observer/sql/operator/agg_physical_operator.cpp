@@ -2,6 +2,7 @@
 
 #include "sql/operator/agg_physical_operator.h"
 #include <climits>
+#include <memory>
 #include <unordered_map>
 #include <utility>
 #include "common/log/log.h"
@@ -197,16 +198,101 @@ RC AggPhysicalOperator::close() {
   return rc;
 }
 
+/// Currently we just consider the case with one attribute & one value on each side
+bool check_having(Value &v, agg a, const ConditionSqlNode &having, const Field &field) {
+  if (having.left_value.attr_type() == AttrType::UNDEFINED &&
+      having.right_value.attr_type() == AttrType::UNDEFINED) {
+    // No having clause for this group by
+    return true;
+  }
+
+  if (having.left_is_attr) {
+    // having sum(id) comp value
+    if (having.left_attr.aggregate_func == a &&
+        strcmp((having.left_attr.relation_name.empty()) ? field.table_name() : having.left_attr.relation_name.c_str(), field.table_name()) == 0 &&
+        strcmp(having.left_attr.attribute_name.c_str(), field.field_name()) == 0) {
+      switch (having.comp) {
+        // Note this should be in normal order
+        case CompOp::EQUAL_TO:
+          return v.compare(having.right_value) == 0;
+        case CompOp::GREAT_EQUAL:
+          return v.compare(having.right_value) >= 0;
+        case CompOp::LESS_EQUAL:
+          return v.compare(having.right_value) <= 0;
+        case CompOp::GREAT_THAN:
+          return v.compare(having.right_value) > 0;
+        case CompOp::LESS_THAN:
+          return v.compare(having.right_value) < 0;
+        default: assert(false); // Not yet support
+      }
+    } else {
+      return true;
+    }
+  } else if (having.right_is_attr) {
+    // having value comp sum(id)
+    if (having.right_attr.aggregate_func == a &&
+        strcmp((having.right_attr.relation_name.empty()) ? field.table_name() : having.right_attr.relation_name.c_str(), field.table_name()) == 0 &&
+        strcmp(having.right_attr.attribute_name.c_str(), field.field_name()) == 0) {
+      switch (having.comp) {
+        // Note this should be in reverse order
+        case CompOp::EQUAL_TO:
+          return v.compare(having.left_value) == 0;
+        case CompOp::GREAT_EQUAL:
+          return v.compare(having.left_value) <= 0;
+        case CompOp::LESS_EQUAL:
+          return v.compare(having.left_value) >= 0;
+        case CompOp::GREAT_THAN:
+          return v.compare(having.left_value) < 0;
+        case CompOp::LESS_THAN:
+          return v.compare(having.left_value) > 0;
+        default: assert(false); // Not yet support
+      }
+    } else {
+      return true;
+    }
+  } else {
+    assert(false);
+  }
+  assert(false);
+}
+
 RC AggPhysicalOperator::next() {
   if (output_keys_.empty()) {
     return RC::RECORD_EOF;
   }
 
-  AggregateKey a_k = output_keys_.front();
-  std::vector<Value> cur_key = a_k.keys_;
-  AggregateValue a_v = agg_ht_[a_k];
-  std::vector<Value> cur_value = a_v.values_;
-  output_keys_.erase(output_keys_.begin());
+  AggregateKey a_k;
+  std::vector<Value> cur_key;
+  AggregateValue a_v;
+  std::vector<Value> cur_value;
+
+  while (true) {
+    // We filter out all the rest of the tuples
+    if (output_keys_.empty()) {
+      return RC::RECORD_EOF;
+    }
+
+    a_k = output_keys_.front();
+    cur_key = a_k.keys_;
+    a_v = agg_ht_[a_k];
+    cur_value = a_v.values_;
+    output_keys_.erase(output_keys_.begin());
+
+    bool check_flag{true};
+    auto tmp_value = cur_value;
+
+    for (int i = 0; i < is_agg_.size(); ++i) {
+      if (is_agg_[i]) {
+        // Only need to check aggregation
+        check_flag = check_flag && check_having(tmp_value.front(), agg_types_[i], having_, field_exprs_[i].field());
+        tmp_value.erase(tmp_value.begin());
+      }
+    }
+    
+    if (check_flag) {
+      break;
+    }
+  }
 
   std::vector<Value> output;
 

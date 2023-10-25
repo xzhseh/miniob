@@ -116,6 +116,7 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
         ASC
         AS
         GROUP
+        HAVING
 
 /** union 中定义各种数据类型，真实生成的代码也是union类型，所以不能有非POD类型的数据 **/
 %union {
@@ -173,6 +174,7 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
 %type <order_by_list_type>  order_by_item
 %type <group_by_list_type>  group_by_clause
 %type <group_by_list_type>  group_by_list
+%type <condition>           having
 %type <condition_list>      where
 %type <condition_list>      condition_list
 %type <rel_attr_list>       select_attr
@@ -570,7 +572,7 @@ update_value_list:
 select_stmt:        /*  select 语句的语法解析树*/
     // FIXME: Please ensure the order of group by and order by
     // Currently group by is placed after order by to prevent renaming issue.
-    SELECT select_attr FROM ID option_as rel_list where order_by_clause group_by_clause
+    SELECT select_attr FROM ID option_as rel_list where order_by_clause group_by_clause having
     {
       $$ = new ParsedSqlNode(SCF_SELECT);
 
@@ -608,6 +610,17 @@ select_stmt:        /*  select 语句的语法解析树*/
 
       if ($9 != nullptr) {
         $$->selection.group_bys.swap(*$9);
+      }
+
+      if ($10 != nullptr) {
+        $$->selection.having = *$10;
+        delete $10;
+      } else {
+        ConditionSqlNode having;
+        // To mark the absence of having condition
+        having.left_value.set_type(UNDEFINED);
+        having.right_value.set_type(UNDEFINED);
+        $$->selection.having = having;
       }
     }
     | SELECT select_attr FROM ID inner_join_constr inner_join_list where order_by_clause
@@ -718,6 +731,15 @@ group_by_list:
       delete $1;
     }
     ;
+
+having:
+    {
+      $$ = nullptr;
+    }
+    | HAVING condition {
+      assert($2 != nullptr && "Expect having condition not to be nullptr");
+      $$ = $2;
+    }
 
 order_by_clause:
    /* empty */

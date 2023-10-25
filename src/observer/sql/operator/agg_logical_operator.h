@@ -21,14 +21,19 @@ class AggLogicalOperator : public LogicalOperator {
 
   auto get_agg_types() const -> const std::vector<agg> & { return agg_types_; }
 
+  auto get_having() const -> const ConditionSqlNode & { return having_; }
+
   void set_fields(std::vector<Field> &&fields) { fields_ = std::move(fields); }
 
   void set_is_agg(std::vector<bool> &&is_agg) { is_agg_ = std::move(is_agg); }
 
   void set_agg_types(std::vector<agg> &&agg_types) { agg_types_ = std::move(agg_types); }
 
+  void set_having(ConditionSqlNode &&having) { having_ = std::move(having); }
+
  private:
   std::vector<Field> fields_;
   std::vector<bool> is_agg_;
   std::vector<agg> agg_types_;
+  ConditionSqlNode having_;
 };

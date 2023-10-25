@@ -132,6 +132,7 @@ BY                                      RETURN_TOKEN(BY);
 ASC                                     RETURN_TOKEN(ASC);
 AS                                      RETURN_TOKEN(AS);
 GROUP                                   RETURN_TOKEN(GROUP);
+HAVING                                  RETURN_TOKEN(HAVING);
 {ID}                                    yylval->string=strdup(yytext); RETURN_TOKEN(ID);
 "("                                     RETURN_TOKEN(LBRACE);
 ")"                                     RETURN_TOKEN(RBRACE);
