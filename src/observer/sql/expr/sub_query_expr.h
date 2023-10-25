@@ -47,6 +47,7 @@ class SubQueryExpr : public Expression {
   std::vector<Value> const_value_list;             // type == CONST_VALUE_LIST
   std::vector<std::unique_ptr<Tuple>> tuple_list;  // type == SUB_QUERY
   std::unique_ptr<SQLStageEvent> sub_query_event_{nullptr};
+  bool inited_{false};
 };
 
 #endif  // MINIDB_SUB_QUERY_EXPR_H

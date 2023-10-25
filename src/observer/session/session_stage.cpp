@@ -177,13 +177,6 @@ RC SessionStage::handle_sub_sql(SQLStageEvent *sql_event) {
     return rc;
   }
 
-  /// Execution --> sql execution via volcano model
-  rc = execute_stage_.handle_request(sql_event);
-  if (OB_FAIL(rc)) {
-    LOG_TRACE("failed to do execute. rc=%s", strrc(rc));
-    return rc;
-  }
-
   /// Hopefully, gracefully return
   return rc;
 }

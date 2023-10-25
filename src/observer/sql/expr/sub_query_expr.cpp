@@ -44,7 +44,7 @@ RC SubQueryExpr::in_or_not(const Value &value, const std::unique_ptr<Expression>
     for (auto &tuple : this->tuple_list) {
       if (field_expr->type() == ExprType::FIELD) {
         Value field_value;
-        auto rc = field_expr->get_value(*tuple, field_value);
+        RC rc = tuple->cell_at(0, field_value);
         if (rc != RC::SUCCESS) {
           LOG_WARN("failed to get field value. rc=%s", strrc(rc));
           return rc;
@@ -67,6 +67,9 @@ RC SubQueryExpr::in_or_not(const Value &value, const std::unique_ptr<Expression>
 RC SubQueryExpr::try_get_value(Value &value) const { return RC::INTERNAL; }
 
 RC SubQueryExpr::init() {
+  if (this->inited_) {
+    return RC::SUCCESS;
+  }
   if (this->sub_query_event_ == nullptr) {
     return RC::SUCCESS;
   }
@@ -78,7 +81,6 @@ RC SubQueryExpr::init() {
   assert(this->sub_query_event_ != nullptr);
   // Project physical operator
   auto &root_oper = this->sub_query_event_->physical_operator();
-  std::vector<std::unique_ptr<Tuple>> result_value_list;
   RC rc = root_oper->open(nullptr);
   if (rc != RC::SUCCESS) {
     LOG_WARN("failed to open root operator. rc=%s", strrc(rc));
@@ -88,8 +90,11 @@ RC SubQueryExpr::init() {
   while (true) {
     rc = root_oper->next();
     tuple_ptr = root_oper->current_tuple();
+    assert(tuple_ptr != nullptr);
     if (rc == RC::SUCCESS) {
-      result_value_list.push_back(tuple_ptr->copy());
+      auto copy_tuple = tuple_ptr->copy();
+      assert(copy_tuple != nullptr);
+      this->tuple_list.emplace_back(std::move(copy_tuple));
     } else if (rc == RC::RECORD_EOF) {
       break;
     } else {
@@ -97,7 +102,7 @@ RC SubQueryExpr::init() {
       return rc;
     }
   }
-  this->tuple_list = std::move(result_value_list);
+  root_oper->close();
   return RC::SUCCESS;
 }
 RC SubQueryExpr::get_value(const Tuple &tuple, Value &value) const {

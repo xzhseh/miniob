@@ -83,7 +83,10 @@ class Tuple {
    */
   virtual RC cell_at(int index, Value &cell) const = 0;
 
-  virtual std::unique_ptr<Tuple> copy() const { return nullptr; }
+  virtual std::unique_ptr<Tuple> copy() const {
+    assert(false);
+    return nullptr;
+  }
 
   /**
    * @brief 根据cell的描述，获取cell的值
@@ -246,6 +249,8 @@ class ProjectTuple : public Tuple {
     const TupleCellSpec *spec = speces_[index];
     return tuple_->find_cell(*spec, cell);
   }
+
+  virtual std::unique_ptr<Tuple> copy() const override { return tuple_->copy(); }
 
   RC find_cell(const TupleCellSpec &spec, Value &cell) const override { return tuple_->find_cell(spec, cell); }
 
