@@ -158,7 +158,7 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
         }
       }
     }
-    for (auto &table : *tables) {
+    for (auto &table : new_tables) {
       sub_query->selection.relations.push_back(RelationSqlNode(table.first, ""));
     }
     filter_obj.init_sub_query(sub_query);
