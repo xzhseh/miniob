@@ -1106,6 +1106,33 @@ condition:
       delete $1;
       delete $3;
     }
+    // FIXME: Currently hard-coded
+    | agg LBRACE '*' RBRACE comp_op value {
+      $$ = new ConditionSqlNode;
+      RelAttrSqlNode left;
+      left.attribute_name = "*";
+      left.aggregate_func = AGG_COUNT;
+      $$->left_is_attr = 1;
+      $$->left_attr = left;
+      $$->right_is_attr = 0;
+      $$->right_value = *$6;
+      $$->comp = $5;
+
+      delete $6;
+    }
+    | value comp_op agg LBRACE '*' RBRACE {
+      $$ = new ConditionSqlNode;
+      RelAttrSqlNode right;
+      right.attribute_name = "*";
+      right.aggregate_func = AGG_COUNT;
+      $$->left_is_attr = 0;
+      $$->left_value = *$1;
+      $$->right_is_attr = 1;
+      $$->right_attr = right;
+      $$->comp = $2;
+
+      delete $1;
+    }
     ;
 
 comp_op:
