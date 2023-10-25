@@ -168,4 +168,5 @@ class AggPhysicalOperator : public PhysicalOperator {
   std::vector<bool> is_agg_;
   std::vector<agg> agg_types_;
   std::unordered_map<AggregateKey, AggregateValue> agg_ht_;
+  int count_;
 };

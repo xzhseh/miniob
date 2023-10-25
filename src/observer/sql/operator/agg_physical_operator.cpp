@@ -205,6 +205,8 @@ RC AggPhysicalOperator::open(Trx *trx) {
     return rc;
   }
 
+  count_ = output_keys_.size();
+
   // Note we directly return RC::SUCCESS here, since this is just preprocessing
   return RC::SUCCESS;
 }
@@ -302,7 +304,7 @@ RC AggPhysicalOperator::next() {
         (having_.right_is_attr && having_.right_attr.attribute_name == "*" && having_.right_attr.aggregate_func == agg::AGG_COUNT)) {
       Value v;
       // Add the erase one back
-      v.set_int(output_keys_.size() + 1);
+      v.set_int(count_);
       if (!check_having(v, agg::AGG_COUNT, having_, field_exprs_.front().field(), true)) {
         return RC::RECORD_EOF;
       } else {
