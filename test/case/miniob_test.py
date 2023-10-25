@@ -276,7 +276,7 @@ class MiniObClient:
     self.__server_port = server_port
     self.__server_socket = server_socket.strip()
     self.__socket = None
-    self.__buffer_size = 8192
+    self.__buffer_size = 1 << 18
 
     sock = None
     if len(self.__server_socket) > 0:

@@ -67,7 +67,7 @@ class SetVariableExecutor {
       bool_value = var_value.get_float() != 0.0;
     } else if (var_value.attr_type() == AttrType::DATE) {
       bool_value = var_value.get_date() != 0;
-    } else if (var_value.attr_type() == AttrType::CHARS) {
+    } else if (var_value.attr_type() == AttrType::CHARS || var_value.attr_type() == AttrType::TEXT) {
       std::string true_strings[] = {"true", "on", "yes", "t", "1"};
 
       std::string false_strings[] = {"false", "off", "no", "f", "0"};

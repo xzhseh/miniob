@@ -292,7 +292,10 @@ RC Table::make_record(int value_num, const Value *values, Record &record) {
     const FieldMeta *field = table_meta_.field(i + normal_field_start_index);
     const Value &value = values[i];
     size_t copy_len = field->len();
-    if (field->type() == CHARS) {
+    if (field->type() == TEXT && strlen(value.get_string().c_str()) > 65535) {
+      return RC::VARIABLE_NOT_VALID;
+    }
+    if (field->type() == CHARS || field->type() == TEXT) {
       const size_t data_len = value.length();
       if (copy_len > data_len) {
         copy_len = data_len + 1;
@@ -302,7 +305,17 @@ RC Table::make_record(int value_num, const Value *values, Record &record) {
     if (field->type() == DATE && value.get_date() == -1) {
       return RC::VARIABLE_NOT_VALID;
     }
-    memcpy(record_data + field->offset(), value.data(), copy_len);
+    if (field->type() != TEXT) {
+      memcpy(record_data + field->offset(), value.data(), copy_len);
+    } else {
+      for (int i = 0; i < copy_len; i++) {
+        if (islower(value.data()[i])) {
+          record_data[field->offset() + i] = value.data()[i] - 32;
+        } else {
+          record_data[field->offset() + i] = value.data()[i];
+        }
+      }
+    }
   }
 
   record.set_data_owner(record_data, record_size);

@@ -50,7 +50,15 @@ RC InsertStmt::create(Db *db, InsertSqlNode &inserts, Stmt *&stmt) {
   const int sys_field_num = table_meta.sys_field_num();
   for (int i = 0; i < value_num; i++) {
     const FieldMeta *field_meta = table_meta.field(i + sys_field_num);
-    const AttrType field_type = field_meta->type();
+    AttrType field_type = field_meta->type();
+    AttrType value_type = values[i].attr_type();
+    
+    // insert 无法识别 text 和 chars, 需要做转换
+    if (value_type == CHARS && field_type == TEXT) {
+      value_type = TEXT;
+      field_type = TEXT;
+      values[i].set_type(TEXT);
+    }
 
     /// NOTE: DO NOT CHANGE/REFACTOR THE CODE BELOW, strange bugs will occur for big-order-by
     /// refer: https://github.com/xzhseh/miniob/pull/23/commits/122869e2f9fd6d88e0b58456fead14aae1fbe1ea
@@ -68,7 +76,7 @@ RC InsertStmt::create(Db *db, InsertSqlNode &inserts, Stmt *&stmt) {
       assert(values[i].attr_type() == field_type && "The type should be the same");
     }
 
-    const AttrType value_type = values[i].attr_type();
+    value_type = values[i].attr_type();
 
     // TODO: try to convert the value type to field type
     if (field_type != value_type) {

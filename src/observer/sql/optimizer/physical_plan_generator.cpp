@@ -156,6 +156,9 @@ RC PhysicalPlanGenerator::create_plan(TableGetLogicalOperator &table_get_oper, u
     if (value.attr_type() == DATE && value.get_date() == -1) {
       return RC::INVALID_ARGUMENT;
     }
+    if (value.attr_type() == TEXT && strlen(value.get_string().c_str()) > 65535) {
+      return RC::INVALID_ARGUMENT;
+    }
 
     IndexScanPhysicalOperator *index_scan_oper = new IndexScanPhysicalOperator(
         table, index, table_get_oper.readonly(), &value, true /*left_inclusive*/, &value, true /*right_inclusive*/);

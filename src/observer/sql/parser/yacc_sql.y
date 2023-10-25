@@ -77,6 +77,7 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
         TRX_ROLLBACK
         INT_T
         STRING_T
+        TEXT_T
         FLOAT_T
         DATE_T
         HELP
@@ -433,6 +434,9 @@ attr_def:
       } else {
         $$->length = 4;
       }
+      if($$->type == AttrType::TEXT) {
+        $$->length = 65535; // need to change
+      }
       $$->is_null = $3;
       free($1);
     }
@@ -458,6 +462,7 @@ number:
 
 type:
     INT_T      { $$ = INTS; }
+    | TEXT_T     { $$ = TEXT; }
     | STRING_T { $$ = CHARS; }
     | FLOAT_T  { $$ = FLOATS; }
     | DATE_T   { $$ = DATE; }
