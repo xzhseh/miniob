@@ -231,10 +231,38 @@ RC LogicalPlanGenerator::create_plan(FilterStmt *filter_stmt, unique_ptr<Logical
     const FilterObj &filter_obj_right = filter_unit->right();
 
     // Left is attr and value. Const value list and sub query are not supported yet.
-    assert(filter_obj_left.type == FilterObjType::ATTR || filter_obj_left.type == FilterObjType::VALUE);
-    unique_ptr<Expression> left(filter_obj_left.type == FilterObjType::ATTR
-                                    ? static_cast<Expression *>(new FieldExpr(filter_obj_left.field))
-                                    : static_cast<Expression *>(new ValueExpr(filter_obj_left.value)));
+    unique_ptr<Expression> left = nullptr;
+    switch (filter_obj_left.type) {
+      case FilterObjType::ATTR:
+        left = unique_ptr<Expression>(new FieldExpr(filter_obj_left.field));
+        break;
+      case FilterObjType::VALUE:
+        left = unique_ptr<Expression>(new ValueExpr(filter_obj_left.value));
+        break;
+      case FilterObjType::VALUE_LIST:
+        left = unique_ptr<Expression>(new SubQueryExpr(filter_obj_left.value_list));
+        break;
+      case FilterObjType::SUB_QUERY:
+        left = unique_ptr<Expression>(new SubQueryExpr(filter_obj_left.sub_query));
+        break;
+      default:
+        assert(false);
+    }
+
+    if (left->type() == ExprType::SUB_QUERY) {
+      SubQueryExpr *sub_query_expr = dynamic_cast<SubQueryExpr *>(left.get());
+      RC rc = sub_query_expr->init();
+      if (rc != RC::SUCCESS) {
+        LOG_WARN("failed to init sub query expr. rc=%s", strrc(rc));
+        return rc;
+      }
+      CompOp comp_op = filter_unit->comp();
+      if (comp_op == IN_OP || comp_op == NOT_IN) {
+        sub_query_expr->set_return_value(false);
+      } else {
+        sub_query_expr->set_return_value(true);
+      }
+    }
 
     unique_ptr<Expression> right = nullptr;
     switch (filter_obj_right.type) {
@@ -248,11 +276,25 @@ RC LogicalPlanGenerator::create_plan(FilterStmt *filter_stmt, unique_ptr<Logical
         right = unique_ptr<Expression>(new SubQueryExpr(filter_obj_right.value_list));
         break;
       case FilterObjType::SUB_QUERY:
-        // Unsafe ,but it's ok for now.
         right = unique_ptr<Expression>(new SubQueryExpr(filter_obj_right.sub_query));
         break;
       default:
         assert(false);
+    }
+
+    if (right->type() == ExprType::SUB_QUERY) {
+      auto *sub_query_expr = dynamic_cast<SubQueryExpr *>(right.get());
+      RC rc = sub_query_expr->init();
+      if (rc != RC::SUCCESS) {
+        LOG_WARN("failed to init sub query expr. rc=%s", strrc(rc));
+        return rc;
+      }
+      CompOp comp_op = filter_unit->comp();
+      if (comp_op == IN_OP || comp_op == NOT_IN) {
+        sub_query_expr->set_return_value(false);
+      } else {
+        sub_query_expr->set_return_value(true);
+      }
     }
     assert(right != nullptr);
 

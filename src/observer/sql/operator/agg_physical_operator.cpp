@@ -244,6 +244,11 @@ RC AggPhysicalOperator::next() {
     }
   }
 
+  if (agg_value_map_.empty()) {
+    next_flag = true;
+    return RC::RECORD_EOF;
+  }
+
   std::vector<Value> ret;
   for (int i = 0; i < aggregate_types_.size(); ++i) {
     ret.push_back(agg_value_map_[aggregate_types_[i]]);

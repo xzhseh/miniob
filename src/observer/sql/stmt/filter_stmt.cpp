@@ -111,10 +111,31 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
     FilterObj filter_obj;
     filter_obj.init_attr(Field(table, field));
     filter_unit->set_left(filter_obj);
-  } else {
+  } else if (condition.left_is_attr == 0) {
     FilterObj filter_obj;
     filter_obj.init_value(condition.left_value);
     filter_unit->set_left(filter_obj);
+  } else if (condition.left_is_attr == 2) {
+    // Sub query
+    FilterObj filter_obj;
+    // It's select stmt
+    std::shared_ptr<ParsedSqlNode> sub_query(new ParsedSqlNode);
+    sub_query->flag = SqlCommandFlag::SCF_SELECT;
+    sub_query->selection = *condition.left_sub_select;
+    filter_obj.init_sub_query(sub_query);
+    filter_unit->set_left(filter_obj);
+  } else if (condition.left_is_attr == 3) {
+    // const value list
+    FilterObj filter_obj;
+    std::vector<Value> value_list;
+    for (const auto &value : condition.left_value_list) {
+      value_list.push_back(value);
+    }
+    filter_obj.init_value_list(value_list);
+    filter_unit->set_left(filter_obj);
+  } else {
+    LOG_WARN("invalid left_is_attr: %d", condition.left_is_attr);
+    return RC::INVALID_ARGUMENT;
   }
 
   if (condition.right_is_attr == 1) {
@@ -138,14 +159,14 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
     // It's select stmt
     std::shared_ptr<ParsedSqlNode> sub_query(new ParsedSqlNode);
     sub_query->flag = SqlCommandFlag::SCF_SELECT;
-    sub_query->selection = *condition.sub_select;
+    sub_query->selection = *condition.right_sub_select;
     filter_obj.init_sub_query(sub_query);
     filter_unit->set_right(filter_obj);
   } else if (condition.right_is_attr == 3) {
     // const value list
     FilterObj filter_obj;
     std::vector<Value> value_list;
-    for (const auto &value : condition.const_value_list) {
+    for (const auto &value : condition.right_value_list) {
       value_list.push_back(value);
     }
     filter_obj.init_value_list(value_list);

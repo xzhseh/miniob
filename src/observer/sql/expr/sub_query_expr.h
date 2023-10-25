@@ -40,6 +40,8 @@ class SubQueryExpr : public Expression {
   // ! Don't call this function, it will return RC::INTERNAL
   RC try_get_value(Value &value) const override;
 
+  void set_return_value(bool should_return) { this->should_return_value = should_return; }
+
   RC init();
 
  private:
@@ -47,7 +49,9 @@ class SubQueryExpr : public Expression {
   std::vector<Value> const_value_list;             // type == CONST_VALUE_LIST
   std::vector<std::unique_ptr<Tuple>> tuple_list;  // type == SUB_QUERY
   std::unique_ptr<SQLStageEvent> sub_query_event_{nullptr};
+  TupleSchema result_schema_;
   bool inited_{false};
+  bool should_return_value{false};
 };
 
 #endif  // MINIDB_SUB_QUERY_EXPR_H

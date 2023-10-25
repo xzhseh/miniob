@@ -52,6 +52,64 @@ RC ExecuteStage::handle_request(SQLStageEvent *sql_event) {
   return rc;
 }
 
+TupleSchema create_result_schema(const SelectStmt *select_stmt) {
+  TupleSchema schema;
+  // FIXME: Refactor this (This is currently hard-coded for aggregation case)
+  if (select_stmt->agg_stmt() != nullptr) {
+    // Construct the schema based on the agg_stmt
+    // rather than the query_fields at present
+    auto &keys = select_stmt->agg_stmt()->get_keys();
+    auto &types = select_stmt->agg_stmt()->get_types();
+    int n = keys.size();
+    for (int i = 0; i < n; ++i) {
+      auto &[f, n] = keys[i];
+      auto name = (n > 1) ? "*" : f->name();
+      const std::string s = std::string(agg_to_string(types[i])) + "(" + name + ")";
+      // std::cout << "current s: " << s << std::endl;
+      schema.append_cell(s.c_str());
+    }
+    return schema;
+  }
+
+  bool with_table_name = select_stmt->tables().size() > 1;
+
+  for (size_t i = 0; i < select_stmt->query_fields().size(); i++) {
+    const auto &field = select_stmt->query_fields()[i];
+    if (with_table_name) {
+      schema.append_cell(field.table_name(), field.field_name());
+    } else {
+      schema.append_cell(field.field_name());
+    }
+  }
+  return schema;
+}
+
+TupleSchema create_sub_result_schema(const SelectStmt *select_stmt) {
+  TupleSchema schema;
+  // FIXME: Refactor this (This is currently hard-coded for aggregation case)
+  if (select_stmt->agg_stmt() != nullptr) {
+    // Construct the schema based on the agg_stmt
+    // rather than the query_fields at present
+    auto &keys = select_stmt->agg_stmt()->get_keys();
+    auto &types = select_stmt->agg_stmt()->get_types();
+    int n = keys.size();
+    for (int i = 0; i < n; ++i) {
+      auto &[f, n] = keys[i];
+      auto name = (n > 1) ? "*" : f->name();
+      const std::string s = std::string(agg_to_string(types[i])) + "(" + name + ")";
+      // std::cout << "current s: " << s << std::endl;
+      schema.append_cell(s.c_str());
+    }
+    return schema;
+  }
+
+  for (size_t i = 0; i < select_stmt->query_fields().size(); i++) {
+    const auto &field = select_stmt->query_fields()[i];
+    schema.append_cell(field.table_name(), field.field_name());
+  }
+  return schema;
+}
+
 RC ExecuteStage::handle_request_with_physical_operator(SQLStageEvent *sql_event) {
   RC rc = RC::SUCCESS;
 
@@ -66,47 +124,11 @@ RC ExecuteStage::handle_request_with_physical_operator(SQLStageEvent *sql_event)
   switch (stmt->type()) {
     case StmtType::SELECT: {
       auto *select_stmt = dynamic_cast<SelectStmt *>(stmt);
-
-      // FIXME: Refactor this (This is currently hard-coded for aggregation case)
-      if (select_stmt->agg_stmt() != nullptr) {
-        // Construct the schema based on the agg_stmt
-        // rather than the query_fields at present
-        auto &keys = select_stmt->agg_stmt()->get_keys();
-        auto &types = select_stmt->agg_stmt()->get_types();
-        int n = keys.size();
-        for (int i = 0; i < n; ++i) {
-          auto &[f, n] = keys[i];
-          auto name = (n > 1) ? "*" : f->name();
-          const std::string s = std::string(agg_to_string(types[i])) + "(" + name + ")";
-          // std::cout << "current s: " << s << std::endl;
-          schema.append_cell(s.c_str());
-        }
-        break;
-      }
-
-      bool with_table_name = select_stmt->tables().size() > 1;
-
-      for (size_t i = 0; i < select_stmt->query_fields().size(); i++) {
-        const auto &field = select_stmt->query_fields()[i];
-        const auto &alias = select_stmt->alias_vec()[i];
-        if (with_table_name) {
-          if (alias.is_alias) {
-            schema.append_cell(alias.table_alias.c_str(), alias.field_alias.c_str());
-          } else {
-            schema.append_cell(field.table_name(), field.field_name());
-          }
-        } else {
-          if (alias.is_alias) {
-            schema.append_cell(alias.field_alias.c_str());
-          } else {
-            schema.append_cell(field.field_name());
-          }
-        }
-      }
+      schema = create_result_schema(select_stmt);
     } break;
 
     case StmtType::CALC: {
-      CalcPhysicalOperator *calc_operator = static_cast<CalcPhysicalOperator *>(physical_operator.get());
+      auto *calc_operator = dynamic_cast<CalcPhysicalOperator *>(physical_operator.get());
       for (const unique_ptr<Expression> &expr : calc_operator->expressions()) {
         schema.append_cell(expr->name().c_str());
       }

@@ -43,13 +43,13 @@ RC SubQueryExpr::in_or_not(const Value &value, const std::unique_ptr<Expression>
   if (this->type_ == SubResultType::SUB_QUERY) {
     for (auto &tuple : this->tuple_list) {
       if (field_expr->type() == ExprType::FIELD) {
-        Value field_value;
-        RC rc = tuple->cell_at(0, field_value);
+        Value sub_value;
+        RC rc = tuple->find_cell(this->result_schema_.cell_at(0), sub_value);
         if (rc != RC::SUCCESS) {
           LOG_WARN("failed to get field value. rc=%s", strrc(rc));
           return rc;
         }
-        if (field_value.compare(value) == 0) {
+        if (sub_value.compare(value) == 0) {
           result = true;
           return RC::SUCCESS;
         }
@@ -81,6 +81,11 @@ RC SubQueryExpr::init() {
   assert(this->sub_query_event_ != nullptr);
   // Project physical operator
   auto &root_oper = this->sub_query_event_->physical_operator();
+  auto select_stmt = dynamic_cast<SelectStmt *>(this->sub_query_event_->stmt());
+  this->result_schema_ = create_sub_result_schema(select_stmt);
+  if (result_schema_.cell_num() != 1) {
+    return RC::INTERNAL;
+  }
   RC rc = root_oper->open(nullptr);
   if (rc != RC::SUCCESS) {
     LOG_WARN("failed to open root operator. rc=%s", strrc(rc));
@@ -105,7 +110,30 @@ RC SubQueryExpr::init() {
   root_oper->close();
   return RC::SUCCESS;
 }
+
 RC SubQueryExpr::get_value(const Tuple &tuple, Value &value) const {
-  value.set_int(1);
-  return RC::SUCCESS;
+  if (!should_return_value) {
+    value.set_int(1);
+    return RC::SUCCESS;
+  }
+  // For : select * from ssq_1 where (select ssq_2.id from ssq_2 where col2 = 47) = id;
+  // !!! Not for IN and EXIST compare
+  if (this->tuple_list.empty()) {
+    value.set_int(1919810);
+    return RC::SUCCESS;
+  }
+
+  if (this->tuple_list.size() != 1) {
+    return RC::INTERNAL;
+  }
+
+  auto &sub_tuple = this->tuple_list[0];
+  RC rc = RC::SUCCESS;
+  if (this->result_schema_.cell_at(0).alias() != nullptr) {
+    // Aggregate function , value list tuple
+    rc = sub_tuple->cell_at(0, value);
+  } else {
+    rc = sub_tuple->find_cell(this->result_schema_.cell_at(0), value);
+  }
+  return rc;
 }

@@ -1036,7 +1036,7 @@ condition:
       $$->left_is_attr = 1;
       $$->left_attr = *$1;
       $$->right_is_attr = 2;
-      $$->sub_select = new SelectSqlNode($4->selection);
+      $$->right_sub_select = new SelectSqlNode($4->selection);
       $$->comp = $2;
       delete $1;
     }
@@ -1047,14 +1047,49 @@ condition:
       $$->left_attr = *$1;
       $$->right_is_attr = 3;
       if($5 != nullptr) {
-	$$->const_value_list.swap(*$5);
+	$$->right_value_list.swap(*$5);
 	delete $5;
       }
-      $$->const_value_list.push_back(*$4);
+      $$->right_value_list.push_back(*$4);
       $$->comp = $2;
       delete $1;
       delete $4;
     }
+    | rel_attr comp_op LBRACE select_stmt RBRACE
+    {
+      $$ = new ConditionSqlNode;
+      $$->left_is_attr = 1;
+      $$->left_attr = *$1;
+      $$->right_is_attr = 2;
+      $$->right_sub_select = new SelectSqlNode($4->selection);
+      $$->comp = $2;
+      delete $1;
+    }
+    | rel_attr comp_op LBRACE value value_list RBRACE
+    {
+      $$ = new ConditionSqlNode;
+      $$->left_is_attr = 1;
+      $$->left_attr = *$1;
+      $$->right_is_attr = 3;
+      if($5 != nullptr) {
+      	$$->right_value_list.swap(*$5);
+      	delete $5;
+      }
+      $$->right_value_list.push_back(*$4);
+      $$->comp = $2;
+      delete $1;
+      delete $4;
+      }
+      | LBRACE select_stmt RBRACE comp_op rel_attr
+      {
+	$$ = new ConditionSqlNode;
+	$$->left_is_attr = 2;
+	$$->left_sub_select = new SelectSqlNode($2->selection);
+	$$->right_is_attr = 1;
+	$$->right_attr = *$5;
+	$$->comp = $4;
+	delete $5;
+      }
     ;
 in_op:
     IN { $$ = IN_OP; }
