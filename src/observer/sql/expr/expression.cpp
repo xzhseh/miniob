@@ -13,8 +13,11 @@ See the Mulan PSL v2 for more details. */
 //
 
 #include "sql/expr/expression.h"
+#include "event/sql_event.h"
+#include "session/session_stage.h"
 #include "sql/expr/tuple.h"
 #include "sql/parser/parse_defs.h"
+#include "sub_query_expr.h"
 
 using namespace std;
 
@@ -154,6 +157,21 @@ RC ComparisonExpr::compare_value(const Value &left, const Value &right, bool &re
       rc = left.like(right, result);
       result = !result;
     } break;
+    case IN_OP: {
+      rc = this->compare_in(left, result);
+
+    } break;
+    case NOT_IN: {
+      rc = this->compare_in(left, result);
+      result = !result;
+    } break;
+    case EXISTS_OP: {
+      rc = this->compare_in(left, result);
+    } break;
+    case NOT_EXISTS: {
+      rc = this->compare_in(left, result);
+      result = !result;
+    } break;
     default: {
       LOG_WARN("unsupported comparison. %d", comp_);
       rc = RC::INTERNAL;
@@ -204,6 +222,28 @@ RC ComparisonExpr::get_value(const Tuple &tuple, Value &value) const {
     value.set_boolean(bool_value);
   }
   return rc;
+}
+
+RC ComparisonExpr::compare_in(const Value &left, bool &result) const {
+  RC rc;
+  // The right expression must be a sub query expression
+  if (right_->type() != ExprType::SUB_QUERY) {
+    LOG_WARN("right expression must be a sub query expression");
+    rc = RC::INVALID_ARGUMENT;
+    return rc;
+  }
+  auto *sub_query_expr = dynamic_cast<SubQueryExpr *>(right_.get());
+  rc = sub_query_expr->init();
+  if (rc != RC::SUCCESS) {
+    LOG_WARN("failed to init sub query expr. rc=%s", strrc(rc));
+    return rc;
+  }
+  rc = sub_query_expr->in_or_not(left, left_, result);
+  if (rc != RC::SUCCESS) {
+    LOG_WARN("failed to check in or not. rc=%s", strrc(rc));
+    return rc;
+  }
+  return RC::SUCCESS;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

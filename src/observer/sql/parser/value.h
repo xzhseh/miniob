@@ -18,6 +18,7 @@ See the Mulan PSL v2 for more details. */
 #include <cstdlib>
 #include <cstring>
 #include <string>
+#include <vector>
 #include "common/rc.h"
 
 /// Note that after adding the null flag
@@ -36,6 +37,8 @@ enum AttrType {
 
 const char *attr_type_to_string(AttrType type);
 AttrType attr_type_from_string(const char *s);
+
+class Value;
 
 /**
  * @brief Class Value

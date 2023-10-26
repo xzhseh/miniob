@@ -108,7 +108,7 @@ class AggPhysicalOperator : public PhysicalOperator {
         is_agg_(std::move(is_agg_)),
         agg_types_(std::move(agg_types)) {}
 
-  virtual ~AggPhysicalOperator() = default;
+  ~AggPhysicalOperator() override = default;
 
   PhysicalOperatorType type() const override { return PhysicalOperatorType::AGG; }
 

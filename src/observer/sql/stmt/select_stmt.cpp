@@ -433,8 +433,14 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt) {
         if (left_table_name != right_table_name) {
           // Join operation
           FilterUnit *filter_unit = nullptr;
-          RC rc = FilterStmt::create_filter_unit(
-              db, default_table, &table_map, select_sql.attributes, conditions[i], filter_unit);
+          RC rc = FilterStmt::create_filter_unit(db,
+                                                 default_table,
+                                                 &table_map,
+                                                 select_sql.attributes,
+                                                 // Join filter does not need to be considered
+                                                 std::vector<RelationSqlNode>(),
+                                                 conditions[i],
+                                                 filter_unit);
           auto filter_obj_left = filter_unit->left().field;
           auto filter_obj_right = filter_unit->right().field;
           if (rc != RC::SUCCESS) {
@@ -463,6 +469,7 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt) {
                           default_table,
                           &table_map,
                           select_sql.attributes,
+                          select_sql.relations,
                           select_sql.conditions.data(),
                           static_cast<int>(select_sql.conditions.size()),
                           filter_stmt);

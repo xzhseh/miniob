@@ -52,6 +52,43 @@ RC ExecuteStage::handle_request(SQLStageEvent *sql_event) {
   return rc;
 }
 
+TupleSchema create_sub_result_schema(const SelectStmt *select_stmt) {
+  TupleSchema schema;
+  // FIXME: Refactor this (This is currently hard-coded for aggregation case)
+  bool with_table_name = select_stmt->tables().size() > 1;
+
+  // FIXME: Refactor this (This is currently hard-coded for aggregation case)
+  if (select_stmt->agg_stmt() != nullptr) {
+    // Construct the schema based on the agg_stmt
+    // rather than the query_fields at present
+    auto &keys = select_stmt->agg_stmt()->get_fields();
+    auto &types = select_stmt->agg_stmt()->get_agg_types();
+    auto &is_agg = select_stmt->agg_stmt()->get_is_agg();
+    size_t n = keys.size();
+    for (int i = 0; i < n; ++i) {
+      auto &f = keys[i];
+      std::string s;
+      if (f.table() != nullptr && with_table_name) {
+        s += f.table_name();
+        s += ".";
+      }
+
+      s += (f.meta() == nullptr && f.table() == nullptr) ? "*" : f.field_name();
+      if (is_agg[i]) {
+        s = std::string(agg_to_string(types[i])) + "(" + s + ")";
+      }
+      schema.append_cell(s.c_str());
+    }
+    return schema;
+  }
+
+  for (size_t i = 0; i < select_stmt->query_fields().size(); i++) {
+    const auto &field = select_stmt->query_fields()[i];
+    schema.append_cell(field.table_name(), field.field_name());
+  }
+  return schema;
+}
+
 RC ExecuteStage::handle_request_with_physical_operator(SQLStageEvent *sql_event) {
   RC rc = RC::SUCCESS;
 

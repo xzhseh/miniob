@@ -14,7 +14,7 @@ See the Mulan PSL v2 for more details. */
 
 #pragma once
 
-#include <string.h>
+#include <cstring>
 #include <memory>
 #include <string>
 
@@ -42,6 +42,7 @@ enum class ExprType {
   COMPARISON,   ///< 需要做比较的表达式
   CONJUNCTION,  ///< 多个表达式使用同一种关系(AND或OR)来联结
   ARITHMETIC,   ///< 算术运算
+  SUB_QUERY,  ///< 子查询，比如在IN子句中，子查询的结果是一个集合，需要和字段的值做比较
 };
 
 /**
@@ -210,6 +211,7 @@ class ComparisonExpr : public Expression {
   RC compare_value(const Value &left, const Value &right, bool &value) const;
 
  private:
+  RC compare_in(const Value &left, bool &result) const;
   CompOp comp_;
   std::unique_ptr<Expression> left_;
   std::unique_ptr<Expression> right_;

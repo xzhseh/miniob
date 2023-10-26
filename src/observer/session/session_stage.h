@@ -42,6 +42,9 @@ class SessionStage : public common::Stage {
   virtual ~SessionStage();
   static Stage *make_stage(const std::string &tag);
 
+  RC handle_sql(SQLStageEvent *sql_event);
+  RC handle_sub_sql(SQLStageEvent *sql_event);
+
  protected:
   // common function
   SessionStage(const char *tag);
@@ -53,7 +56,6 @@ class SessionStage : public common::Stage {
 
  protected:
   void handle_request(common::StageEvent *event);
-  RC handle_sql(SQLStageEvent *sql_event);
 
  private:
   QueryCacheStage query_cache_stage_;

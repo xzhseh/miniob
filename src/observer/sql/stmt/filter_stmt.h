@@ -18,25 +18,41 @@ See the Mulan PSL v2 for more details. */
 #include <vector>
 #include "sql/expr/expression.h"
 #include "sql/parser/parse_defs.h"
+#include "sql/stmt/select_stmt.h"
 #include "sql/stmt/stmt.h"
 
 class Db;
 class Table;
 class FieldMeta;
 
+enum class FilterObjType { ATTR, VALUE, VALUE_LIST, SUB_QUERY };
+
 struct FilterObj {
-  bool is_attr;
+  FilterObjType type;
   Field field;
   Value value;
+  // Different usage , so we won't merge them into one.
+  std::vector<Value> value_list;
+  std::shared_ptr<ParsedSqlNode> sub_query{nullptr};
 
   void init_attr(const Field &field) {
-    is_attr = true;
+    this->type = FilterObjType::ATTR;
     this->field = field;
   }
 
   void init_value(const Value &value) {
-    is_attr = false;
+    this->type = FilterObjType::VALUE;
     this->value = value;
+  }
+
+  void init_value_list(const std::vector<Value> &value_list) {
+    this->type = FilterObjType::VALUE_LIST;
+    this->value_list = value_list;
+  }
+
+  void init_sub_query(std::shared_ptr<ParsedSqlNode> subQuery) {
+    this->type = FilterObjType::SUB_QUERY;
+    this->sub_query = std::move(subQuery);
   }
 };
 
@@ -75,11 +91,12 @@ class FilterStmt {
 
  public:
   static RC create(Db *db, Table *default_table, std::unordered_map<std::string, Table *> *tables,
-                   const std::vector<RelAttrSqlNode> &rel_attr, const ConditionSqlNode *conditions, int condition_num,
-                   FilterStmt *&stmt);
+                   const std::vector<RelAttrSqlNode> &rel_attr, const std::vector<RelationSqlNode> &relations,
+                   const ConditionSqlNode *conditions, int condition_num, FilterStmt *&stmt);
 
   static RC create_filter_unit(Db *db, Table *default_table, std::unordered_map<std::string, Table *> *tables,
-                               const std::vector<RelAttrSqlNode> &rel_attr, const ConditionSqlNode &condition,
+                               const std::vector<RelAttrSqlNode> &rel_attr,
+                               const std::vector<RelationSqlNode> &relations, const ConditionSqlNode &condition,
                                FilterUnit *&filter_unit);
 
  private:

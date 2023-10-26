@@ -23,6 +23,7 @@ See the Mulan PSL v2 for more details. */
 #include "sql/expr/tuple_cell.h"
 #include "sql/parser/parse.h"
 #include "sql/parser/value.h"
+#include "sql/stmt/select_stmt.h"
 #include "storage/record/record.h"
 
 class Table;
@@ -60,6 +61,9 @@ class TupleSchema {
   std::vector<TupleCellSpec> cells_;
 };
 
+TupleSchema create_result_schema(const SelectStmt *select_stmt);
+TupleSchema create_sub_result_schema(const SelectStmt *select_stmt);
+
 /**
  * @brief 元组的抽象描述
  * @ingroup Tuple
@@ -83,7 +87,10 @@ class Tuple {
    */
   virtual RC cell_at(int index, Value &cell) const = 0;
 
-  virtual std::unique_ptr<Tuple> copy() const { return nullptr; }
+  virtual std::unique_ptr<Tuple> copy() const {
+    assert(false);
+    return nullptr;
+  }
 
   /**
    * @brief 根据cell的描述，获取cell的值
@@ -247,6 +254,8 @@ class ProjectTuple : public Tuple {
     return tuple_->find_cell(*spec, cell);
   }
 
+  virtual std::unique_ptr<Tuple> copy() const override { return tuple_->copy(); }
+
   RC find_cell(const TupleCellSpec &spec, Value &cell) const override { return tuple_->find_cell(spec, cell); }
 
 #if 0
@@ -317,6 +326,12 @@ class ValueListTuple : public Tuple {
   }
 
   virtual RC find_cell(const TupleCellSpec &spec, Value &cell) const override { return RC::INTERNAL; }
+
+  [[nodiscard]] std::unique_ptr<Tuple> copy() const override {
+    std::unique_ptr<ValueListTuple> tuple(new ValueListTuple());
+    tuple->cells_ = cells_;
+    return tuple;
+  }
 
  private:
   std::vector<Value> cells_;

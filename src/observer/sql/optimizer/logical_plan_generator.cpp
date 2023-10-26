@@ -14,6 +14,7 @@ See the Mulan PSL v2 for more details. */
 
 #include "sql/optimizer/logical_plan_generator.h"
 #include <memory>
+#include "sql/expr/sub_query_expr.h"
 #include "sql/operator/agg_logical_operator.h"
 #include "sql/operator/calc_logical_operator.h"
 #include "sql/operator/delete_logical_operator.h"
@@ -236,13 +237,73 @@ RC LogicalPlanGenerator::create_plan(FilterStmt *filter_stmt, unique_ptr<Logical
     const FilterObj &filter_obj_left = filter_unit->left();
     const FilterObj &filter_obj_right = filter_unit->right();
 
-    unique_ptr<Expression> left(filter_obj_left.is_attr
-                                    ? static_cast<Expression *>(new FieldExpr(filter_obj_left.field))
-                                    : static_cast<Expression *>(new ValueExpr(filter_obj_left.value)));
+    // Left is attr and value. Const value list and sub query are not supported yet.
+    unique_ptr<Expression> left = nullptr;
+    switch (filter_obj_left.type) {
+      case FilterObjType::ATTR:
+        left = unique_ptr<Expression>(new FieldExpr(filter_obj_left.field));
+        break;
+      case FilterObjType::VALUE:
+        left = unique_ptr<Expression>(new ValueExpr(filter_obj_left.value));
+        break;
+      case FilterObjType::VALUE_LIST:
+        left = unique_ptr<Expression>(new SubQueryExpr(filter_obj_left.value_list));
+        break;
+      case FilterObjType::SUB_QUERY:
+        left = unique_ptr<Expression>(new SubQueryExpr(filter_obj_left.sub_query));
+        break;
+      default:
+        assert(false);
+    }
 
-    unique_ptr<Expression> right(filter_obj_right.is_attr
-                                     ? static_cast<Expression *>(new FieldExpr(filter_obj_right.field))
-                                     : static_cast<Expression *>(new ValueExpr(filter_obj_right.value)));
+    if (left->type() == ExprType::SUB_QUERY) {
+      SubQueryExpr *sub_query_expr = dynamic_cast<SubQueryExpr *>(left.get());
+      RC rc = sub_query_expr->init();
+      if (rc != RC::SUCCESS) {
+        LOG_WARN("failed to init sub query expr. rc=%s", strrc(rc));
+        return rc;
+      }
+      CompOp comp_op = filter_unit->comp();
+      if (comp_op == IN_OP || comp_op == NOT_IN) {
+        sub_query_expr->set_return_value(false);
+      } else {
+        sub_query_expr->set_return_value(true);
+      }
+    }
+
+    unique_ptr<Expression> right = nullptr;
+    switch (filter_obj_right.type) {
+      case FilterObjType::ATTR:
+        right = unique_ptr<Expression>(new FieldExpr(filter_obj_right.field));
+        break;
+      case FilterObjType::VALUE:
+        right = unique_ptr<Expression>(new ValueExpr(filter_obj_right.value));
+        break;
+      case FilterObjType::VALUE_LIST:
+        right = unique_ptr<Expression>(new SubQueryExpr(filter_obj_right.value_list));
+        break;
+      case FilterObjType::SUB_QUERY:
+        right = unique_ptr<Expression>(new SubQueryExpr(filter_obj_right.sub_query));
+        break;
+      default:
+        assert(false);
+    }
+
+    if (right->type() == ExprType::SUB_QUERY) {
+      auto *sub_query_expr = dynamic_cast<SubQueryExpr *>(right.get());
+      RC rc = sub_query_expr->init();
+      if (rc != RC::SUCCESS) {
+        LOG_WARN("failed to init sub query expr. rc=%s", strrc(rc));
+        return rc;
+      }
+      CompOp comp_op = filter_unit->comp();
+      if (comp_op == IN_OP || comp_op == NOT_IN) {
+        sub_query_expr->set_return_value(false);
+      } else {
+        sub_query_expr->set_return_value(true);
+      }
+    }
+    assert(right != nullptr);
 
     ComparisonExpr *cmp_expr = new ComparisonExpr(filter_unit->comp(), std::move(left), std::move(right));
     cmp_exprs.emplace_back(cmp_expr);

@@ -107,6 +107,8 @@ void SessionStage::handle_request(StageEvent *event) {
   Session::set_current_session(nullptr);
 }
 
+SessionEvent *event = nullptr;
+
 /**
  * 处理一个SQL语句经历这几个阶段。
  * 虽然看起来流程比较多，但是对于大多数SQL来说，更多的可以关注parse和executor阶段。
@@ -118,6 +120,7 @@ void SessionStage::handle_request(StageEvent *event) {
  * 调试或者看代码执行过程即可。
  */
 RC SessionStage::handle_sql(SQLStageEvent *sql_event) {
+  event = sql_event->session_event();
   RC rc = query_cache_stage_.handle_request(sql_event);
   if (OB_FAIL(rc)) {
     LOG_TRACE("failed to do query cache. rc=%s", strrc(rc));
@@ -150,6 +153,27 @@ RC SessionStage::handle_sql(SQLStageEvent *sql_event) {
   rc = execute_stage_.handle_request(sql_event);
   if (OB_FAIL(rc)) {
     LOG_TRACE("failed to do execute. rc=%s", strrc(rc));
+    return rc;
+  }
+
+  /// Hopefully, gracefully return
+  return rc;
+}
+
+RC SessionStage::handle_sub_sql(SQLStageEvent *sql_event) {
+  sql_event->set_event(event);
+  /// Binder --> binding the node we get from the last stage with catalog / table infos
+  /// To generate the statement / context
+  RC rc = resolve_stage_.handle_request(sql_event);
+  if (OB_FAIL(rc)) {
+    LOG_TRACE("failed to do resolve. rc=%s", strrc(rc));
+    return rc;
+  }
+
+  /// Planner / Optimizer --> potentially generate the logical / physical plan based on the statement
+  rc = optimize_stage_.handle_request(sql_event);
+  if (rc != RC::UNIMPLENMENT && rc != RC::SUCCESS) {
+    LOG_TRACE("failed to do optimize. rc=%s", strrc(rc));
     return rc;
   }
 
