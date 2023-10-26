@@ -208,7 +208,7 @@ bool DefaultConditionFilter::filter(const Record &rec) const {
     right_value.set_value(right_.value);
   }
 
-  std::cout << "left_value: " << left_value.to_string() << " right_value: " << right_value.to_string() << std::endl;
+  // std::cout << "left_value: " << left_value.to_string() << " right_value: " << right_value.to_string() << std::endl;
 
   if (Value::check_null(left_value) || Value::check_null(right_value)) {
     return false;

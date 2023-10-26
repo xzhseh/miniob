@@ -360,30 +360,20 @@ RC PhysicalPlanGenerator::create_plan(AggLogicalOperator &logical_oper, std::uni
   assert(child_physical_oper != nullptr);
 
   // Get the relevant data
-  auto agg_keys = logical_oper.get_agg_keys();
   auto agg_types = logical_oper.get_agg_types();
-  auto all_keys = logical_oper.get_all_keys();
+  auto is_agg = logical_oper.get_is_agg();
+  auto fields = logical_oper.get_fields();
+  auto having = logical_oper.get_having();
 
-  // Construct exprs
-  // std::vector<FieldExpr> exprs(agg_keys.size());
-  std::vector<FieldExpr> exprs(all_keys.size());
-
-  for (int i = 0; i < all_keys.size(); ++i) {
-    // for (int i = 0; i < agg_keys.size(); ++i) {
-    exprs.push_back(all_keys[i]);
-    // for (const auto &f : all_keys) {
-    //   if (f.meta() == agg_keys[i].first) {
-    //     exprs.push_back(all_keys[i]);
-    //   }
-    // }
+  // Construct exprs for fields
+  std::vector<FieldExpr> field_exprs;
+  for (const auto &field : fields) {
+    field_exprs.emplace_back(field);
   }
 
   // Construct the physical operator
   AggPhysicalOperator *agg_oper = new AggPhysicalOperator{
-      agg_keys,
-      agg_types,
-      exprs,
-  };
+      child_physical_oper.get(), std::move(having), std::move(field_exprs), std::move(is_agg), std::move(agg_types)};
 
   agg_oper->add_child(std::move(child_physical_oper));
 

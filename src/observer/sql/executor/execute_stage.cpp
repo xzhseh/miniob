@@ -66,25 +66,32 @@ RC ExecuteStage::handle_request_with_physical_operator(SQLStageEvent *sql_event)
   switch (stmt->type()) {
     case StmtType::SELECT: {
       auto *select_stmt = dynamic_cast<SelectStmt *>(stmt);
+      bool with_table_name = select_stmt->tables().size() > 1;
 
       // FIXME: Refactor this (This is currently hard-coded for aggregation case)
       if (select_stmt->agg_stmt() != nullptr) {
         // Construct the schema based on the agg_stmt
         // rather than the query_fields at present
-        auto &keys = select_stmt->agg_stmt()->get_keys();
-        auto &types = select_stmt->agg_stmt()->get_types();
+        auto &keys = select_stmt->agg_stmt()->get_fields();
+        auto &types = select_stmt->agg_stmt()->get_agg_types();
+        auto &is_agg = select_stmt->agg_stmt()->get_is_agg();
         int n = keys.size();
         for (int i = 0; i < n; ++i) {
-          auto &[f, n] = keys[i];
-          auto name = (n > 1) ? "*" : f->name();
-          const std::string s = std::string(agg_to_string(types[i])) + "(" + name + ")";
-          // std::cout << "current s: " << s << std::endl;
+          auto &f = keys[i];
+          std::string s{""};
+          if (f.table() != nullptr && with_table_name) {
+            s += f.table_name();
+            s += ".";
+          }
+
+          s += (f.meta() == nullptr && f.table() == nullptr) ? "*" : f.field_name();
+          if (is_agg[i]) {
+            s = std::string(agg_to_string(types[i])) + "(" + s + ")";
+          }
           schema.append_cell(s.c_str());
         }
         break;
       }
-
-      bool with_table_name = select_stmt->tables().size() > 1;
 
       for (size_t i = 0; i < select_stmt->query_fields().size(); i++) {
         const auto &field = select_stmt->query_fields()[i];
