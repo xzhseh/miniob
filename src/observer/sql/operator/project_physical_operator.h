@@ -27,7 +27,12 @@ class ProjectPhysicalOperator : public PhysicalOperator {
 
   virtual ~ProjectPhysicalOperator() = default;
 
-  void add_expressions(std::vector<std::unique_ptr<Expression>> &&expressions) {}
+  void add_expressions(std::vector<std::unique_ptr<Expression>> &&expressions) {
+    expressions_ = std::move(expressions);
+  }
+  std::vector<std::unique_ptr<Expression>>&& get_expressions() {
+    return std::move(expressions_);
+  }
   void add_projection(const Table *table, const FieldMeta *field);
 
   PhysicalOperatorType type() const override { return PhysicalOperatorType::PROJECT; }
@@ -41,6 +46,7 @@ class ProjectPhysicalOperator : public PhysicalOperator {
   Tuple *current_tuple() override;
 
  private:
+  std::vector<std::unique_ptr<Expression>> expressions_;
   ProjectTuple tuple_;
   bool agg_flag_{false};
 };

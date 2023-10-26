@@ -26,6 +26,7 @@ class Expression;
 
 /// Aggregate functions
 enum agg { NONE, AGG_MIN, AGG_MAX, AGG_AVG, AGG_SUM, AGG_COUNT };
+enum field_function {NOFUNC, F_LENGTH, F_ROUND, F_DATA_FORMAT};
 
 inline std::string agg_to_string(agg a) {
   std::string ret{""};
@@ -67,6 +68,11 @@ struct RelAttrSqlNode {
   std::string attribute_name;  ///< attribute / column name
   enum agg aggregate_func;     ///< aggregate function (may be NULL/EMPTY)
   bool agg_valid_flag{true};   /// Whether the parsed aggregate syntax is valid
+  enum field_function func; // function type
+  int round_num; // 保留浮点位数
+  int length; // 原生字符串长度, 如果是字段的话为-1
+  std::string char_name;
+  std::string date_format;
   std::string alias_name;      ///< alias name (may be NULL/EMPTY)
 };
 

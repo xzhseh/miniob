@@ -24,6 +24,7 @@ See the Mulan PSL v2 for more details. */
 #include "session/session.h"
 #include "sql/executor/command_executor.h"
 #include "sql/operator/calc_physical_operator.h"
+#include "sql/operator/project_physical_operator.h"
 #include "sql/parser/parse_defs.h"
 #include "sql/stmt/select_stmt.h"
 #include "sql/stmt/stmt.h"
@@ -66,7 +67,6 @@ RC ExecuteStage::handle_request_with_physical_operator(SQLStageEvent *sql_event)
   switch (stmt->type()) {
     case StmtType::SELECT: {
       auto *select_stmt = dynamic_cast<SelectStmt *>(stmt);
-
       // FIXME: Refactor this (This is currently hard-coded for aggregation case)
       if (select_stmt->agg_stmt() != nullptr) {
         // Construct the schema based on the agg_stmt

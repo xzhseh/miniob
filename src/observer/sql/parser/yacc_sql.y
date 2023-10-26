@@ -116,7 +116,10 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
         BY
         ASC
         AS
-
+        LENGTH
+        ROUND
+        DATE_FORMAT
+    
 /** union 中定义各种数据类型，真实生成的代码也是union类型，所以不能有非POD类型的数据 **/
 %union {
   ParsedSqlNode *                   sql_node;
@@ -142,6 +145,7 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
   int                               number;
   float                             floats;
   enum agg                          agg;
+  enum field_function                  field_function;
   bool                              null;
 }
 
@@ -796,6 +800,7 @@ select_attr:
       attr.relation_name  = "";
       attr.attribute_name = "*";
       attr.aggregate_func = agg::NONE;
+      attr.func = field_function::NOFUNC;
       $$->emplace_back(attr);
     }
     // TODO: Add the syntax for cases like `select agg(c1), count(*) from t1;`
@@ -806,6 +811,7 @@ select_attr:
       attr.relation_name = "";
       attr.attribute_name = "*";
       attr.aggregate_func = $1;
+      attr.func = field_function::NOFUNC;
       $$->emplace_back(attr);
       if ($5 != nullptr) {
         for (const auto &e : *$5) {
@@ -821,6 +827,7 @@ select_attr:
       attr.relation_name = "";
       attr.attribute_name = "*";
       attr.aggregate_func = $3;
+      attr.func = field_function::NOFUNC;
       $$->emplace_back(attr);
       $$->emplace_back(*$1);
     }
@@ -839,12 +846,14 @@ select_attr:
       $$ = new std::vector<RelAttrSqlNode>;
       RelAttrSqlNode attr;
       attr.agg_valid_flag = false;
+      attr.func = field_function::NOFUNC;
       $$->emplace_back(attr);
     }
     | agg LBRACE '*' COMMA rel_attr RBRACE {
       $$ = new std::vector<RelAttrSqlNode>;
       RelAttrSqlNode attr;
       attr.agg_valid_flag = false;
+      attr.func = field_function::NOFUNC;
       $$->emplace_back(attr);
     }
     ;
@@ -871,6 +880,7 @@ rel_attr:
     ID option_as {
       $$ = new RelAttrSqlNode;
       $$->relation_name = "";
+      $$->func = field_function::NOFUNC;
       $$->attribute_name = $1;
       $$->aggregate_func = agg::NONE;
       if($2 != nullptr) {
@@ -883,6 +893,7 @@ rel_attr:
       $$ = new RelAttrSqlNode;
       $$->relation_name  = $1;
       $$->attribute_name = $3;
+      $$->func = field_function::NOFUNC;
       $$->aggregate_func = agg::NONE;
       if($4 != nullptr) {
 	$$->alias_name = $4;
@@ -896,6 +907,7 @@ rel_attr:
       $$ = new RelAttrSqlNode;
       $$->relation_name = "";
       $$->attribute_name = $3;
+      $$->func = field_function::NOFUNC;
       $$->aggregate_func = $1;
       free($3);
     }
@@ -904,6 +916,47 @@ rel_attr:
       $$->relation_name = $3;
       $$->attribute_name = $5;
       $$->aggregate_func = $1;
+      $$->func = field_function::NOFUNC;
+      free($3);
+      free($5);
+    } 
+    | LENGTH LBRACE ID RBRACE {
+      $$ = new RelAttrSqlNode;
+      $$->relation_name = "";
+      $$->attribute_name = $3;
+      $$->aggregate_func = agg::NONE;
+      $$->length = -1;
+      $$->char_name = $3;
+      $$->func = field_function::F_LENGTH;
+      free($3);
+    } 
+    | LENGTH LBRACE SSS RBRACE {
+      $$ = new RelAttrSqlNode;
+      $$->relation_name = "";
+      $$->attribute_name = "";
+      $$->aggregate_func = agg::NONE;
+      $$->char_name = $3;
+      $$->length = strlen($3) - 2;
+      $$->func = field_function::F_LENGTH;
+    }
+    | ROUND LBRACE ID COMMA NUMBER RBRACE {
+      $$ = new RelAttrSqlNode;
+      $$->relation_name = "";
+      $$->attribute_name = $3;
+      $$->char_name = $3;
+      $$->aggregate_func = agg::NONE;
+      $$->func = field_function::F_ROUND;
+      $$->round_num = $5;
+      free($3);
+    }
+    | DATE_FORMAT LBRACE ID COMMA SSS RBRACE {
+      $$ = new RelAttrSqlNode;
+      $$->relation_name = "";
+      $$->attribute_name = $3;
+      $$->char_name = $3;
+      $$->aggregate_func = agg::NONE;
+      $$->func = field_function::F_DATA_FORMAT;
+      $$->date_format = common::substr($5, 1, strlen($5) - 2);
       free($3);
       free($5);
     }

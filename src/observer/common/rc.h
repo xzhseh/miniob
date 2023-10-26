@@ -74,7 +74,8 @@ See the Mulan PSL v2 for more details. */
   DEFINE_RC(VARIABLE_NOT_EXISTS)         \
   DEFINE_RC(VARIABLE_NOT_VALID)          \
   DEFINE_RC(LOGBUF_FULL)                 \
-  DEFINE_RC(CONSTRAINT_UNIQUE)
+  DEFINE_RC(CONSTRAINT_UNIQUE)           \
+  DEFINE_RC(FUNCTION_NOT_MATCH_VALUE)    
 
 enum class RC {
 #define DEFINE_RC(name) name,

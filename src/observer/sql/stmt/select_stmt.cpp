@@ -228,7 +228,6 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt) {
             LOG_WARN("no such field. field=%s.%s.%s", db->name(), table->name(), field_name);
             return RC::SCHEMA_FIELD_MISSING;
           }
-
           query_fields.emplace_back(table, field_meta);
           if (!relation_attr.alias_name.empty()) {
             alias_vec.push_back({true, relation_attr.alias_name, table_name});
@@ -355,9 +354,11 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt) {
 
   // everything alright
   SelectStmt *select_stmt = new SelectStmt();
-
+  // TODO(maybe) change fields beacuse of length function or data_format
   // TODO add expression copy
+
   select_stmt->tables_.swap(tables);
+  select_stmt->make_funcion_express(select_sql.attributes);
   select_stmt->query_fields_.swap(query_fields);
   select_stmt->alias_vec_.swap(alias_vec);
   select_stmt->filter_stmt_ = filter_stmt;
@@ -367,3 +368,30 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt) {
   stmt = select_stmt;
   return RC::SUCCESS;
 }
+
+std::vector<std::unique_ptr<Expression>>&& SelectStmt::make_funcion_express(const std::vector<RelAttrSqlNode>& attributes) {
+  std::vector<std::unique_ptr<Expression>> change_functions;
+  for(int j = 0; j < attributes.size(); j++) {
+    int i = attributes.size() - j - 1;
+    if(attributes[i].func != field_function::NOFUNC) {
+      if(attributes[i].func == field_function::F_LENGTH) {
+        if(attributes[i].length == -1) {
+          change_functions.push_back(std::make_unique<LengthExpr>(i, attributes[i].char_name));
+        } else {
+          Value value(attributes[i].length);
+          change_functions.push_back(std::make_unique<LengthExpr>(value, i, attributes[i].char_name));
+        }
+      }
+      if(attributes[i].func == field_function::F_ROUND) {
+        Value value(attributes[i].round_num);
+        change_functions.push_back(std::make_unique<RoundExpr>(value, i, attributes[i].char_name));
+      }
+      if(attributes[i].func == field_function::F_DATA_FORMAT) {
+        printf("make function %s \n",attributes[i].date_format.c_str());
+        Value value(attributes[i].date_format.c_str());
+        change_functions.push_back(std::make_unique<DataFormatExpr>(value, i, attributes[i].char_name));
+      }
+    }
+  }
+  query_functions_ =  std::move(change_functions);
+} 

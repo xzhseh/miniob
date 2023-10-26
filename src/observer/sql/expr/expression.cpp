@@ -15,6 +15,9 @@ See the Mulan PSL v2 for more details. */
 #include "sql/expr/expression.h"
 #include "sql/expr/tuple.h"
 #include "sql/parser/parse_defs.h"
+#include <sstream>
+#include <iomanip>
+#include <cmath>
 
 using namespace std;
 
@@ -320,6 +323,67 @@ RC ArithmeticExpr::calc_value(const Value &left_value, const Value &right_value,
     } break;
   }
   return rc;
+}
+RC LengthExpr::get_value(const Tuple &tuple, Value &value) const {
+    if(judge_by_index_) {
+      tuple.cell_at(tuple_index_, value);
+      if(value.attr_type() != CHARS) {
+        return RC::FUNCTION_NOT_MATCH_VALUE;
+      }
+      value.set_int(strlen(value.get_string().c_str()));
+      return RC::SUCCESS;
+    } else {
+      value = value_;
+      return RC::SUCCESS;
+    }
+    return RC::SUCCESS;
+}
+
+RC RoundExpr::get_value(const Tuple &tuple, Value &value) const {
+  tuple.cell_at(tuple_index_, value);
+  if(value.attr_type() != FLOATS) {
+    return RC::FUNCTION_NOT_MATCH_VALUE;
+  } 
+  float num = value.get_float();
+  int decimals = value_.get_int();
+  float rounded = std::round(num * std::pow(10, decimals)) / std::pow(10, decimals);
+  std::stringstream ss;
+  ss << std::fixed << std::setprecision(decimals) << rounded;
+  value.set_string(ss.str().c_str());
+  return RC::SUCCESS;
+}
+std::string DataFormatExpr::name() const {
+    std::stringstream ss;
+    ss <<"date_format("<<char_name<<","<<value_.get_string()<<")";
+    return ss.str();
+}
+RC DataFormatExpr::get_value(const Tuple &tuple, Value &value) const {
+  tuple.cell_at(tuple_index_, value);
+  if(value.attr_type() != DATE) {
+    return RC::FUNCTION_NOT_MATCH_VALUE;
+  }
+  std::string date_format = value_.get_string();
+  int date = value.get_date();
+  int year = date / 10000;
+  int month = date % 10000 / 100;
+  int day = date % 1000000;
+  std::string result = date_format;
+    std::size_t pos = result.find("%Y");
+    if (pos != std::string::npos) {
+        result.replace(pos, 2, std::to_string(year));
+    }
+
+    pos = result.find("%m");
+    if (pos != std::string::npos) {
+        result.replace(pos, 2, std::to_string(month));
+    }
+
+    pos = result.find("%d");
+    if (pos != std::string::npos) {
+        result.replace(pos, 2, std::to_string(day));
+    }
+  value.set_string(result.c_str());
+  return RC::SUCCESS; 
 }
 
 RC ArithmeticExpr::get_value(const Tuple &tuple, Value &value) const {

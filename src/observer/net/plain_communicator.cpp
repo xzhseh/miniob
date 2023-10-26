@@ -16,6 +16,8 @@ See the Mulan PSL v2 for more details. */
 #include "common/io/io.h"
 #include "common/log/log.h"
 #include "event/session_event.h"
+#include "sql/operator/project_physical_operator.h"
+#include "sql/executor/sql_result.h"
 #include "net/buffered_writer.h"
 #include "session/session.h"
 #include "sql/expr/tuple.h"
@@ -185,10 +187,40 @@ RC PlainCommunicator::write_result_internal(SessionEvent *event, bool &need_disc
 
   const TupleSchema &schema = sql_result->tuple_schema();
   const int cell_num = schema.cell_num();
-
+  std::vector<std::unique_ptr<Expression>> functions;
+  ProjectPhysicalOperator* oper =  dynamic_cast<ProjectPhysicalOperator*>(sql_result->get_operator()->get());
+  if(nullptr != oper) {
+    functions = oper->get_expressions();
+  }
   for (int i = 0; i < cell_num; i++) {
     const TupleCellSpec &spec = schema.cell_at(i);
     const char *alias = spec.alias();
+    bool function_name_flag = false;
+    for(int j = 0; j < functions.size(); j++) {
+      if(functions[j]->index() == i) {
+      function_name_flag = true;
+      std::string function_name = functions[j]->name();
+      const char* func_name = function_name.c_str();
+      if (0 != i) {
+        const char *delim = " | ";
+        rc = writer_->writen(delim, strlen(delim));
+        if (OB_FAIL(rc)) {
+          LOG_WARN("failed to send data to client. err=%s", strerror(errno));
+          return rc;
+        }
+      }
+
+        int len = strlen(func_name);
+        rc = writer_->writen(func_name, len);
+        if (OB_FAIL(rc)) {
+        LOG_WARN("failed to send data to client. err=%s", strerror(errno));
+        sql_result->close();
+        return rc;
+        }
+        break;
+      }
+    }
+    if(!function_name_flag) {
     if (nullptr != alias || alias[0] != 0) {
       if (0 != i) {
         const char *delim = " | ";
@@ -206,6 +238,7 @@ RC PlainCommunicator::write_result_internal(SessionEvent *event, bool &need_disc
         sql_result->close();
         return rc;
       }
+    }
     }
   }
 
@@ -235,16 +268,31 @@ RC PlainCommunicator::write_result_internal(SessionEvent *event, bool &need_disc
           return rc;
         }
       }
-
+      // function process
       Value value;
-      rc = tuple->cell_at(i, value);
+      bool function_process = false;
+      for(int i = 0; i < functions.size(); i++) {
+        if((functions[i]->type() == ExprType::LENGTH || functions[i]->type() == ExprType::DATA_FORMAT || functions[i]->type() == ExprType::ROUND )&& functions[i]->index() == i) {
+            rc = functions[i]->get_value(*tuple, value);
+            if(rc != RC::SUCCESS) {
+              LOG_WARN("function not match");
+              sql_result->set_return_code(rc);
+              sql_result->close();
+              return rc;
+            }
+            function_process = true;
+            break;
+        }
+      }
+      if(!function_process) {
+        rc = tuple->cell_at(i, value);
+      }
       if (rc != RC::SUCCESS) {
         sql_result->close();
         return rc;
       }
 
       std::string cell_str = value.to_string();
-
       // std::cout << "[plain communicator] current cell_str: " << cell_str << std::endl;
 
       // Check null here 😅

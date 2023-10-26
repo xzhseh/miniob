@@ -75,9 +75,11 @@ class SelectStmt : public Stmt {
                            std::unordered_map<std::string, std::string> &table_alias_map);
 
   AggStmt *agg_stmt() const { return agg_stmt_; }
-
+  std::vector<std::unique_ptr<Expression>>&& query_functions() {return std::move(query_functions_);}
+  std::vector<std::unique_ptr<Expression>>&& make_funcion_express(const std::vector<RelAttrSqlNode>& attributes);
  private:
   std::vector<Field> query_fields_;
+  std::vector<std::unique_ptr<Expression>> query_functions_;
   std::vector<AliasCell> alias_vec_;  // Map query_fields_ to alias,if size of alias_vec_ is 0,then no alias
   std::vector<Table *> tables_;
   std::vector<JoinStmt> join_stmts_;

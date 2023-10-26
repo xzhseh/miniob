@@ -42,6 +42,9 @@ enum class ExprType {
   COMPARISON,   ///< 需要做比较的表达式
   CONJUNCTION,  ///< 多个表达式使用同一种关系(AND或OR)来联结
   ARITHMETIC,   ///< 算术运算
+  LENGTH,       ///< 长度 select 和 where 这两个地方可能用到
+  ROUND,
+  DATA_FORMAT
 };
 
 /**
@@ -88,6 +91,7 @@ class Expression {
    */
   virtual std::string name() const { return name_; }
   virtual void set_name(std::string name) { name_ = name; }
+  virtual int index() const {return -1;}
 
  private:
   std::string name_;
@@ -117,6 +121,7 @@ class FieldExpr : public Expression {
   const char *field_name() const { return field_.field_name(); }
 
   RC get_value(const Tuple &tuple, Value &value) const override;
+  
 
  private:
   Field field_;
@@ -285,4 +290,73 @@ class ArithmeticExpr : public Expression {
   Type arithmetic_type_;
   std::unique_ptr<Expression> left_;
   std::unique_ptr<Expression> right_;
+};
+
+/**
+ * @brief 长度表达式
+ * @ingroup Expression
+ */
+
+class LengthExpr : public Expression{
+public:
+  explicit  LengthExpr(const Value &value, int index, std::string name) : value_(value), tuple_index_(index), char_name(name) {}
+  explicit LengthExpr(int index, std::string name) : tuple_index_(index), judge_by_index_(true), char_name(name) {}
+  virtual ~LengthExpr() = default;
+  RC get_value(const Tuple &tuple, Value &value) const override;
+  int index() const override{
+    return tuple_index_;
+  }
+  ExprType type() const override { return ExprType::LENGTH; }
+
+  AttrType value_type() const override {
+    // 返回表达式值的类型
+    return INTS;
+  }
+  virtual std::string name() const override{
+    return "length(" + char_name + ")";
+  }
+private:
+  Value value_;
+  bool judge_by_index_{false};
+  std::string char_name;
+  int tuple_index_ = -1;
+};
+class RoundExpr : public Expression {
+  public:
+  explicit RoundExpr(const Value &value, int index, std::string name): value_(value), tuple_index_(index), char_name(name) {}
+  ExprType type() const override { return ExprType::ROUND; }
+  virtual ~RoundExpr() = default;
+  RC get_value(const Tuple &tuple, Value &value) const override;
+  int index() const override {
+    return tuple_index_;
+  }
+  AttrType value_type() const override {
+    return CHARS;
+  }
+  virtual std::string name() const override{
+    return "round(" + char_name + "," + std::to_string(value_.get_int()) + ")";
+  }
+  private:
+  Value value_;
+  std::string char_name;
+  int tuple_index_ = -1;
+};
+
+class DataFormatExpr : public Expression {
+  public:
+  explicit DataFormatExpr(const Value &value, int index, std::string name): value_(value), tuple_index_(index), char_name(name) {}
+  ExprType type() const override { return ExprType::DATA_FORMAT; }
+  virtual ~DataFormatExpr() = default;
+  RC get_value(const Tuple &tuple, Value &value) const override;
+  int index() const override {
+    return tuple_index_;
+  }
+  AttrType value_type() const override {
+    return CHARS;
+  }
+  virtual std::string name() const override;
+  private:
+  Value value_;
+  int tuple_index_ = -1;
+  std::string char_name;
 };
