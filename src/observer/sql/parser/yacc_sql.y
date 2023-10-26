@@ -163,6 +163,7 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
 %type <value>               value
 %type <number>              number
 %type <comp>                comp_op
+%type <comp>                in_op
 %type <index_attr>          index_attr
 %type <index_attr_name_list>     index_attr_name_list 
 %type <attr_name_list>      attr_name_list           

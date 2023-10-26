@@ -94,9 +94,14 @@ enum CompOp {
   NOT_LIKE_OP,  ///< "NOT LIKE"
   IS,
   IS_NOT,
+  IN_OP,
+  NOT_IN,
+  EXISTS_OP,
+  NOT_EXISTS,
   NO_OP
 };
 
+struct SelectSqlNode;
 /**
  * @brief 表示一个条件比较
  * @ingroup SQLParser
@@ -106,15 +111,26 @@ enum CompOp {
  * 这个结构中记录的仅仅支持字段和值。
  */
 struct ConditionSqlNode {
-  int left_is_attr;           ///< TRUE if left-hand side is an attribute
-                              ///< 1时，操作符左边是属性名，0时，是属性值
+  int left_is_attr;                    ///< TRUE if left-hand side is an attribute
+                                       ///< 1时，操作符左边是属性名，0时，是属性值
+                                       ///< 2时，是子查询
+                                       ///< 3时，是常量列表
+  std::vector<Value> left_value_list;  ///< const value list for IN/NOT IN,EXISTS/NOT EXISTS
+  SelectSqlNode *left_sub_select = {nullptr};
   Value left_value;           ///< left-hand side value if left_is_attr = FALSE
   RelAttrSqlNode left_attr;   ///< left-hand side attribute
   CompOp comp;                ///< comparison operator
   int right_is_attr;          ///< TRUE if right-hand side is an attribute
                               ///< 1时，操作符右边是属性名，0时，是属性值
+                              ///< 2时，是子查询
+                              ///< 3时，是常量列表
   RelAttrSqlNode right_attr;  ///< right-hand side attribute if right_is_attr = TRUE 右边的属性
   Value right_value;          ///< right-hand side value if right_is_attr = FALSE
+
+  std::vector<Value> right_value_list;  ///< const value list for IN/NOT IN,EXISTS/NOT EXISTS
+  // Use unique_ptr will cause compile error,hard to handle
+  // The memory will leak, but it doesn't matter
+  SelectSqlNode *right_sub_select = {nullptr};  ///< sub select for IN/NOT IN,EXISTS/NOT EXISTS
 };
 
 struct OrderBySqlNode {
