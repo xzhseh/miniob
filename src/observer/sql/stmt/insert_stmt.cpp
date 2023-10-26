@@ -52,7 +52,7 @@ RC InsertStmt::create(Db *db, InsertSqlNode &inserts, Stmt *&stmt) {
     const FieldMeta *field_meta = table_meta.field(i + sys_field_num);
     AttrType field_type = field_meta->type();
     AttrType value_type = values[i].attr_type();
-    
+
     // insert 无法识别 text 和 chars, 需要做转换
     if (value_type == CHARS && field_type == TEXT) {
       value_type = TEXT;

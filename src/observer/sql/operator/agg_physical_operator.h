@@ -16,35 +16,35 @@
 /// The self-defined hasher for `Value`
 namespace std {
 
-template<>
+template <>
 struct hash<Value> {
-    std::size_t operator()(const Value &v) const noexcept {
-        std::size_t h = 0;
+  std::size_t operator()(const Value &v) const noexcept {
+    std::size_t h = 0;
 
-        // hash the attr_type_
-        h ^= hash<AttrType>()(v.attr_type());
+    // hash the attr_type_
+    h ^= hash<AttrType>()(v.attr_type());
 
-        // hash the value based on attr_type_
-        switch(v.attr_type()) {
-            case INTS:
-                h ^= hash<int>()(v.get_int());
-                break;
-            case FLOATS:
-                h ^= hash<float>()(v.get_float());
-                break;
-            case CHARS:
-                h ^= hash<std::string>()(v.get_string());
-                break;
-            case DATE:
-                h ^= hash<int>()(v.get_date());
-                break;
-            // TODO: add more types that need support for aggregation
-            default:
-                break;
-        }
-
-        return h;
+    // hash the value based on attr_type_
+    switch (v.attr_type()) {
+      case INTS:
+        h ^= hash<int>()(v.get_int());
+        break;
+      case FLOATS:
+        h ^= hash<float>()(v.get_float());
+        break;
+      case CHARS:
+        h ^= hash<std::string>()(v.get_string());
+        break;
+      case DATE:
+        h ^= hash<int>()(v.get_date());
+        break;
+      // TODO: add more types that need support for aggregation
+      default:
+        break;
     }
+
+    return h;
+  }
 };
 
 }  // namespace std
@@ -87,30 +87,26 @@ struct hash<AggregateKey> {
       // Combine the current hash with the hash of the key
       curr_hash ^= value_hasher(key) + 0x9e3779b9 + (curr_hash << 6) + (curr_hash >> 2);
     }
-    
+
     return curr_hash;
   }
 };
 
 }  // namespace std
 
-
 /// Please note that the child of agg should be exactly one
 class AggPhysicalOperator : public PhysicalOperator {
  public:
   AggPhysicalOperator() = default;
 
-  explicit AggPhysicalOperator(
-    PhysicalOperator *child,
-    ConditionSqlNode &&having,
-    const std::vector<FieldExpr> &&field_exprs,
-    const std::vector<bool> &&is_agg_,
-    const std::vector<agg> &&agg_types)
-    : child_(child),
-      having_(std::move(having)),
-      field_exprs_(std::move(field_exprs)),
-      is_agg_(std::move(is_agg_)),
-      agg_types_(std::move(agg_types)) {}
+  explicit AggPhysicalOperator(PhysicalOperator *child, ConditionSqlNode &&having,
+                               const std::vector<FieldExpr> &&field_exprs, const std::vector<bool> &&is_agg_,
+                               const std::vector<agg> &&agg_types)
+      : child_(child),
+        having_(std::move(having)),
+        field_exprs_(std::move(field_exprs)),
+        is_agg_(std::move(is_agg_)),
+        agg_types_(std::move(agg_types)) {}
 
   virtual ~AggPhysicalOperator() = default;
 
@@ -160,7 +156,7 @@ class AggPhysicalOperator : public PhysicalOperator {
 
  private:
   Trx *trx_{nullptr};
-  PhysicalOperator* child_{nullptr};
+  PhysicalOperator *child_{nullptr};
   ValueListTuple tuple_;
   ConditionSqlNode having_;
   std::vector<AggregateKey> output_keys_;

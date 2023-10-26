@@ -77,10 +77,14 @@ void initialize_agg_value(std::vector<Value> &values, std::vector<agg> &value_ty
           }
         }
       } break;
-      case AGG_MIN: case AGG_MAX: case AGG_SUM: case AGG_AVG: {
+      case AGG_MIN:
+      case AGG_MAX:
+      case AGG_SUM:
+      case AGG_AVG: {
         // Do nothing
       } break;
-      default: assert(false);
+      default:
+        assert(false);
     }
   }
 }
@@ -127,7 +131,9 @@ std::pair<AggregateKey, AggregateValue> AggPhysicalOperator::aggregate_key_value
 void bind_agg_values(std::vector<Value> &lhs, std::vector<Value> &rhs, const std::vector<agg> &value_types) {
   for (int i = 0; i < lhs.size(); ++i) {
     switch (value_types[i]) {
-      case AGG_COUNT: case AGG_SUM: case AGG_AVG: {
+      case AGG_COUNT:
+      case AGG_SUM:
+      case AGG_AVG: {
         lhs[i] = add_value(lhs[i], rhs[i]);
       } break;
       case AGG_MIN: {
@@ -140,7 +146,8 @@ void bind_agg_values(std::vector<Value> &lhs, std::vector<Value> &rhs, const std
           lhs[i] = rhs[i];
         }
       } break;
-      default: assert(false);
+      default:
+        assert(false);
     }
   }
 }
@@ -221,17 +228,18 @@ RC AggPhysicalOperator::close() {
 
 /// Currently we just consider the case with one attribute & one value on each side
 bool check_having(Value &v, agg a, const ConditionSqlNode &having, const Field &field, bool force = false) {
-  if (having.left_value.attr_type() == AttrType::UNDEFINED &&
-      having.right_value.attr_type() == AttrType::UNDEFINED) {
+  if (having.left_value.attr_type() == AttrType::UNDEFINED && having.right_value.attr_type() == AttrType::UNDEFINED) {
     // No having clause for this group by
     return true;
   }
 
   if (having.left_is_attr) {
     // having sum(id) comp value
-    if (force || (having.left_attr.aggregate_func == a &&
-        strcmp((having.left_attr.relation_name.empty()) ? field.table_name() : having.left_attr.relation_name.c_str(), field.table_name()) == 0 &&
-        strcmp(having.left_attr.attribute_name.c_str(), field.field_name()) == 0)) {
+    if (force ||
+        (having.left_attr.aggregate_func == a &&
+         strcmp((having.left_attr.relation_name.empty()) ? field.table_name() : having.left_attr.relation_name.c_str(),
+                field.table_name()) == 0 &&
+         strcmp(having.left_attr.attribute_name.c_str(), field.field_name()) == 0)) {
       switch (having.comp) {
         // Note this should be in normal order
         case CompOp::EQUAL_TO:
@@ -244,7 +252,8 @@ bool check_having(Value &v, agg a, const ConditionSqlNode &having, const Field &
           return v.compare(having.right_value) > 0;
         case CompOp::LESS_THAN:
           return v.compare(having.right_value) < 0;
-        default: assert(false); // Not yet support
+        default:
+          assert(false);  // Not yet support
       }
     } else {
       return true;
@@ -252,8 +261,10 @@ bool check_having(Value &v, agg a, const ConditionSqlNode &having, const Field &
   } else if (having.right_is_attr) {
     // having value comp sum(id)
     if (force || (having.right_attr.aggregate_func == a &&
-        strcmp((having.right_attr.relation_name.empty()) ? field.table_name() : having.right_attr.relation_name.c_str(), field.table_name()) == 0 &&
-        strcmp(having.right_attr.attribute_name.c_str(), field.field_name()) == 0)) {
+                  strcmp((having.right_attr.relation_name.empty()) ? field.table_name()
+                                                                   : having.right_attr.relation_name.c_str(),
+                         field.table_name()) == 0 &&
+                  strcmp(having.right_attr.attribute_name.c_str(), field.field_name()) == 0)) {
       switch (having.comp) {
         // Note this should be in reverse order
         case CompOp::EQUAL_TO:
@@ -266,7 +277,8 @@ bool check_having(Value &v, agg a, const ConditionSqlNode &having, const Field &
           return v.compare(having.left_value) < 0;
         case CompOp::LESS_THAN:
           return v.compare(having.left_value) > 0;
-        default: assert(false); // Not yet support
+        default:
+          assert(false);  // Not yet support
       }
     } else {
       return true;
@@ -300,8 +312,10 @@ RC AggPhysicalOperator::next() {
     cur_value = a_v.values_;
     output_keys_.erase(output_keys_.begin());
 
-    if ((having_.left_is_attr && having_.left_attr.attribute_name == "*" && having_.left_attr.aggregate_func == agg::AGG_COUNT) ||
-        (having_.right_is_attr && having_.right_attr.attribute_name == "*" && having_.right_attr.aggregate_func == agg::AGG_COUNT)) {
+    if ((having_.left_is_attr && having_.left_attr.attribute_name == "*" &&
+         having_.left_attr.aggregate_func == agg::AGG_COUNT) ||
+        (having_.right_is_attr && having_.right_attr.attribute_name == "*" &&
+         having_.right_attr.aggregate_func == agg::AGG_COUNT)) {
       Value v;
       // Add the erase one back
       v.set_int(a_v.count);
@@ -322,7 +336,7 @@ RC AggPhysicalOperator::next() {
         tmp_value.erase(tmp_value.begin());
       }
     }
-    
+
     if (check_flag) {
       break;
     }

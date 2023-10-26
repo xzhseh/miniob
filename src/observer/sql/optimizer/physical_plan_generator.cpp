@@ -367,18 +367,13 @@ RC PhysicalPlanGenerator::create_plan(AggLogicalOperator &logical_oper, std::uni
 
   // Construct exprs for fields
   std::vector<FieldExpr> field_exprs;
-  for (const auto &field: fields) {
+  for (const auto &field : fields) {
     field_exprs.emplace_back(field);
   }
 
   // Construct the physical operator
   AggPhysicalOperator *agg_oper = new AggPhysicalOperator{
-      child_physical_oper.get(),
-      std::move(having),
-      std::move(field_exprs),
-      std::move(is_agg),
-      std::move(agg_types)
-  };
+      child_physical_oper.get(), std::move(having), std::move(field_exprs), std::move(is_agg), std::move(agg_types)};
 
   agg_oper->add_child(std::move(child_physical_oper));
 

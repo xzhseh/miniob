@@ -488,7 +488,7 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt) {
   }
 
   bool agg_flag{false};
-  for (const auto &a: agg_stmt->get_is_agg()) {
+  for (const auto &a : agg_stmt->get_is_agg()) {
     if (a == true) {
       agg_flag = true;
       break;
