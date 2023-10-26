@@ -71,8 +71,16 @@ class FilterUnit {
   const FilterObj &left() const { return left_; }
   const FilterObj &right() const { return right_; }
 
+  void set_is_and(bool is_and) { is_and_ = is_and; }
+  [[nodiscard]] bool is_and() const {
+    assert(is_and_ != -1);
+    return is_and_;
+  }
+
  private:
   CompOp comp_ = NO_OP;
+  // -1 is invalid, 0 is AND, 1 is OR
+  int is_and_{-1};
   FilterObj left_;
   FilterObj right_;
 };

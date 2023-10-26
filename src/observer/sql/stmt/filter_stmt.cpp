@@ -101,6 +101,7 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
   }
 
   filter_unit = new FilterUnit;
+  filter_unit->set_is_and(condition.is_and);
 
   if (condition.left_is_attr == 1) {
     Table *table = nullptr;
