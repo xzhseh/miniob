@@ -248,7 +248,6 @@ RC PlainCommunicator::write_result_internal(SessionEvent *event, bool &need_disc
       // std::cout << "[plain communicator] current cell_str: " << cell_str << std::endl;
 
       // Check null here 😅
-      // TODO: Refactor the code 😅😅
       if (Value::check_null(value)) {
         cell_str = "NULL";
       }

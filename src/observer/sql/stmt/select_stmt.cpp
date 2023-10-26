@@ -15,8 +15,11 @@ See the Mulan PSL v2 for more details. */
 #include "sql/stmt/select_stmt.h"
 #include "common/lang/string.h"
 #include "common/log/log.h"
+#include "sql/parser/parse_defs.h"
+#include "sql/stmt/agg_stmt.h"
 #include "sql/stmt/filter_stmt.h"
 #include "storage/db/db.h"
+#include "storage/field/field_meta.h"
 #include "storage/table/table.h"
 
 SelectStmt::~SelectStmt() {
@@ -33,26 +36,6 @@ static void wildcard_fields(Table *table, std::vector<Field> &field_metas, std::
     field_metas.emplace_back(table, table_meta.field(i));
     alias_vec.emplace_back();
   }
-}
-
-static void agg_builder_inner(std::vector<Field> &query_fields, int &agg_pos,
-                              std::vector<std::pair<const FieldMeta *, int>> &aggregate_keys,
-                              std::vector<agg> &aggregate_types, const RelAttrSqlNode &relation_attr, bool &agg_flag,
-                              bool &non_agg_flag) {
-  if (relation_attr.aggregate_func == agg::NONE) {
-    // Do nothing if this is not a aggregation
-    non_agg_flag = true;
-    return;
-  }
-
-  agg_flag = true;
-
-  assert(query_fields.size() > 0 && "The size of `query_fields` must greater than zero");
-  assert(relation_attr.aggregate_func != agg::NONE);
-
-  aggregate_keys.push_back({query_fields[agg_pos].meta(), query_fields.size() - agg_pos});
-  agg_pos = query_fields.size();
-  aggregate_types.push_back(relation_attr.aggregate_func);
 }
 
 RC bind_order_by(Db *db, const std::vector<Table *> &tables, const std::vector<OrderBySqlNode> &order_bys,
@@ -110,6 +93,178 @@ RC bind_order_by(Db *db, const std::vector<Table *> &tables, const std::vector<O
   return RC::SUCCESS;
 }
 
+auto get_field(Db *db, const std::vector<Table *> &tables, const RelAttrSqlNode &attribute, Field &field) -> RC {
+  RC rc = RC::SUCCESS;
+
+  const char *table_name = attribute.relation_name.c_str();
+  const char *field_name = attribute.attribute_name.c_str();
+
+  if (common::is_blank(table_name)) {
+    if (common::is_blank(field_name)) {
+      return RC::INVALID_ARGUMENT;
+    }
+
+    for (const auto &table : tables) {
+      const FieldMeta *field_meta = table->table_meta().field(field_name);
+      if (field_meta != nullptr) {
+        field = Field{table, field_meta};
+        return rc;
+      }
+    }
+
+    return RC::INVALID_ARGUMENT;
+  } else {
+    const auto *table = db->find_table(table_name);
+    if (table == nullptr) {
+      return RC::INVALID_ARGUMENT;
+    }
+
+    const FieldMeta *field_meta = table->table_meta().field(field_name);
+    if (field_meta == nullptr) {
+      return RC::INVALID_ARGUMENT;
+    }
+
+    field = Field{table, field_meta};
+    return rc;
+  }
+
+  assert(false && "This path is impossible");
+}
+
+/// Check if every group by key can be found in parsed fields
+bool group_by_sanity_check(const std::vector<RelAttrSqlNode> &group_by_keys, const AggStmt &agg_stmt) {
+  const auto &fields = agg_stmt.get_fields();
+  int count{0};
+  bool flag{false};
+
+  bool agg_flag{false};
+  bool non_agg_flag{false};
+
+  for (const auto &i_a : agg_stmt.get_is_agg()) {
+    if (i_a) {
+      agg_flag = true;
+    } else {
+      non_agg_flag = true;
+    }
+  }
+
+  if (agg_flag && non_agg_flag && group_by_keys.empty()) {
+    return false;
+  }
+
+  for (int i = 0; i < fields.size(); ++i) {
+    const auto &field = fields[i];
+
+    if (!agg_stmt.get_is_agg()[i]) {
+      count += 1;
+    }
+
+    for (const auto &g_b_k : group_by_keys) {
+      if (common::is_blank(g_b_k.relation_name.c_str())) {
+        // Table name is empty
+        if (g_b_k.attribute_name == field.field_name()) {
+          if (agg_stmt.get_is_agg()[i] || agg_stmt.get_agg_types()[i] != agg::NONE) {
+            // Must not be aggregate key
+            return false;
+          }
+          flag = true;
+        }
+      } else {
+        // Group by multiple tables
+        if (g_b_k.attribute_name == field.field_name() && g_b_k.relation_name == field.table_name()) {
+          if (agg_stmt.get_is_agg()[i] || agg_stmt.get_agg_types()[i] != agg::NONE) {
+            // Must not be aggregate key
+            return false;
+          }
+          flag = true;
+        }
+      }
+    }
+  }
+
+  if (!flag && !group_by_keys.empty()) {
+    return false;
+  }
+
+  // Check the number of keys
+  if (count != group_by_keys.size() && !group_by_keys.empty()) {
+    return false;
+  }
+
+  return true;
+}
+
+/// Find the corresponding fields and bind they to group by statements
+RC aggregation_builder(Db *db, const std::vector<Table *> &tables, const std::vector<RelAttrSqlNode> &attributes,
+                       AggStmt &agg_stmt) {
+  RC rc = RC::SUCCESS;
+  std::vector<Field> fields;
+  std::vector<bool> is_agg;
+  std::vector<agg> agg_types;
+
+  // Should in reverse order
+  for (int i = attributes.size() - 1; i >= 0; --i) {
+    const auto &attr = attributes[i];
+
+    if (!attr.agg_valid_flag) {
+      // Syntax error for the current aggregation
+      return RC::INVALID_ARGUMENT;
+    }
+
+    if (attr.aggregate_func != agg::NONE) {
+      // Is aggregate key
+      if (attr.attribute_name == "*") {
+        // AGG(*)
+        if (attr.aggregate_func != agg::AGG_COUNT) {
+          // Should be invalid
+          return RC::INVALID_ARGUMENT;
+        } else {
+          assert(agg::AGG_COUNT == attr.aggregate_func && "Expect agg::AGG_COUNT");
+          // Only COUNT(*) is allowed currently
+          is_agg.push_back(true);
+          agg_types.push_back(agg::AGG_COUNT);
+          // Used to distinguish COUNT(*) from others
+          fields.push_back({nullptr, nullptr});
+          continue;
+        }
+      } else {
+        // AGG(rel_attr)
+        Field field;
+        rc = get_field(db, tables, attr, field);
+        if (rc != RC::SUCCESS) {
+          LOG_WARN("[aggregation_builder] failed to get field %s.", attr.attribute_name.c_str());
+          return rc;
+        }
+        is_agg.push_back(true);
+        agg_types.push_back(attr.aggregate_func);
+        fields.push_back(field);
+      }
+    } else {
+      if (attr.attribute_name == "*") {
+        return RC::SUCCESS;
+      }
+      // Normal key
+      Field field;
+      rc = get_field(db, tables, attr, field);
+      if (rc != RC::SUCCESS) {
+        LOG_WARN("[aggregation_builder] failed to get field %s.", attr.attribute_name.c_str());
+        return rc;
+      }
+      is_agg.push_back(false);
+      agg_types.push_back(agg::NONE);
+      fields.push_back(field);
+    }
+  }
+
+  assert(is_agg.size() == agg_types.size() && agg_types.size() == fields.size() && "Expect the sizes to be the same");
+
+  agg_stmt.set_is_agg(std::move(is_agg));
+  agg_stmt.set_agg_types(std::move(agg_types));
+  agg_stmt.set_fields(std::move(fields));
+
+  return rc;
+}
+
 RC SelectStmt::resolve_tables(Db *db, const SelectSqlNode &select_sql, std::vector<Table *> &tables,
                               std::unordered_map<std::string, Table *> &table_map,
                               std::unordered_map<std::string, std::string> &table_alias_map) {
@@ -161,13 +316,6 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt) {
   std::vector<Field> query_fields;
   std::vector<AliasCell> alias_vec;
 
-  // For aggregation
-  std::vector<std::pair<const FieldMeta *, int>> aggregate_keys;
-  std::vector<agg> aggregate_types;
-  int agg_pos = 0;
-  bool agg_flag{false};
-  bool non_agg_flag{false};
-
   // Resolve the query fields
   for (int i = static_cast<int>(select_sql.attributes.size()) - 1; i >= 0; i--) {
     const RelAttrSqlNode &relation_attr = select_sql.attributes[i];
@@ -183,10 +331,6 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt) {
         // We basically need all the metadata from all the underlying tables
         wildcard_fields(table, query_fields, alias_vec);
       }
-
-      // Possibly aggregation on `*`
-      agg_builder_inner(query_fields, agg_pos, aggregate_keys, aggregate_types, relation_attr, agg_flag, non_agg_flag);
-
     } else if (!common::is_blank(relation_attr.relation_name.c_str())) {
       // If the table name is not null. (i.e., `select t1.c1 from t1;`)
       const char *table_name = relation_attr.relation_name.c_str();
@@ -201,11 +345,6 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt) {
         for (Table *table : tables) {
           wildcard_fields(table, query_fields, alias_vec);
         }
-
-        // Essentially the same as `*` cases for aggregation
-        agg_builder_inner(
-            query_fields, agg_pos, aggregate_keys, aggregate_types, relation_attr, agg_flag, non_agg_flag);
-
       } else {
         // select t1.c1 from t1;
         auto iter = table_map.find(table_name);
@@ -219,8 +358,6 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt) {
         if (0 == strcmp(field_name, "*")) {
           // i.e., `select t1.* from t1;`. Though this is essentially the same with `*`.
           wildcard_fields(table, query_fields, alias_vec);
-          agg_builder_inner(
-              query_fields, agg_pos, aggregate_keys, aggregate_types, relation_attr, agg_flag, non_agg_flag);
         } else {
           // It's real name ,not alias name
           const FieldMeta *field_meta = table->table_meta().field(field_name);
@@ -235,8 +372,6 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt) {
           } else {
             alias_vec.push_back(AliasCell());
           }
-          agg_builder_inner(
-              query_fields, agg_pos, aggregate_keys, aggregate_types, relation_attr, agg_flag, non_agg_flag);
         }
       }
     } else {
@@ -271,17 +406,7 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt) {
       } else {
         alias_vec.push_back(AliasCell());
       }
-      agg_builder_inner(query_fields, agg_pos, aggregate_keys, aggregate_types, relation_attr, agg_flag, non_agg_flag);
     }
-  }
-
-  if (agg_flag && non_agg_flag) {
-    return RC::INVALID_ARGUMENT;
-  }
-
-  if (agg_flag) {
-    // Need to reverse the query_fields
-    query_fields = {query_fields.rbegin(), query_fields.rend()};
   }
 
   assert(query_fields.size() == alias_vec.size());
@@ -354,10 +479,35 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt) {
   }
 
   // create aggregation statement
-  AggStmt *agg_stmt{nullptr};
-  if (agg_flag) {
-    agg_stmt = new AggStmt{aggregate_keys, aggregate_types};
-    assert(agg_stmt != nullptr && "`agg_stmt` must not be nullptr");
+  AggStmt *agg_stmt = new AggStmt();
+  assert(agg_stmt != nullptr && "`agg_stmt must not be nullptr");
+
+  rc = aggregation_builder(db, tables, select_sql.attributes, *agg_stmt);
+  if (rc != RC::SUCCESS) {
+    LOG_WARN("failed to build the aggregation statement.");
+    return rc;
+  }
+
+  // i.e., select count(id), id from t1; is INVALID
+  if (!group_by_sanity_check(select_sql.group_bys, *agg_stmt)) {
+    LOG_WARN("invalid group by syntax.");
+    return RC::INVALID_ARGUMENT;
+  }
+
+  bool agg_flag{false};
+  for (const auto &a : agg_stmt->get_is_agg()) {
+    if (a == true) {
+      agg_flag = true;
+      break;
+    }
+  }
+
+  // Set potential having node
+  agg_stmt->set_having(std::move(static_cast<ConditionSqlNode>(select_sql.having)));
+
+  if (!agg_flag) {
+    // No need to plan the aggregation node
+    agg_stmt = nullptr;
   }
 
   // everything alright

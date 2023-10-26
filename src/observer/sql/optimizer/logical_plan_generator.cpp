@@ -173,9 +173,16 @@ RC LogicalPlanGenerator::create_plan(SelectStmt *select_stmt, unique_ptr<Logical
   // Create the aggregate logical operator
   std::unique_ptr<LogicalOperator> agg_oper{nullptr};
   if (select_stmt->agg_stmt() != nullptr) {
-    auto agg_keys = select_stmt->agg_stmt()->get_keys();
-    auto agg_types = select_stmt->agg_stmt()->get_types();
-    agg_oper = std::make_unique<AggLogicalOperator>(all_fields, agg_keys, agg_types);
+    auto fields = select_stmt->agg_stmt()->get_fields();
+    auto is_agg = select_stmt->agg_stmt()->get_is_agg();
+    auto agg_types = select_stmt->agg_stmt()->get_agg_types();
+    auto having = select_stmt->agg_stmt()->get_having();
+    std::unique_ptr<AggLogicalOperator> agg_oper_t = std::make_unique<AggLogicalOperator>();
+    agg_oper_t->set_fields(std::move(fields));
+    agg_oper_t->set_is_agg(std::move(is_agg));
+    agg_oper_t->set_agg_types(std::move(agg_types));
+    agg_oper_t->set_having(std::move(having));
+    agg_oper = std::move(agg_oper_t);
     assert(agg_oper != nullptr);
   }
 

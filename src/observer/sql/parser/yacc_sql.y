@@ -116,6 +116,8 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
         BY
         ASC
         AS
+        GROUP
+        HAVING
 	IN
 	EXISTS
 
@@ -136,10 +138,11 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
   std::vector<IndexAttr> *          attr_name_list;
   IndexAttr*                        index_attr;
   std::vector<IndexAttr> *          index_attr_name_list;
-  std::vector<RelationSqlNode> *        relation_list;
+  std::vector<RelationSqlNode> *    relation_list;
   std::vector<JoinSqlNode> *        join_list;
   std::vector<UpdateValueNode> *    update_value_list;
   std::vector<OrderBySqlNode> *     order_by_list_type;
+  std::vector<RelAttrSqlNode> *     group_by_list_type;
   char *                            string;
   int                               number;
   float                             floats;
@@ -160,7 +163,6 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
 %type <value>               value
 %type <number>              number
 %type <comp>                comp_op
-%type <comp>                in_op
 %type <index_attr>          index_attr
 %type <index_attr_name_list>     index_attr_name_list 
 %type <attr_name_list>      attr_name_list           
@@ -170,9 +172,12 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
 %type <attr_info>           attr_def
 %type <value_list>          value_list
 %type <update_value_list>   update_value_list
-%type <order_by_list_type>       order_by_clause
-%type <order_by_list_type>       order_by_list
-%type <order_by_list_type>       order_by_item
+%type <order_by_list_type>  order_by_clause
+%type <order_by_list_type>  order_by_list
+%type <order_by_list_type>  order_by_item
+%type <group_by_list_type>  group_by_clause
+%type <group_by_list_type>  group_by_list
+%type <condition>           having
 %type <condition_list>      where
 %type <condition_list>      condition_list
 %type <rel_attr_list>       select_attr
@@ -413,7 +418,12 @@ attr_def:
       $$ = new AttrInfoSqlNode;
       $$->type = (AttrType)$2;
       $$->name = $1;
-      $$->length = $4;
+      assert($2 == CHARS && "Expect char(number)");
+      if ($6) {
+        $$->length = $4 + 10;
+      } else {
+        $$->length = $4;
+      }
       $$->is_null = $6;
       free($1);
     }
@@ -421,7 +431,11 @@ attr_def:
       $$ = new AttrInfoSqlNode;
       $$->type = (AttrType) $2;
       $$->name = $1;
-      $$->length = 4;
+      if ($2 == CHARS && $3) {
+        $$->length = 10;
+      } else {
+        $$->length = 4;
+      }
       if($$->type == AttrType::TEXT) {
         $$->length = 65535; // need to change
       }
@@ -572,23 +586,31 @@ update_value_list:
 ;
 
 select_stmt:        /*  select 语句的语法解析树*/
-    SELECT select_attr FROM ID option_as rel_list where order_by_clause
+    // FIXME: Please ensure the order of group by and order by
+    // Currently group by is placed after order by to prevent renaming issue.
+    SELECT select_attr FROM ID option_as rel_list where order_by_clause group_by_clause having
     {
       $$ = new ParsedSqlNode(SCF_SELECT);
+
       if ($2 != nullptr) {
         $$->selection.attributes.swap(*$2);
         delete $2;
       }
+
       if ($6 != nullptr) {
         $$->selection.relations.swap(*$6);
         delete $6;
       }
+
       RelationSqlNode relation;
       relation.relation_name = $4;
+      free($4);
+
       if($5 != nullptr) {
       	relation.alias_name = $5;
       	free($5);
       }
+
       $$->selection.relations.push_back(relation);
       std::reverse($$->selection.relations.begin(), $$->selection.relations.end());
 
@@ -598,13 +620,26 @@ select_stmt:        /*  select 语句的语法解析树*/
       }
 
       if($8 != nullptr) {
-	$$->selection.order_bys.insert($$->selection.order_bys.end(),$8->begin(),$8->end());
-	delete $8;
+        $$->selection.order_bys.insert($$->selection.order_bys.end(),$8->begin(),$8->end());
+        delete $8;
       }
-      free($4);
+
+      if ($9 != nullptr) {
+        $$->selection.group_bys.swap(*$9);
+      }
+
+      if ($10 != nullptr) {
+        $$->selection.having = *$10;
+        delete $10;
+      } else {
+        ConditionSqlNode having;
+        // To mark the absence of having condition
+        having.left_value.set_type(UNDEFINED);
+        having.right_value.set_type(UNDEFINED);
+        $$->selection.having = having;
+      }
     }
-    |
-    SELECT select_attr FROM ID inner_join_constr inner_join_list where order_by_clause
+    | SELECT select_attr FROM ID inner_join_constr inner_join_list where order_by_clause
         {
           $$ = new ParsedSqlNode(SCF_SELECT);
           if ($2 != nullptr) {
@@ -676,6 +711,52 @@ inner_join_list:
       free($3);
     }
     ;
+
+group_by_clause:
+    {
+      $$ = nullptr;
+    }
+    | GROUP BY group_by_list {
+      assert($3 != nullptr && "Expect `group_by_list` not to be null");
+      $$ = $3;
+    }
+    ;
+
+group_by_list:
+    rel_attr {
+      assert($1 != nullptr && "Expect `rel_attr` not to be null");
+
+      $$ = new std::vector<RelAttrSqlNode>;
+      $$->emplace_back(*$1);
+
+      delete $1;
+    }
+    | rel_attr COMMA group_by_list {
+      assert($1 != nullptr && $3 != nullptr && "Expect all item not to be null");
+
+      if ($3 != nullptr) {
+        $$ = $3;
+      } else {
+        $$ = new std::vector<RelAttrSqlNode>;
+      }
+
+      // Note that the order of group by item should be reversed
+      // But since the order does not matter, just keep it simple at present
+      $$->emplace_back(*$1);
+
+      delete $1;
+    }
+    ;
+
+having:
+    {
+      $$ = nullptr;
+    }
+    | HAVING condition {
+      assert($2 != nullptr && "Expect having condition not to be nullptr");
+      $$ = $2;
+    }
+
 order_by_clause:
    /* empty */
     {
@@ -689,17 +770,17 @@ order_by_clause:
 order_by_list:
     order_by_item {
         $$ = new std::vector<OrderBySqlNode>;
-	$$->insert($$->begin(), (*$1).begin(), (*$1).end());
-	delete $1;
+        $$->insert($$->begin(), (*$1).begin(), (*$1).end());
+        delete $1;
     }
     | order_by_item COMMA order_by_list {
         if ($3 != nullptr) {
-	    $$ = $3;
-	} else {
-	    $$ = new std::vector<OrderBySqlNode>;
-	}
-	$$->insert($$->begin(), (*$1).begin(), (*$1).end());
-	delete $1;
+            $$ = $3;
+        } else {
+            $$ = new std::vector<OrderBySqlNode>;
+        }
+      $$->insert($$->begin(), (*$1).begin(), (*$1).end());
+      delete $1;
     }
     ;
 
@@ -792,6 +873,7 @@ option_as:
       $$ = $2;
     }
     ;
+
 select_attr:
     '*' {
       $$ = new std::vector<RelAttrSqlNode>;
@@ -804,18 +886,19 @@ select_attr:
     // TODO: Add the syntax for cases like `select agg(c1), count(*) from t1;`
     | agg LBRACE '*' RBRACE attr_list  {
       /* AGG_FUNC(*) */
-      $$ = new std::vector<RelAttrSqlNode>;
+      if ($5 != nullptr) {
+        $$ = $5;
+      } else {
+        $$ = new std::vector<RelAttrSqlNode>;
+      }
+
+      // Construct the aggregation attribute
       RelAttrSqlNode attr;
       attr.relation_name = "";
       attr.attribute_name = "*";
       attr.aggregate_func = $1;
+
       $$->emplace_back(attr);
-      if ($5 != nullptr) {
-        for (const auto &e : *$5) {
-          $$->emplace_back(e);
-        }
-      }
-      delete $5;
     }
     | rel_attr COMMA agg LBRACE '*' RBRACE {
       /* AGG_FUNC(*) */
@@ -888,8 +971,8 @@ rel_attr:
       $$->attribute_name = $3;
       $$->aggregate_func = agg::NONE;
       if($4 != nullptr) {
-	$$->alias_name = $4;
-	free($4);
+        $$->alias_name = $4;
+        free($4);
       }
       free($1);
       free($3);
@@ -1029,6 +1112,33 @@ condition:
 
       delete $1;
       delete $3;
+    }
+    // FIXME: Currently hard-coded
+    | agg LBRACE '*' RBRACE comp_op value {
+      $$ = new ConditionSqlNode;
+      RelAttrSqlNode left;
+      left.attribute_name = "*";
+      left.aggregate_func = AGG_COUNT;
+      $$->left_is_attr = 1;
+      $$->left_attr = left;
+      $$->right_is_attr = 0;
+      $$->right_value = *$6;
+      $$->comp = $5;
+
+      delete $6;
+    }
+    | value comp_op agg LBRACE '*' RBRACE {
+      $$ = new ConditionSqlNode;
+      RelAttrSqlNode right;
+      right.attribute_name = "*";
+      right.aggregate_func = AGG_COUNT;
+      $$->left_is_attr = 0;
+      $$->left_value = *$1;
+      $$->right_is_attr = 1;
+      $$->right_attr = right;
+      $$->comp = $2;
+
+      delete $1;
     }
     | rel_attr in_op LBRACE select_stmt RBRACE
     {

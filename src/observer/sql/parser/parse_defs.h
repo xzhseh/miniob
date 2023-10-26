@@ -66,7 +66,7 @@ struct RelAttrSqlNode {
   std::string relation_name;   ///< relation / table name (may be NULL/EMPTY)
   std::string attribute_name;  ///< attribute / column name
   enum agg aggregate_func;     ///< aggregate function (may be NULL/EMPTY)
-  bool agg_valid_flag{true};   /// Whether the parsed aggregate syntax is valid
+  bool agg_valid_flag{true};   ///< Whether the parsed aggregate syntax is valid, i.e., COUNT(c1, c2) will be invalid
   std::string alias_name;      ///< alias name (may be NULL/EMPTY)
 };
 
@@ -94,14 +94,9 @@ enum CompOp {
   NOT_LIKE_OP,  ///< "NOT LIKE"
   IS,
   IS_NOT,
-  IN_OP,
-  EXISTS_OP,
-  NOT_IN,
-  NOT_EXISTS,
-  NO_OP,  ///< no comparison
+  NO_OP
 };
 
-struct SelectSqlNode;
 /**
  * @brief 表示一个条件比较
  * @ingroup SQLParser
@@ -111,26 +106,15 @@ struct SelectSqlNode;
  * 这个结构中记录的仅仅支持字段和值。
  */
 struct ConditionSqlNode {
-  int left_is_attr;                    ///< TRUE if left-hand side is an attribute
-                                       ///< 1时，操作符左边是属性名，0时，是属性值
-                                       ///< 2时，是子查询
-                                       ///< 3时，是常量列表
-  std::vector<Value> left_value_list;  ///< const value list for IN/NOT IN,EXISTS/NOT EXISTS
-  SelectSqlNode *left_sub_select = {nullptr};
+  int left_is_attr;           ///< TRUE if left-hand side is an attribute
+                              ///< 1时，操作符左边是属性名，0时，是属性值
   Value left_value;           ///< left-hand side value if left_is_attr = FALSE
   RelAttrSqlNode left_attr;   ///< left-hand side attribute
   CompOp comp;                ///< comparison operator
   int right_is_attr;          ///< TRUE if right-hand side is an attribute
                               ///< 1时，操作符右边是属性名，0时，是属性值
-                              ///< 2时，是子查询
-                              ///< 3时，是常量列表
   RelAttrSqlNode right_attr;  ///< right-hand side attribute if right_is_attr = TRUE 右边的属性
   Value right_value;          ///< right-hand side value if right_is_attr = FALSE
-
-  std::vector<Value> right_value_list;  ///< const value list for IN/NOT IN,EXISTS/NOT EXISTS
-  // Use unique_ptr will cause compile error,hard to handle
-  // The memory will leak, but it doesn't matter
-  SelectSqlNode *right_sub_select = {nullptr};  ///< sub select for IN/NOT IN,EXISTS/NOT EXISTS
 };
 
 struct OrderBySqlNode {
@@ -154,6 +138,8 @@ struct SelectSqlNode {
   std::vector<RelationSqlNode> relations;    ///< 查询的表
   std::vector<ConditionSqlNode> conditions;  ///< 查询条件，使用AND串联起来多个条件
   std::vector<OrderBySqlNode> order_bys;     ///< order by clause
+  std::vector<RelAttrSqlNode> group_bys;     ///< group by clause
+  ConditionSqlNode having;                   ///< Currently treat it as a single condition node
 
   SelectSqlNode() = default;
   SelectSqlNode(const SelectSqlNode &other) = default;

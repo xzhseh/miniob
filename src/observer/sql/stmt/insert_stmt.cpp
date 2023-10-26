@@ -37,7 +37,6 @@ RC InsertStmt::create(Db *db, InsertSqlNode &inserts, Stmt *&stmt) {
   }
 
   // check the fields number
-
   std::vector<Value> &values = inserts.values;
   const int value_num = static_cast<int>(inserts.values.size());
   const TableMeta &table_meta = table->table_meta();
@@ -53,14 +52,13 @@ RC InsertStmt::create(Db *db, InsertSqlNode &inserts, Stmt *&stmt) {
     const FieldMeta *field_meta = table_meta.field(i + sys_field_num);
     AttrType field_type = field_meta->type();
     AttrType value_type = values[i].attr_type();
+
     // insert 无法识别 text 和 chars, 需要做转换
     if (value_type == CHARS && field_type == TEXT) {
       value_type = TEXT;
       field_type = TEXT;
       values[i].set_type(TEXT);
     }
-
-    bool null_flag{false};
 
     /// NOTE: DO NOT CHANGE/REFACTOR THE CODE BELOW, strange bugs will occur for big-order-by
     /// refer: https://github.com/xzhseh/miniob/pull/23/commits/122869e2f9fd6d88e0b58456fead14aae1fbe1ea
@@ -71,52 +69,32 @@ RC InsertStmt::create(Db *db, InsertSqlNode &inserts, Stmt *&stmt) {
         return RC::INVALID_ARGUMENT;
       }
 
-      null_flag = true;
-
-      // We need to adjust the values
-      // Since the default value is 0, it should be good for all
-      // TODO: Just to make sure this is expected
-      values[i].set_type(field_type);
-
-      // Currently the null values are hard-coded 😅
-      // TODO: Refactor this later
-      switch (field_type) {
-        case INTS: {
-          values[i].set_int(1919810);
-        } break;
-        case FLOATS: {
-          values[i].set_float(114.514);
-        } break;
-        case DATE: {
-          // values[i].set_date("2002-10-30");
-          values[i].set_date("9191-91-91");
-        } break;
-        case CHARS: {
-          values[i].set_string("xzhseh");
-        } break;
-        case TEXT: {
-          values[i].set_string("boring is null");
-        } break;
-        default:
-          assert(false);
-      }
-
       // Set the value to the hard-coded null value
-      // Value::set_null(values[i], field_type);
+      Value::set_null(values[i], field_type);
 
       assert(values[i].is_null() && "`values[i]` should persist the `is_null_` property");
-      // assert(values[i].attr_type() == field_type && "The type should be the same");
+      assert(values[i].attr_type() == field_type && "The type should be the same");
     }
 
+    value_type = values[i].attr_type();
+
     // TODO: try to convert the value type to field type
-    if (field_type != value_type && !null_flag) {
+    if (field_type != value_type) {
       LOG_WARN("field type mismatch. table=%s, field=%s, field type=%d, value_type=%d",
           table_name, field_meta->name(), field_type, value_type);
       return RC::SCHEMA_FIELD_TYPE_MISMATCH;
     }
   }
 
-  const Value *values_t = inserts.values.data();
+  // std::cout << "[insert_stmt] ----" << std::endl;
+  // for (const auto &v : values) {
+  //   std::cout << v.to_string() << " ";
+  // }
+  // std::cout << std::endl;
+  // std::cout << "[insert_stmt] ----" << std::endl;
+
+  // const Value *values_t = inserts.values.data();
+  const Value *values_t = values.data();
 
   // everything alright
   stmt = new InsertStmt(table, values_t, value_num);

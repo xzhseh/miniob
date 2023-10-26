@@ -115,8 +115,8 @@ extern int yydebug;
     BY = 316,                      /* BY  */
     ASC = 317,                     /* ASC  */
     AS = 318,                      /* AS  */
-    IN = 319,                      /* IN  */
-    EXISTS = 320,                  /* EXISTS  */
+    GROUP = 319,                   /* GROUP  */
+    HAVING = 320,                  /* HAVING  */
     NUMBER = 321,                  /* NUMBER  */
     FLOAT = 322,                   /* FLOAT  */
     ID = 323,                      /* ID  */
@@ -148,17 +148,18 @@ union YYSTYPE
   std::vector<IndexAttr> *          attr_name_list;
   IndexAttr*                        index_attr;
   std::vector<IndexAttr> *          index_attr_name_list;
-  std::vector<RelationSqlNode> *        relation_list;
+  std::vector<RelationSqlNode> *    relation_list;
   std::vector<JoinSqlNode> *        join_list;
   std::vector<UpdateValueNode> *    update_value_list;
   std::vector<OrderBySqlNode> *     order_by_list_type;
+  std::vector<RelAttrSqlNode> *     group_by_list_type;
   char *                            string;
   int                               number;
   float                             floats;
   enum agg                          agg;
   bool                              null;
 
-#line 162 "yacc_sql.hpp"
+#line 163 "yacc_sql.hpp"
 
 };
 typedef union YYSTYPE YYSTYPE;

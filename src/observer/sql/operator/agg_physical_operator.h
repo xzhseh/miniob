@@ -2,7 +2,9 @@
 
 #pragma once
 
+#include <memory>
 #include <unordered_map>
+#include <vector>
 #include "sql/expr/expression.h"
 #include "sql/expr/tuple.h"
 #include "sql/operator/physical_operator.h"
@@ -11,16 +13,100 @@
 #include "storage/table/table.h"
 #include "storage/trx/trx.h"
 
+/// The self-defined hasher for `Value`
+namespace std {
+
+template <>
+struct hash<Value> {
+  std::size_t operator()(const Value &v) const noexcept {
+    std::size_t h = 0;
+
+    // hash the attr_type_
+    h ^= hash<AttrType>()(v.attr_type());
+
+    // hash the value based on attr_type_
+    switch (v.attr_type()) {
+      case INTS:
+        h ^= hash<int>()(v.get_int());
+        break;
+      case FLOATS:
+        h ^= hash<float>()(v.get_float());
+        break;
+      case CHARS:
+        h ^= hash<std::string>()(v.get_string());
+        break;
+      case DATE:
+        h ^= hash<int>()(v.get_date());
+        break;
+      // TODO: add more types that need support for aggregation
+      default:
+        break;
+    }
+
+    return h;
+  }
+};
+
+}  // namespace std
+
+/// Group by keys, should be unique per aggregation
+struct AggregateKey {
+  std::vector<Value> keys_;
+
+  /// Check if the keys are equal or not
+  auto operator==(const AggregateKey &other) const -> bool {
+    for (uint32_t i = 0; i < other.keys_.size(); i++) {
+      if (keys_[i].compare(other.keys_[i]) != 0) {
+        return false;
+      }
+    }
+    return true;
+  }
+};
+
+/// Actual value(s) begin aggregated
+struct AggregateValue {
+  std::vector<Value> values_;
+  std::vector<agg> value_types_;
+  // The absolute counter
+  int count{0};
+  // The null counter for each aggregate column, for non-aggregate col this is 0 by default
+  std::vector<int> null_count;
+};
+
+namespace std {
+
+/** Implements std::hash on AggregateKey */
+template <>
+struct hash<AggregateKey> {
+  auto operator()(const AggregateKey &agg_key) const -> std::size_t {
+    std::size_t curr_hash = 0;
+    std::hash<Value> value_hasher;  // Assuming Value has a defined std::hash
+
+    for (const auto &key : agg_key.keys_) {
+      // Combine the current hash with the hash of the key
+      curr_hash ^= value_hasher(key) + 0x9e3779b9 + (curr_hash << 6) + (curr_hash >> 2);
+    }
+
+    return curr_hash;
+  }
+};
+
+}  // namespace std
+
 /// Please note that the child of agg should be exactly one
 class AggPhysicalOperator : public PhysicalOperator {
  public:
   AggPhysicalOperator() = default;
 
-  explicit AggPhysicalOperator(std::vector<std::pair<const FieldMeta *, int>> &aggregate_keys,
-                               std::vector<agg> &aggregate_types, std::vector<FieldExpr> &exprs)
-      : aggregate_keys_(std::move(aggregate_keys)),
-        aggregate_types_(std::move(aggregate_types)),
-        exprs_(std::move(exprs)) {}
+  explicit AggPhysicalOperator(PhysicalOperator *child, ConditionSqlNode &&having,
+                               const std::vector<FieldExpr> &&field_exprs, const std::vector<bool> &&is_agg_,
+                               const std::vector<agg> &&agg_types)
+      : child_(child),
+        having_(std::move(having)),
+        field_exprs_(std::move(field_exprs)),
+        is_agg_(std::move(is_agg_)),
+        agg_types_(std::move(agg_types)) {}
 
   ~AggPhysicalOperator() override = default;
 
@@ -38,7 +124,7 @@ class AggPhysicalOperator : public PhysicalOperator {
 
   std::string param() const override {
     std::vector<string> ret;
-    for (const auto &a : aggregate_types_) {
+    for (const auto &a : agg_types_) {
       switch (a) {
         case AGG_AVG:
           ret.emplace_back("AGG_AVG");
@@ -66,18 +152,17 @@ class AggPhysicalOperator : public PhysicalOperator {
     return ret_str.substr(0, ret_str.size() - 1);
   }
 
+  std::pair<AggregateKey, AggregateValue> aggregate_key_value_builder(Tuple *tuple);
+
  private:
   Trx *trx_{nullptr};
   PhysicalOperator *child_{nullptr};
-  // FIXME: Refactor this when implementing group by
   ValueListTuple tuple_;
-  // FIXME: This needs fix (duplicate aggregate functions)
-  std::unordered_map<agg, Value> agg_value_map_;
-  // Including the expressions of all fields
-  std::vector<FieldExpr> exprs_;
-  std::vector<std::pair<const FieldMeta *, int>> aggregate_keys_;
-  // The number of tuples
-  int avg_n{0};
-  bool next_flag{false};
-  std::vector<agg> aggregate_types_;
+  ConditionSqlNode having_;
+  std::vector<AggregateKey> output_keys_;
+  std::vector<FieldExpr> field_exprs_;
+  std::vector<bool> is_agg_;
+  std::vector<agg> agg_types_;
+  std::unordered_map<AggregateKey, AggregateValue> agg_ht_;
+  int count_;
 };

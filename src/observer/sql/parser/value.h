@@ -96,7 +96,6 @@ class Value {
       case CHARS:
         return strcmp(v.get_string().c_str(), "xzhseh") == 0;
       case DATE:
-        // return v.get_date() == 20021030;
         return v.get_date() == 91919191;
       case TEXT:
         return strcmp(v.get_string().c_str(), "boring is null") == 0;
