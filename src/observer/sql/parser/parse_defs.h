@@ -73,6 +73,7 @@ struct RelAttrSqlNode {
 struct RelationSqlNode {
   std::string relation_name;
   std::string alias_name;
+  bool is_parent{false};  // for sub query
 };
 
 struct IndexAttr {

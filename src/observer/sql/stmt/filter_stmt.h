@@ -99,10 +99,12 @@ class FilterStmt {
 
  public:
   static RC create(Db *db, Table *default_table, std::unordered_map<std::string, Table *> *tables,
-                   const std::vector<RelAttrSqlNode> &rel_attr, const std::vector<RelationSqlNode> &relations,
-                   const ConditionSqlNode *conditions, int condition_num, FilterStmt *&stmt);
+                   std::unordered_map<std::string, Table *> *parent_tables, const std::vector<RelAttrSqlNode> &rel_attr,
+                   const std::vector<RelationSqlNode> &relations, const ConditionSqlNode *conditions, int condition_num,
+                   FilterStmt *&stmt);
 
   static RC create_filter_unit(Db *db, Table *default_table, std::unordered_map<std::string, Table *> *tables,
+                               std::unordered_map<std::string, Table *> *parent_tables,
                                const std::vector<RelAttrSqlNode> &rel_attr,
                                const std::vector<RelationSqlNode> &relations, const ConditionSqlNode &condition,
                                FilterUnit *&filter_unit);
@@ -110,3 +112,5 @@ class FilterStmt {
  private:
   std::vector<FilterUnit *> filter_units_;  // 默认当前都是AND关系
 };
+
+void resolve_sub_query(SelectSqlNode &sub_node, std::unordered_map<std::string, Table *> *table_map);
