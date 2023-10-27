@@ -21,7 +21,7 @@ See the Mulan PSL v2 for more details. */
 
 using namespace std;
 
-RC FieldExpr::get_value(const Tuple &tuple, Value &value) const {
+RC FieldExpr::get_value(const Tuple &tuple, Value &value) {
   auto rc = tuple.find_cell(TupleCellSpec(table_name(), field_name()), value);
   if (value.attr_type() == DATE && value.get_date() == -1) {
     rc = RC::INVALID_ARGUMENT;
@@ -32,7 +32,7 @@ RC FieldExpr::get_value(const Tuple &tuple, Value &value) const {
   return rc;
 }
 
-RC ValueExpr::get_value(const Tuple &tuple, Value &value) const {
+RC ValueExpr::get_value(const Tuple &tuple, Value &value) {
   if (value.attr_type() == TEXT && strlen(value.get_string().c_str()) > 65535) {
     return RC::INVALID_ARGUMENT;
   }
@@ -70,7 +70,7 @@ RC CastExpr::cast(const Value &value, Value &cast_value) const {
   return rc;
 }
 
-RC CastExpr::get_value(const Tuple &tuple, Value &cell) const {
+RC CastExpr::get_value(const Tuple &tuple, Value &cell) {
   RC rc = child_->get_value(tuple, cell);
   if (rc != RC::SUCCESS) {
     return rc;
@@ -201,7 +201,7 @@ RC ComparisonExpr::try_get_value(Value &cell) const {
   return RC::INVALID_ARGUMENT;
 }
 
-RC ComparisonExpr::get_value(const Tuple &tuple, Value &value) const {
+RC ComparisonExpr::get_value(const Tuple &tuple, Value &value) {
   Value left_value;
   Value right_value;
 
@@ -250,7 +250,7 @@ RC ComparisonExpr::compare_in(const Value &left, bool &result) const {
 ConjunctionExpr::ConjunctionExpr(Type type, vector<unique_ptr<Expression>> &children)
     : conjunction_type_(type), children_(std::move(children)) {}
 
-RC ConjunctionExpr::get_value(const Tuple &tuple, Value &value) const {
+RC ConjunctionExpr::get_value(const Tuple &tuple, Value &value) {
   RC rc = RC::SUCCESS;
   if (children_.empty()) {
     value.set_boolean(true);
@@ -362,7 +362,7 @@ RC ArithmeticExpr::calc_value(const Value &left_value, const Value &right_value,
   return rc;
 }
 
-RC ArithmeticExpr::get_value(const Tuple &tuple, Value &value) const {
+RC ArithmeticExpr::get_value(const Tuple &tuple, Value &value) {
   RC rc = RC::SUCCESS;
 
   Value left_value;

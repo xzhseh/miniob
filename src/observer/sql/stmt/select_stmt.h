@@ -38,17 +38,6 @@ struct OrderByStmt {
   bool asc;
 };
 
-struct QueryTable {
-  Table *table;
-  std::string alias;
-};
-
-struct AliasCell {
-  bool is_alias = false;
-  std::string field_alias;
-  std::string table_alias;
-};
-
 /**
  * @brief 表示select语句
  * @ingroup Statement

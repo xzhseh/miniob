@@ -27,13 +27,14 @@ class SubQueryExpr : public Expression {
   ~SubQueryExpr() override = default;
 
   explicit SubQueryExpr(const std::vector<Value> &const_value_list);
-  explicit SubQueryExpr(const std::shared_ptr<ParsedSqlNode> &sub_query);
+  explicit SubQueryExpr(const std::shared_ptr<ParsedSqlNode> &sub_query,
+                        std::unordered_map<std::string, Table *> table_map);
 
   [[nodiscard]] ExprType type() const override { return ExprType::SUB_QUERY; }
 
   [[nodiscard]] AttrType value_type() const override { return BOOLEANS; }
 
-  RC get_value(const Tuple &tuple, Value &value) const override;
+  RC get_value(const Tuple &tuple, Value &value) override;
 
   RC in_or_not(const Value &value, const std::unique_ptr<Expression> &field_expr, bool &result) const;
 
@@ -48,7 +49,9 @@ class SubQueryExpr : public Expression {
   SubResultType type_{SubResultType::UNDEFINED};
   std::vector<Value> const_value_list;             // type == CONST_VALUE_LIST
   std::vector<std::unique_ptr<Tuple>> tuple_list;  // type == SUB_QUERY
+  std::shared_ptr<ParsedSqlNode> sub_query_node;
   std::unique_ptr<SQLStageEvent> sub_query_event_{nullptr};
+  std::unordered_map<std::string, Table *> table_map_;
   TupleSchema result_schema_;
   bool inited_{false};
   bool should_return_value{false};

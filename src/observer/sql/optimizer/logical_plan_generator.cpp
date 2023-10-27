@@ -282,7 +282,7 @@ RC LogicalPlanGenerator::create_plan(FilterStmt *filter_stmt, unique_ptr<Logical
         left = unique_ptr<Expression>(new SubQueryExpr(filter_obj_left.value_list));
         break;
       case FilterObjType::SUB_QUERY:
-        left = unique_ptr<Expression>(new SubQueryExpr(filter_obj_left.sub_query));
+        left = unique_ptr<Expression>(new SubQueryExpr(filter_obj_left.sub_query, filter_obj_left.table_map));
         break;
       default:
         assert(false);
@@ -290,7 +290,11 @@ RC LogicalPlanGenerator::create_plan(FilterStmt *filter_stmt, unique_ptr<Logical
 
     if (left->type() == ExprType::SUB_QUERY) {
       SubQueryExpr *sub_query_expr = dynamic_cast<SubQueryExpr *>(left.get());
-      RC rc = sub_query_expr->init();
+      RC rc = RC::SUCCESS;
+      if (filter_unit->comp() == IN_OP || filter_unit->comp() == NOT_IN || filter_unit->comp() == EXISTS_OP ||
+          filter_unit->comp() == NOT_EXISTS) {
+        rc = sub_query_expr->init();
+      }
       if (rc != RC::SUCCESS) {
         LOG_WARN("failed to init sub query expr. rc=%s", strrc(rc));
         return rc;
@@ -315,7 +319,7 @@ RC LogicalPlanGenerator::create_plan(FilterStmt *filter_stmt, unique_ptr<Logical
         right = unique_ptr<Expression>(new SubQueryExpr(filter_obj_right.value_list));
         break;
       case FilterObjType::SUB_QUERY:
-        right = unique_ptr<Expression>(new SubQueryExpr(filter_obj_right.sub_query));
+        right = unique_ptr<Expression>(new SubQueryExpr(filter_obj_right.sub_query, filter_obj_right.table_map));
         break;
       default:
         assert(false);
@@ -323,7 +327,11 @@ RC LogicalPlanGenerator::create_plan(FilterStmt *filter_stmt, unique_ptr<Logical
 
     if (right->type() == ExprType::SUB_QUERY) {
       auto *sub_query_expr = dynamic_cast<SubQueryExpr *>(right.get());
-      RC rc = sub_query_expr->init();
+      RC rc = RC::SUCCESS;
+      if (filter_unit->comp() == IN_OP || filter_unit->comp() == NOT_IN || filter_unit->comp() == EXISTS_OP ||
+          filter_unit->comp() == NOT_EXISTS) {
+        rc = sub_query_expr->init();
+      }
       if (rc != RC::SUCCESS) {
         LOG_WARN("failed to init sub query expr. rc=%s", strrc(rc));
         return rc;

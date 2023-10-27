@@ -501,20 +501,6 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt) {
   // everything alright
   SelectStmt *select_stmt = new SelectStmt();
 
-  for (const auto &table : table_map) {
-    // Find if it is already in tables ,if not ,push back
-    bool flag = false;
-    for (const auto &t : tables) {
-      if (t == table.second) {
-        flag = true;
-        break;
-      }
-    }
-    if (!flag) {
-      tables.push_back(table.second);
-    }
-  }
-
   // TODO add expression copy
   select_stmt->tables_.swap(tables);
   select_stmt->query_fields_.swap(query_fields);

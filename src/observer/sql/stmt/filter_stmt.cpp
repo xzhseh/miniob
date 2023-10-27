@@ -34,7 +34,7 @@ RC FilterStmt::create(Db *db, Table *default_table, std::unordered_map<std::stri
   stmt = nullptr;
 
   auto *tmp_stmt = new FilterStmt();
-  for (int i = 0; i < condition_num; i++) {
+  for (size_t i = 0; i < condition_num; i++) {
     FilterUnit *filter_unit = nullptr;
     rc = create_filter_unit(db, default_table, tables, parent_tables, rel_attr, relations, conditions[i], filter_unit);
     if (rc != RC::SUCCESS) {
@@ -60,13 +60,7 @@ RC get_table_and_field(Db *db, Table *default_table, std::unordered_map<std::str
       table = iter->second;
     } else {
       // iter == tables->end() ,check parent table
-      if (parent_tables != nullptr) {
-        auto parent_iter = parent_tables->find(attr.relation_name);
-        if (parent_iter != parent_tables->end()) {
-          tables->insert({attr.relation_name, parent_iter->second});
-          table = parent_iter->second;
-        }
-      }
+      return RC::SCHEMA_TABLE_NOT_EXIST;
     }
   } else {
     table = db->find_table(attr.relation_name.c_str());
@@ -140,6 +134,7 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
     for (const auto &relation : relations) {
       sub_query->selection.relations.push_back(RelationSqlNode(relation.relation_name, relation.alias_name, true));
     }
+    filter_obj.table_map = *tables;
     filter_obj.init_sub_query(sub_query);
     filter_unit->set_left(filter_obj);
   } else if (condition.left_is_attr == 3) {
@@ -181,6 +176,7 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
     for (const auto &relation : relations) {
       sub_query->selection.relations.push_back(RelationSqlNode(relation.relation_name, relation.alias_name, true));
     }
+    filter_obj.table_map = *tables;
     filter_obj.init_sub_query(sub_query);
     filter_unit->set_right(filter_obj);
   } else if (condition.right_is_attr == 3) {

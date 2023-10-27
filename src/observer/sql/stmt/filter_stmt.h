@@ -34,6 +34,7 @@ struct FilterObj {
   // Different usage , so we won't merge them into one.
   std::vector<Value> value_list;
   std::shared_ptr<ParsedSqlNode> sub_query{nullptr};
+  std::unordered_map<std::string, Table *> table_map;
 
   void init_attr(const Field &field) {
     this->type = FilterObjType::ATTR;
