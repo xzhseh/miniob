@@ -233,11 +233,6 @@ RC ComparisonExpr::compare_in(const Value &left, bool &result) const {
     return rc;
   }
   auto *sub_query_expr = dynamic_cast<SubQueryExpr *>(right_.get());
-  rc = sub_query_expr->init();
-  if (rc != RC::SUCCESS) {
-    LOG_WARN("failed to init sub query expr. rc=%s", strrc(rc));
-    return rc;
-  }
   rc = sub_query_expr->in_or_not(left, left_, result);
   if (rc != RC::SUCCESS) {
     LOG_WARN("failed to check in or not. rc=%s", strrc(rc));

@@ -158,6 +158,8 @@ struct SelectSqlNode {
   std::vector<OrderBySqlNode> order_bys;     ///< order by clause
   std::vector<RelAttrSqlNode> group_bys;     ///< group by clause
   ConditionSqlNode having;                   ///< Currently treat it as a single condition node
+  // The void * is Tuple *
+  std::vector<void *> context_tuples;  ///< context tuples for sub query
 
   SelectSqlNode() = default;
   SelectSqlNode(const SelectSqlNode &other) = default;

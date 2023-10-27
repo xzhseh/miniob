@@ -290,15 +290,6 @@ RC LogicalPlanGenerator::create_plan(FilterStmt *filter_stmt, unique_ptr<Logical
 
     if (left->type() == ExprType::SUB_QUERY) {
       SubQueryExpr *sub_query_expr = dynamic_cast<SubQueryExpr *>(left.get());
-      RC rc = RC::SUCCESS;
-      if (filter_unit->comp() == IN_OP || filter_unit->comp() == NOT_IN || filter_unit->comp() == EXISTS_OP ||
-          filter_unit->comp() == NOT_EXISTS) {
-        rc = sub_query_expr->init();
-      }
-      if (rc != RC::SUCCESS) {
-        LOG_WARN("failed to init sub query expr. rc=%s", strrc(rc));
-        return rc;
-      }
       CompOp comp_op = filter_unit->comp();
       if (comp_op == IN_OP || comp_op == NOT_IN) {
         sub_query_expr->set_return_value(false);
@@ -327,15 +318,6 @@ RC LogicalPlanGenerator::create_plan(FilterStmt *filter_stmt, unique_ptr<Logical
 
     if (right->type() == ExprType::SUB_QUERY) {
       auto *sub_query_expr = dynamic_cast<SubQueryExpr *>(right.get());
-      RC rc = RC::SUCCESS;
-      if (filter_unit->comp() == IN_OP || filter_unit->comp() == NOT_IN || filter_unit->comp() == EXISTS_OP ||
-          filter_unit->comp() == NOT_EXISTS) {
-        rc = sub_query_expr->init();
-      }
-      if (rc != RC::SUCCESS) {
-        LOG_WARN("failed to init sub query expr. rc=%s", strrc(rc));
-        return rc;
-      }
       CompOp comp_op = filter_unit->comp();
       if (comp_op == IN_OP || comp_op == NOT_IN) {
         sub_query_expr->set_return_value(false);

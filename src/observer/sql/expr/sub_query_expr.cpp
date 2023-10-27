@@ -16,8 +16,11 @@ SubQueryExpr::SubQueryExpr(const std::shared_ptr<ParsedSqlNode> &sub_query,
   this->sub_query_node = sub_query;
   this->table_map_ = std::move(table_map);
 }
+// 受不了了，直接简单粗暴一点
+std::vector<std::unique_ptr<Tuple>> parent_tuples;
 
 RC SubQueryExpr::in_or_not(const Value &value, const std::unique_ptr<Expression> &field_expr, bool &result) const {
+  std::cout << "Compare value is " << value.to_string() << std::endl;
   if (this->type_ == SubResultType::UNDEFINED) {
     return RC::INTERNAL;
   }
@@ -62,8 +65,7 @@ RC SubQueryExpr::in_or_not(const Value &value, const std::unique_ptr<Expression>
 
 RC SubQueryExpr::try_get_value(Value &value) const { return RC::INTERNAL; }
 
-RC replace_field(std::shared_ptr<ParsedSqlNode> &sub_query, const std::unordered_map<std::string, Table *> &table_map,
-                 const Tuple &parent_tuple) {
+RC replace_field(std::shared_ptr<ParsedSqlNode> &sub_query, const std::unordered_map<std::string, Table *> &table_map) {
   //  Now we get a sub query parsed sql node, we need to replace the parent field
   for (auto &condition : sub_query->selection.conditions) {
     // select * from t1 where t1.nothing <> (select min(t2.id) from t2 where t2.id > t1.id)
@@ -78,12 +80,18 @@ RC replace_field(std::shared_ptr<ParsedSqlNode> &sub_query, const std::unordered
         auto table = iter->second;
         // Construct a field expression
         const FieldMeta *field = table->table_meta().field(left_attr.attribute_name.c_str());
-        auto field_expr = std::make_unique<FieldExpr>(Field(table, field));
         Value value;
-        RC rc = field_expr->get_value(parent_tuple, value);
-        if (rc != RC::SUCCESS) {
-          LOG_WARN("failed to get value. rc=%s", strrc(rc));
-          return rc;
+        auto field_expr = std::make_unique<FieldExpr>(Field(table, field));
+        bool is_replaced = false;
+        for (const auto &parent_tuple : parent_tuples) {
+          RC rc = field_expr->get_value(*parent_tuple, value);
+          if (rc == RC::SUCCESS) {
+            is_replaced = true;
+            break;
+          }
+        }
+        if (!is_replaced) {
+          return RC::INTERNAL;
         }
         condition.left_is_attr = 0;
         condition.left_value = value;
@@ -98,12 +106,18 @@ RC replace_field(std::shared_ptr<ParsedSqlNode> &sub_query, const std::unordered
         auto table = iter->second;
         // Construct a field expression
         const FieldMeta *field = table->table_meta().field(right_attr.attribute_name.c_str());
-        auto field_expr = std::make_unique<FieldExpr>(Field(table, field));
         Value value;
-        RC rc = field_expr->get_value(parent_tuple, value);
-        if (rc != RC::SUCCESS) {
-          LOG_WARN("failed to get value. rc=%s", strrc(rc));
-          return rc;
+        auto field_expr = std::make_unique<FieldExpr>(Field(table, field));
+        bool is_replaced = false;
+        for (const auto &parent_tuple : parent_tuples) {
+          RC rc = field_expr->get_value(*parent_tuple, value);
+          if (rc == RC::SUCCESS) {
+            is_replaced = true;
+            break;
+          }
+        }
+        if (!is_replaced) {
+          return RC::INTERNAL;
         }
         condition.right_is_attr = 0;
         condition.right_value = value;
@@ -113,67 +127,20 @@ RC replace_field(std::shared_ptr<ParsedSqlNode> &sub_query, const std::unordered
   return RC::SUCCESS;
 }
 
-RC SubQueryExpr::init() {
-  if (this->inited_) {
-    return RC::SUCCESS;
-  }
-  if (this->type_ == SubResultType::UNDEFINED) {
-    return RC::INTERNAL;
-  }
-  this->sub_query_event_ = std::make_unique<SQLStageEvent>(this->sub_query_node);
-  SessionStage *stage = dynamic_cast<SessionStage *>(SessionStage::make_stage("SessionStage"));
-  RC rc = stage->handle_sub_sql(this->sub_query_event_.get());
-  if (rc != RC::SUCCESS) {
-    LOG_WARN("failed to handle sub sql. rc=%s", strrc(rc));
-    return rc;
-  }
-  // Handle sub query
-  assert(this->type_ == SubResultType::SUB_QUERY);
-  assert(this->sub_query_event_ != nullptr);
-  // Project physical operator
-  auto &root_oper = this->sub_query_event_->physical_operator();
-  auto select_stmt = dynamic_cast<SelectStmt *>(this->sub_query_event_->stmt());
-  this->result_schema_ = create_sub_result_schema(select_stmt);
-  if (result_schema_.cell_num() != 1) {
-    return RC::INTERNAL;
-  }
-  rc = root_oper->open(nullptr);
-  if (rc != RC::SUCCESS) {
-    LOG_WARN("failed to open root operator. rc=%s", strrc(rc));
-    return rc;
-  }
-  Tuple *tuple_ptr = nullptr;
-  while (true) {
-    rc = root_oper->next();
-    if (rc == RC::RECORD_EOF) {
-      break;
-    }
-    if (rc == RC::SUCCESS) {
-      tuple_ptr = root_oper->current_tuple();
-      auto copy_tuple = tuple_ptr->copy();
-      assert(copy_tuple != nullptr);
-      this->tuple_list.emplace_back(std::move(copy_tuple));
-    } else {
-      LOG_WARN("failed to get next tuple. rc=%s", strrc(rc));
-      return rc;
-    }
-  }
-  root_oper->close();
-  return RC::SUCCESS;
-}
-
 RC SubQueryExpr::get_value(const Tuple &tuple, Value &value) {
-  if (!should_return_value) {
-    value.set_int(1);
+  this->tuple_list.clear();
+  if (this->type_ != SubResultType::SUB_QUERY) {
+    value.set_int(123);
     return RC::SUCCESS;
   }
+  parent_tuples.emplace_back(tuple.copy());
   assert(this->type_ == SubResultType::SUB_QUERY);
   SessionStage *stage = dynamic_cast<SessionStage *>(SessionStage::make_stage("SessionStage"));
   auto copy_node = this->sub_query_node.get()->selection;
   std::shared_ptr<ParsedSqlNode> sub_query = std::make_shared<ParsedSqlNode>();
   sub_query->selection = copy_node;
   sub_query->flag = SCF_SELECT;
-  RC rc = replace_field(sub_query, table_map_, tuple);
+  RC rc = replace_field(sub_query, table_map_);
   this->sub_query_event_ = std::make_unique<SQLStageEvent>(sub_query);
   if (rc != RC::SUCCESS) {
     LOG_WARN("failed to replace field. rc=%s", strrc(rc));
@@ -212,6 +179,13 @@ RC SubQueryExpr::get_value(const Tuple &tuple, Value &value) {
     }
   }
   root_oper->close();
+
+  parent_tuples.pop_back();
+
+  if (!should_return_value) {
+    value.set_int(1);
+    return RC::SUCCESS;
+  }
 
   if (this->tuple_list.empty()) {
     value.set_int(1919810);

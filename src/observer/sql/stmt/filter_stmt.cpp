@@ -135,6 +135,9 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
       sub_query->selection.relations.push_back(RelationSqlNode(relation.relation_name, relation.alias_name, true));
     }
     filter_obj.table_map = *tables;
+    for (const auto &parent_table : *parent_tables) {
+      filter_obj.table_map.insert(parent_table);
+    }
     filter_obj.init_sub_query(sub_query);
     filter_unit->set_left(filter_obj);
   } else if (condition.left_is_attr == 3) {
@@ -177,6 +180,9 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
       sub_query->selection.relations.push_back(RelationSqlNode(relation.relation_name, relation.alias_name, true));
     }
     filter_obj.table_map = *tables;
+    for (const auto &parent_table : *parent_tables) {
+      filter_obj.table_map.insert(parent_table);
+    }
     filter_obj.init_sub_query(sub_query);
     filter_unit->set_right(filter_obj);
   } else if (condition.right_is_attr == 3) {
