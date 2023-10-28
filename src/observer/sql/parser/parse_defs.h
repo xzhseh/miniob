@@ -130,7 +130,11 @@ struct ConditionSqlNode {
   std::vector<Value> right_value_list;  ///< const value list for IN/NOT IN,EXISTS/NOT EXISTS
   // Use unique_ptr will cause compile error,hard to handle
   // The memory will leak, but it doesn't matter
-  SelectSqlNode *right_sub_select = {nullptr};  ///< sub select for IN/NOT IN,EXISTS/NOT EXISTS
+  SelectSqlNode *right_sub_select{nullptr};  ///< sub select for IN/NOT IN,EXISTS/NOT EXISTS
+  // If the two expressions here is not nullptr, then we will evaluate the where clause based on pure expression
+  // Specifically by `get_value`
+  Expression *left_expr{nullptr};
+  Expression *right_expr{nullptr};
 };
 
 struct OrderBySqlNode {
@@ -156,6 +160,10 @@ struct SelectSqlNode {
   std::vector<OrderBySqlNode> order_bys;     ///< order by clause
   std::vector<RelAttrSqlNode> group_bys;     ///< group by clause
   ConditionSqlNode having;                   ///< Currently treat it as a single condition node
+  std::vector<Expression *> expressions;     ///< expressions in select clause
+  ConditionSqlNode *where_expr{nullptr};     ///< expression in where clause
+  bool select_expr_flag{false};
+  bool where_expr_flag{false};
 
   SelectSqlNode() = default;
   SelectSqlNode(const SelectSqlNode &other) = default;

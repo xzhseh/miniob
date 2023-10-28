@@ -40,7 +40,11 @@ class ProjectPhysicalOperator : public PhysicalOperator {
 
   Tuple *current_tuple() override;
 
+  std::vector<Expression *> select_expr_;
+  bool select_expr_flag_{false};
+
  private:
   ProjectTuple tuple_;
+  ValueListTuple expr_tuple_;
   bool agg_flag_{false};
 };

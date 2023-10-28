@@ -14,6 +14,7 @@ See the Mulan PSL v2 for more details. */
 
 #include "sql/optimizer/logical_plan_generator.h"
 #include <memory>
+#include "sql/expr/expression.h"
 #include "sql/expr/sub_query_expr.h"
 #include "sql/operator/agg_logical_operator.h"
 #include "sql/operator/calc_logical_operator.h"
@@ -215,7 +216,15 @@ RC LogicalPlanGenerator::create_plan(SelectStmt *select_stmt, unique_ptr<Logical
       return RC::INTERNAL;
     }
   }
-  unique_ptr<LogicalOperator> project_oper(new ProjectLogicalOperator(select_stmt->query_fields()));
+
+  auto project_op = std::make_unique<ProjectLogicalOperator>(select_stmt->query_fields());
+
+  if (select_stmt->get_select_expr_flag()) {
+    project_op->select_expr_flag_ = true;
+    project_op->select_expr_ = select_stmt->get_select_expr();
+  }
+
+  unique_ptr<LogicalOperator> project_oper(std::move(project_op));
   if (order_by_op) {
     project_oper->add_child(std::move(order_by_op));
   } else if (agg_oper) {
@@ -231,6 +240,14 @@ RC LogicalPlanGenerator::create_plan(SelectStmt *select_stmt, unique_ptr<Logical
 }
 
 RC LogicalPlanGenerator::create_plan(FilterStmt *filter_stmt, unique_ptr<LogicalOperator> &logical_operator) {
+  if (filter_stmt->is_where_expr()) {
+    auto predicate_oper = std::make_unique<PredicateLogicalOperator>();
+    predicate_oper->where_expr_flag_ = true;
+    predicate_oper->where_expr_ = filter_stmt->get_where_expr();
+    logical_operator = std::move(predicate_oper);
+    return RC::SUCCESS;
+  }
+
   std::vector<unique_ptr<Expression>> cmp_exprs;
   const std::vector<FilterUnit *> &filter_units = filter_stmt->filter_units();
   for (const FilterUnit *filter_unit : filter_units) {

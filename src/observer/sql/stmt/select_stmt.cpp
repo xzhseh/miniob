@@ -13,8 +13,10 @@ See the Mulan PSL v2 for more details. */
 //
 
 #include "sql/stmt/select_stmt.h"
+#include <memory>
 #include "common/lang/string.h"
 #include "common/log/log.h"
+#include "sql/expr/expression.h"
 #include "sql/parser/parse_defs.h"
 #include "sql/stmt/agg_stmt.h"
 #include "sql/stmt/filter_stmt.h"
@@ -93,6 +95,7 @@ RC bind_order_by(Db *db, const std::vector<Table *> &tables, const std::vector<O
   return RC::SUCCESS;
 }
 
+/// Get the corresponding `Field` based on the parsed `RelAttrSqlNode`
 auto get_field(Db *db, const std::vector<Table *> &tables, const RelAttrSqlNode &attribute, Field &field) -> RC {
   RC rc = RC::SUCCESS;
 
@@ -293,6 +296,34 @@ RC SelectStmt::resolve_tables(Db *db, const SelectSqlNode &select_sql, std::vect
   return RC::SUCCESS;
 }
 
+/// Recursively transform the `RelAttrSqlNode` in `FieldExpr` to real field
+RC field_expr_transformation(Db *db, const std::vector<Table *> &tables, Expression *expr) {
+  RC rc = RC::SUCCESS;
+  if (expr == nullptr) {
+    return RC::INVALID_ARGUMENT;
+  }
+  if (expr->type() == ExprType::FIELD) {
+    std::cout << "[field_expr_transformation] field expr name: " << expr->name() << std::endl;
+    Field f;
+    FieldExpr *f_expr = dynamic_cast<FieldExpr *>(expr);
+    assert(f_expr != nullptr && "Expect `f_expr` not to be nullptr");
+    rc = get_field(db, tables, f_expr->get_rel_attr(), f);
+    if (rc != RC::SUCCESS) {
+      LOG_WARN("[field_expr_transformation] failed to get field for expr: %s", f_expr->name().c_str());
+      return rc;
+    }
+    f_expr->set_field(f);
+  }
+  // Recursively transformation the child expression, if exists any
+  if (expr->left() != nullptr) {
+    rc = field_expr_transformation(db, tables, expr->left());
+  }
+  if (expr->right() != nullptr) {
+    rc = field_expr_transformation(db, tables, expr->right());
+  }
+  return rc;
+}
+
 /// TODO: We definitely need to refactor this part, the current implementation is so embarrassed 😅
 RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt) {
   assert(stmt == nullptr && "`stmt` must be nullptr at the beginning");
@@ -310,6 +341,38 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt) {
   if (rc != RC::SUCCESS) {
     LOG_WARN("failed to resolve tables");
     return rc;
+  }
+
+  // Make the expression transformation for select attribute, specifically for `FieldExpr`
+  if (select_sql.select_expr_flag) {
+    for (int i = 0; i < select_sql.expressions.size(); ++i) {
+      rc = field_expr_transformation(db, tables, select_sql.expressions[i]);
+      if (rc != RC::SUCCESS) {
+        LOG_WARN("[SelectStmt::create] failed to transform select expressions");
+        return rc;
+      }
+      std::cout << "[select stmt] select expr name: " << select_sql.expressions[i]->name() << std::endl;
+    }
+  }
+
+  // Make the same transformation for where conditions
+  if (select_sql.where_expr_flag) {
+    if (select_sql.where_expr->left_expr != nullptr && select_sql.where_expr->right_expr != nullptr) {
+      // We should evaluate the where clause based on pure expressions
+      // Do the transformation for the left expression and right expression
+      rc = field_expr_transformation(db, tables, select_sql.where_expr->left_expr);
+      if (rc != RC::SUCCESS) {
+        LOG_WARN("[SelectStmt::create] failed to transform where left expressions");
+        return rc;
+      }
+      rc = field_expr_transformation(db, tables, select_sql.where_expr->right_expr);
+      if (rc != RC::SUCCESS) {
+        LOG_WARN("[SelectStmt::create] failed to transform where right expressions");
+        return rc;
+      }
+      std::cout << "[select stmt] where left expr name: " << select_sql.where_expr->left_expr->name() << std::endl;
+      std::cout << "[select stmt] where right expr name: " << select_sql.where_expr->right_expr->name() << std::endl;
+    }
   }
 
   // collect query fields in `select` statement
@@ -512,6 +575,18 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt) {
 
   // everything alright
   SelectStmt *select_stmt = new SelectStmt();
+
+  // Select expression
+  if (select_sql.select_expr_flag) {
+    select_stmt->select_expr_flag_ = true;
+    select_stmt->expressions_ = select_sql.expressions;
+  }
+
+  // Where expression
+  if (select_sql.where_expr_flag) {
+    assert(select_sql.where_expr != nullptr && "Expect `where_expr` not to be nullptr");
+    filter_stmt->set_where_expr(select_sql.where_expr);
+  }
 
   // TODO add expression copy
   select_stmt->tables_.swap(tables);

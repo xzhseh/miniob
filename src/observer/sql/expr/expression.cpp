@@ -17,6 +17,7 @@ See the Mulan PSL v2 for more details. */
 #include "session/session_stage.h"
 #include "sql/expr/tuple.h"
 #include "sql/parser/parse_defs.h"
+#include "sql/parser/value.h"
 #include "sub_query_expr.h"
 
 using namespace std;
@@ -299,6 +300,11 @@ AttrType ArithmeticExpr::value_type() const {
 RC ArithmeticExpr::calc_value(const Value &left_value, const Value &right_value, Value &value) const {
   RC rc = RC::SUCCESS;
 
+  if (Value::check_null(left_value) || Value::check_null(right_value)) {
+    Value::set_null(value, left_value.attr_type());
+    return RC::SUCCESS;
+  }
+
   const AttrType target_type = value_type();
 
   switch (arithmetic_type_) {
@@ -331,7 +337,8 @@ RC ArithmeticExpr::calc_value(const Value &left_value, const Value &right_value,
         if (right_value.get_int() == 0) {
           // NOTE:
           // 设置为整数最大值是不正确的。通常的做法是设置为NULL，但是当前的miniob没有NULL概念，所以这里设置为整数最大值。
-          value.set_int(numeric_limits<int>::max());
+          // value.set_int(numeric_limits<int>::max());
+          Value::set_null(value, AttrType::INTS);
         } else {
           value.set_int(left_value.get_int() / right_value.get_int());
         }
@@ -339,7 +346,8 @@ RC ArithmeticExpr::calc_value(const Value &left_value, const Value &right_value,
         if (right_value.get_float() > -EPSILON && right_value.get_float() < EPSILON) {
           // NOTE:
           // 设置为浮点数最大值是不正确的。通常的做法是设置为NULL，但是当前的miniob没有NULL概念，所以这里设置为浮点数最大值。
-          value.set_float(numeric_limits<float>::max());
+          // value.set_float(numeric_limits<float>::max());
+          Value::set_null(value, AttrType::FLOATS);
         } else {
           value.set_float(left_value.get_float() / right_value.get_float());
         }
@@ -373,10 +381,17 @@ RC ArithmeticExpr::get_value(const Tuple &tuple, Value &value) const {
     LOG_WARN("failed to get value of left expression. rc=%s", strrc(rc));
     return rc;
   }
-  rc = right_->get_value(tuple, right_value);
-  if (rc != RC::SUCCESS) {
-    LOG_WARN("failed to get value of right expression. rc=%s", strrc(rc));
-    return rc;
+  // The expression maybe of `-(expr)`
+  if (right_ != nullptr) {
+    rc = right_->get_value(tuple, right_value);
+    if (rc != RC::SUCCESS) {
+      LOG_WARN("failed to get value of right expression. rc=%s", strrc(rc));
+      return rc;
+    }
+  } else {
+    // FIXME: Ensure this
+    right_value.set_int(0);
+    right_value.set_type(left_value.attr_type());
   }
   return calc_value(left_value, right_value, value);
 }

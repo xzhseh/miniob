@@ -77,6 +77,11 @@ QUOTE            [\'\"]
 {WHITE_SAPCE}                                        // ignore whitespace
 \n                                                   ;
 
+{ID}"-"{DIGIT}+ {
+  yylval->string = strdup(yytext);
+  RETURN_TOKEN(ID_MINUS);
+}
+
 [\-]?{DIGIT}+                           yylval->number=atoi(yytext); RETURN_TOKEN(NUMBER);
 [\-]?{DIGIT}+{DOT}{DIGIT}+              yylval->floats=(float)(atof(yytext)); RETURN_TOKEN(FLOAT);
 

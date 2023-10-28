@@ -44,7 +44,8 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
 
 %}
 
-%define api.pure full
+%define api.pure true
+/* %define api.pure full */
 %define parse.error verbose
 /** 启用位置标识 **/
 %locations
@@ -118,8 +119,8 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
         AS
         GROUP
         HAVING
-	IN
-	EXISTS
+        IN
+        EXISTS
 
 /** union 中定义各种数据类型，真实生成的代码也是union类型，所以不能有非POD类型的数据 **/
 %union {
@@ -155,6 +156,7 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
 %token <string> ID
 %token <string> SSS
 %token <string> DATE_STR
+%token <string> ID_MINUS
 //非终结符
 
 /** type 定义了各种解析后的结果输出的是什么类型。类型对应了 union 中的定义的成员变量名称 **/
@@ -169,6 +171,7 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
 %type <attr_name_list>      attr_name_list           
 %type <agg>                 agg
 %type <rel_attr>            rel_attr
+%type <rel_attr>            expr_attr
 %type <attr_infos>          attr_def_list
 %type <attr_info>           attr_def
 %type <value_list>          value_list
@@ -180,6 +183,8 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
 %type <group_by_list_type>  group_by_list
 %type <condition>           having
 %type <condition_list>      where
+%type <condition>           expr_where
+%type <condition>           expr_where_not_null
 %type <condition_list>      condition_list
 %type <rel_attr_list>       select_attr
 %type <relation_list>       rel_list
@@ -218,6 +223,13 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
 %left '+' '-'
 %left '*' '/'
 %nonassoc UMINUS
+
+// Enable glr-parser for ambiguity grammar
+%glr-parser
+// please do NOT edit these
+%expect-rr 5
+%expect 1
+
 %%
 
 commands: command_wrapper opt_semicolon  //commands or sqls. parser starts here.
@@ -587,9 +599,58 @@ update_value_list:
 ;
 
 select_stmt:        /*  select 语句的语法解析树*/
+    SELECT select_attr FROM ID rel_list expr_where_not_null {
+      $$ = new ParsedSqlNode(SCF_SELECT);
+
+      $$->selection.attributes.swap(*$2);
+      delete $2;
+
+      // expr_where
+      if ($6 != nullptr) {
+        $$->selection.where_expr = $6;
+        $$->selection.where_expr_flag = true;
+      }
+
+      // ID & rel_list
+      if ($5 != nullptr) {
+        $$->selection.relations.swap(*$5);
+        delete $5;
+      }
+      RelationSqlNode relation;
+      relation.relation_name = $4;
+      free($4);
+      $$->selection.relations.push_back(relation);
+      std::reverse($$->selection.relations.begin(), $$->selection.relations.end());
+    }
+    | SELECT expression_list FROM ID rel_list expr_where {
+      $$ = new ParsedSqlNode(SCF_SELECT);
+
+      // expression_list
+      $$->selection.expressions.swap(*$2);
+      std::reverse($$->selection.expressions.begin(), $$->selection.expressions.end());
+      $$->selection.select_expr_flag = true;
+      delete $2;
+
+      // expr_where
+      if ($6 != nullptr) {
+        $$->selection.where_expr = $6;
+        $$->selection.where_expr_flag = true;
+      }
+
+      // ID & rel_list
+      if ($5 != nullptr) {
+        $$->selection.relations.swap(*$5);
+        delete $5;
+      }
+      RelationSqlNode relation;
+      relation.relation_name = $4;
+      free($4);
+      $$->selection.relations.push_back(relation);
+      std::reverse($$->selection.relations.begin(), $$->selection.relations.end());
+    }
     // FIXME: Please ensure the order of group by and order by
     // Currently group by is placed after order by to prevent renaming issue.
-    SELECT select_attr FROM ID option_as rel_list where order_by_clause group_by_clause having
+    | SELECT select_attr FROM ID option_as rel_list where order_by_clause group_by_clause having
     {
       $$ = new ParsedSqlNode(SCF_SELECT);
 
@@ -863,6 +924,43 @@ expression:
       $$->set_name(token_name(sql_string, &@$));
       delete $1;
     }
+    | expr_attr {
+      $$ = new FieldExpr(*$1);
+      $$->set_name(token_name(sql_string, &@$));
+      delete $1;
+    }
+    | ID_MINUS {
+      char *ptr = strchr($1, '-');
+      assert(ptr != nullptr && "Expect `ptr` not to be nullptr");
+      *ptr = '\0';
+      RelAttrSqlNode rel_attr;
+      rel_attr.attribute_name = $1;
+      rel_attr.aggregate_func = agg::NONE;
+      FieldExpr *f_expr = new FieldExpr(rel_attr);
+      int v = atoi(ptr + 1);
+      Value value;
+      value.set_int(v);
+      ValueExpr *value_expr = new ValueExpr(value);
+      $$ = create_arithmetic_expression(ArithmeticExpr::Type::SUB, f_expr, value_expr, sql_string, &@$);
+    }
+    ;
+
+expr_attr:
+    ID {
+      $$ = new RelAttrSqlNode;
+      $$->relation_name = "";
+      $$->attribute_name = $1;
+      $$->aggregate_func = agg::NONE;
+      free($1);
+    }
+    | ID DOT ID {
+      $$ = new RelAttrSqlNode;
+      $$->relation_name  = $1;
+      $$->attribute_name = $3;
+      $$->aggregate_func = agg::NONE;
+      free($1);
+      free($3);
+    }
     ;
 
 option_as:
@@ -1046,9 +1144,31 @@ where:
       $$ = nullptr;
     }
     | WHERE condition_list {
-      $$ = $2;  
+      $$ = $2;
     }
     ;
+
+expr_where_not_null:
+    WHERE expression comp_op expression {
+      $$ = new ConditionSqlNode;
+      $$->comp = $3;
+      $$->left_expr = $2;
+      $$->right_expr = $4;
+    }
+    ;
+
+expr_where:
+    {
+      $$ = nullptr;
+    }
+    | WHERE expression comp_op expression {
+      $$ = new ConditionSqlNode;
+      $$->comp = $3;
+      $$->left_expr = $2;
+      $$->right_expr = $4;
+    }
+    ;
+
 condition_list:
     /* empty */
     {

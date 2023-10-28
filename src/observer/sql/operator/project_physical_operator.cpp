@@ -53,6 +53,22 @@ Tuple *ProjectPhysicalOperator::current_tuple() {
     return children_[0]->current_tuple();
   }
 
+  if (select_expr_flag_) {
+    // Construct the `expr_tuple_`
+    std::vector<Value> cells;
+    for (const auto *expr: select_expr_) {
+      Value v;
+      RC rc = expr->get_value(*children_[0]->current_tuple(), v);
+      if (rc != RC::SUCCESS) {
+        LOG_WARN("[ProjectPhysicalOperator::current_tuple] failed to get the value of expression");
+        return nullptr;
+      }
+      cells.push_back(v);
+    }
+    expr_tuple_.set_cells(cells);
+    return &expr_tuple_;
+  }
+
   tuple_.set_tuple(children_[0]->current_tuple());
   // std::cout << "[project] Current tuple: " << tuple_.to_string() << std::endl;
   return &tuple_;

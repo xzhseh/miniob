@@ -37,6 +37,9 @@ class ProjectLogicalOperator : public LogicalOperator {
   const std::vector<std::unique_ptr<Expression>> &expressions() const { return expressions_; }
   const std::vector<Field> &fields() const { return fields_; }
 
+  std::vector<Expression *> select_expr_;
+  bool select_expr_flag_{false};
+
  private:
   //! 投影映射的字段名称
   //! 并不是所有的select都会查看表字段，也可能是常量数字、字符串，

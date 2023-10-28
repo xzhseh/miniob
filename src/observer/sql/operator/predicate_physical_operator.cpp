@@ -14,12 +14,15 @@ See the Mulan PSL v2 for more details. */
 
 #include "sql/operator/predicate_physical_operator.h"
 #include "common/log/log.h"
+#include "sql/parser/parse_defs.h"
 #include "sql/stmt/filter_stmt.h"
 #include "storage/field/field.h"
 #include "storage/record/record.h"
 
-PredicatePhysicalOperator::PredicatePhysicalOperator(std::unique_ptr<Expression> expr) : expression_(std::move(expr)) {
-  ASSERT(expression_->value_type() == BOOLEANS, "predicate's expression should be BOOLEAN type");
+PredicatePhysicalOperator::PredicatePhysicalOperator(std::unique_ptr<Expression> expr, bool is_where_expr) : expression_(std::move(expr)) {
+  if (!is_where_expr) {
+    ASSERT(expression_->value_type() == BOOLEANS, "predicate's expression should be BOOLEAN type");
+  }
 }
 
 RC PredicatePhysicalOperator::open(Trx *trx) {
@@ -29,6 +32,44 @@ RC PredicatePhysicalOperator::open(Trx *trx) {
   }
 
   return children_[0]->open(trx);
+}
+
+/// Return true if the condition is satisfied, false otherwise
+bool filter(ConditionSqlNode *condition, Tuple &tuple) {
+  Value lhs;
+  Value rhs;
+
+  std::cout << "current tuple: " << tuple.to_string() << std::endl;
+
+  if (condition->left_expr->get_value(tuple, lhs) != RC::SUCCESS) {
+    LOG_WARN("[filter] failed to get the left expr value, expr: %s", condition->left_expr->name().c_str());
+  }
+  if (condition->right_expr->get_value(tuple, rhs) != RC::SUCCESS) {
+    LOG_WARN("[filter] failed to get the right expr value, expr: %s", condition->right_expr->name().c_str());
+  }
+
+  if (Value::check_null(lhs) || Value::check_null(rhs)) {
+    return false;
+  }
+
+  switch (condition->comp) {
+    case CompOp::EQUAL_TO: {
+      return lhs.compare(rhs) == 0;
+    }
+    case CompOp::GREAT_EQUAL: {
+      return lhs.compare(rhs) >= 0;
+    }
+    case CompOp::LESS_EQUAL: {
+      return lhs.compare(rhs) <= 0;
+    }
+    case CompOp::GREAT_THAN: {
+      return lhs.compare(rhs) > 0;
+    }
+    case CompOp::LESS_THAN: {
+      return lhs.compare(rhs) < 0;
+    }
+    default: assert(false); // Not yet support
+  }
 }
 
 RC PredicatePhysicalOperator::next() {
@@ -41,6 +82,17 @@ RC PredicatePhysicalOperator::next() {
       rc = RC::INTERNAL;
       LOG_WARN("failed to get tuple from operator");
       break;
+    }
+
+    if (where_expr_flag_) {
+      // Should be expression filter
+      if (filter(where_expr_, *tuple)) {
+        return RC::SUCCESS;
+      } else {
+        // Keep filtering out tuples until
+        // the first tuple that satisfies the condition appears
+        continue;
+      }
     }
 
     Value value;

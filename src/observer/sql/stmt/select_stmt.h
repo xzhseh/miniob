@@ -19,6 +19,7 @@ See the Mulan PSL v2 for more details. */
 #include <vector>
 
 #include "common/rc.h"
+#include "sql/expr/expression.h"
 #include "sql/stmt/agg_stmt.h"
 #include "sql/stmt/stmt.h"
 #include "storage/field/field.h"
@@ -75,6 +76,8 @@ class SelectStmt : public Stmt {
                            std::unordered_map<std::string, std::string> &table_alias_map);
 
   AggStmt *agg_stmt() const { return agg_stmt_; }
+  const std::vector<Expression *> & get_select_expr() const { return expressions_; }
+  bool get_select_expr_flag() const { return select_expr_flag_; }
 
  private:
   std::vector<Field> query_fields_;
@@ -82,6 +85,9 @@ class SelectStmt : public Stmt {
   std::vector<Table *> tables_;
   std::vector<JoinStmt> join_stmts_;
   std::vector<OrderByStmt> order_by_;
-  FilterStmt *filter_stmt_ = nullptr;
-  AggStmt *agg_stmt_ = nullptr;
+  FilterStmt *filter_stmt_{nullptr};
+  AggStmt *agg_stmt_{nullptr};
+  // This will be propagated to projection operator
+  std::vector<Expression *> expressions_;
+  bool select_expr_flag_{false};
 };
