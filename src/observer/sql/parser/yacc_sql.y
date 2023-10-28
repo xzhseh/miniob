@@ -874,6 +874,9 @@ option_as:
     | AS ID {
       $$ = $2;
     }
+    | ID {
+      $$ = $1;
+    }
     ;
 
 select_attr:

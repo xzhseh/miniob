@@ -92,7 +92,8 @@ RC bind_order_by(Db *db, const std::vector<Table *> &tables, const std::vector<O
   return RC::SUCCESS;
 }
 
-auto get_field(Db *db, const std::vector<Table *> &tables, const RelAttrSqlNode &attribute, Field &field) -> RC {
+auto get_field(Db *db, const std::vector<Table *> &tables, std::unordered_map<std::string, Table *> *table_map,
+               const RelAttrSqlNode &attribute, Field &field) -> RC {
   RC rc = RC::SUCCESS;
 
   const char *table_name = attribute.relation_name.c_str();
@@ -111,9 +112,14 @@ auto get_field(Db *db, const std::vector<Table *> &tables, const RelAttrSqlNode 
       }
     }
 
-    return RC::INVALID_ARGUMENT;
+    return RC::SUCCESS;
   } else {
-    const auto *table = db->find_table(table_name);
+    // Table name is not empty
+    auto iter = table_map->find(table_name);
+    if (iter == table_map->end()) {
+      return RC::INVALID_ARGUMENT;
+    }
+    const Table *table = iter->second;
     if (table == nullptr) {
       return RC::INVALID_ARGUMENT;
     }
@@ -194,8 +200,8 @@ bool group_by_sanity_check(const std::vector<RelAttrSqlNode> &group_by_keys, con
 }
 
 /// Find the corresponding fields and bind they to group by statements
-RC aggregation_builder(Db *db, const std::vector<Table *> &tables, const std::vector<RelAttrSqlNode> &attributes,
-                       AggStmt &agg_stmt) {
+RC aggregation_builder(Db *db, const std::vector<Table *> &tables, std::unordered_map<std::string, Table *> *table_map,
+                       const std::vector<RelAttrSqlNode> &attributes, AggStmt &agg_stmt) {
   RC rc = RC::SUCCESS;
   std::vector<Field> fields;
   std::vector<bool> is_agg;
@@ -229,7 +235,7 @@ RC aggregation_builder(Db *db, const std::vector<Table *> &tables, const std::ve
       } else {
         // AGG(rel_attr)
         Field field;
-        rc = get_field(db, tables, attr, field);
+        rc = get_field(db, tables, table_map, attr, field);
         if (rc != RC::SUCCESS) {
           LOG_WARN("[aggregation_builder] failed to get field %s.", attr.attribute_name.c_str());
           return rc;
@@ -244,7 +250,7 @@ RC aggregation_builder(Db *db, const std::vector<Table *> &tables, const std::ve
       }
       // Normal key
       Field field;
-      rc = get_field(db, tables, attr, field);
+      rc = get_field(db, tables, table_map, attr, field);
       if (rc != RC::SUCCESS) {
         LOG_WARN("[aggregation_builder] failed to get field %s.", attr.attribute_name.c_str());
         return rc;
@@ -470,7 +476,7 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt) {
   AggStmt *agg_stmt = new AggStmt();
   assert(agg_stmt != nullptr && "`agg_stmt must not be nullptr");
 
-  rc = aggregation_builder(db, tables, select_sql.attributes, *agg_stmt);
+  rc = aggregation_builder(db, tables, &table_map, select_sql.attributes, *agg_stmt);
   if (rc != RC::SUCCESS) {
     LOG_WARN("failed to build the aggregation statement.");
     return rc;
