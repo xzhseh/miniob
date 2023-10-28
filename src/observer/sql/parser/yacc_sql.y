@@ -880,12 +880,16 @@ option_as:
     ;
 
 select_attr:
-    '*' {
+    '*' option_as {
       $$ = new std::vector<RelAttrSqlNode>;
       RelAttrSqlNode attr;
       attr.relation_name  = "";
       attr.attribute_name = "*";
       attr.aggregate_func = agg::NONE;
+      if($2 != nullptr) {
+      	attr.agg_valid_flag = false;
+      	free($2);
+      }
       $$->emplace_back(attr);
     }
     // TODO: Add the syntax for cases like `select agg(c1), count(*) from t1;`
