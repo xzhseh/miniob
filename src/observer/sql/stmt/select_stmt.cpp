@@ -292,6 +292,11 @@ RC SelectStmt::resolve_tables(Db *db, const SelectSqlNode &select_sql, std::vect
       tables.push_back(table);
       table_map.insert(std::pair<std::string, Table *>(table_name, table));
       if (!alias.empty()) {
+        // check if the alias is conflict with the table name
+        if (table_map.find(alias) != table_map.end()) {
+          LOG_WARN("alias name conflict. alias=%s", alias.c_str());
+          return RC::INVALID_ARGUMENT;
+        }
         table_map.insert(std::pair<std::string, Table *>(alias, table));
       }
     } else {
