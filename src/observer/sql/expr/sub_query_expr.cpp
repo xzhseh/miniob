@@ -10,12 +10,17 @@ SubQueryExpr::SubQueryExpr(const std::vector<Value> &const_value_list) {
   this->const_value_list = const_value_list;
 }
 
-SubQueryExpr::SubQueryExpr(const std::shared_ptr<ParsedSqlNode> &sub_query) {
+SubQueryExpr::SubQueryExpr(const std::shared_ptr<ParsedSqlNode> &sub_query,
+                           std::unordered_map<std::string, Table *> table_map) {
   this->type_ = SubResultType::SUB_QUERY;
-  this->sub_query_event_ = std::make_unique<SQLStageEvent>(sub_query);
+  this->sub_query_node = sub_query;
+  this->table_map_ = std::move(table_map);
 }
+// 受不了了，直接简单粗暴一点
+std::vector<std::unique_ptr<Tuple>> parent_tuples;
 
 RC SubQueryExpr::in_or_not(const Value &value, const std::unique_ptr<Expression> &field_expr, bool &result) const {
+  std::cout << "Compare value is " << value.to_string() << std::endl;
   if (this->type_ == SubResultType::UNDEFINED) {
     return RC::INTERNAL;
   }
@@ -60,26 +65,92 @@ RC SubQueryExpr::in_or_not(const Value &value, const std::unique_ptr<Expression>
 
 RC SubQueryExpr::try_get_value(Value &value) const { return RC::INTERNAL; }
 
-RC SubQueryExpr::init() {
-  if (this->inited_) {
+RC replace_field(std::shared_ptr<ParsedSqlNode> &sub_query, const std::unordered_map<std::string, Table *> &table_map) {
+  //  Now we get a sub query parsed sql node, we need to replace the parent field
+  for (auto &condition : sub_query->selection.conditions) {
+    // select * from t1 where t1.nothing <> (select min(t2.id) from t2 where t2.id > t1.id)
+    const auto &left_attr = condition.left_attr;
+    const auto &right_attr = condition.right_attr;
+
+    if (condition.left_is_attr == 1) {
+      // left is attr
+      auto iter = table_map.find(left_attr.relation_name);
+      if (iter != table_map.end()) {
+        // Replace with value
+        auto table = iter->second;
+        // Construct a field expression
+        const FieldMeta *field = table->table_meta().field(left_attr.attribute_name.c_str());
+        Value value;
+        auto field_expr = std::make_unique<FieldExpr>(Field(table, field));
+        bool is_replaced = false;
+        for (const auto &parent_tuple : parent_tuples) {
+          RC rc = field_expr->get_value(*parent_tuple, value);
+          if (rc == RC::SUCCESS) {
+            is_replaced = true;
+            break;
+          }
+        }
+        if (!is_replaced) {
+          return RC::INTERNAL;
+        }
+        condition.left_is_attr = 0;
+        condition.left_value = value;
+      }
+    }
+
+    if (condition.right_is_attr == 1) {
+      // right is attr
+      auto iter = table_map.find(right_attr.relation_name);
+      if (iter != table_map.end()) {
+        // Replace with value
+        auto table = iter->second;
+        // Construct a field expression
+        const FieldMeta *field = table->table_meta().field(right_attr.attribute_name.c_str());
+        Value value;
+        auto field_expr = std::make_unique<FieldExpr>(Field(table, field));
+        bool is_replaced = false;
+        for (const auto &parent_tuple : parent_tuples) {
+          RC rc = field_expr->get_value(*parent_tuple, value);
+          if (rc == RC::SUCCESS) {
+            is_replaced = true;
+            break;
+          }
+        }
+        if (!is_replaced) {
+          return RC::INTERNAL;
+        }
+        condition.right_is_attr = 0;
+        condition.right_value = value;
+      }
+    }
+  }
+  return RC::SUCCESS;
+}
+
+RC SubQueryExpr::get_value(const Tuple &tuple, Value &value) {
+  this->tuple_list.clear();
+  if (this->type_ != SubResultType::SUB_QUERY) {
+    value.set_int(123);
     return RC::SUCCESS;
   }
-  if (this->sub_query_event_ == nullptr) {
-    return RC::SUCCESS;
-  }
-  if (this->type_ == SubResultType::UNDEFINED) {
-    return RC::INTERNAL;
-  }
+  parent_tuples.emplace_back(tuple.copy());
+  assert(this->type_ == SubResultType::SUB_QUERY);
   SessionStage *stage = dynamic_cast<SessionStage *>(SessionStage::make_stage("SessionStage"));
-  RC rc = stage->handle_sub_sql(this->sub_query_event_.get());
+  auto copy_node = this->sub_query_node.get()->selection;
+  std::shared_ptr<ParsedSqlNode> sub_query = std::make_shared<ParsedSqlNode>();
+  sub_query->selection = copy_node;
+  sub_query->flag = SCF_SELECT;
+  RC rc = replace_field(sub_query, table_map_);
+  this->sub_query_event_ = std::make_unique<SQLStageEvent>(sub_query);
+  if (rc != RC::SUCCESS) {
+    LOG_WARN("failed to replace field. rc=%s", strrc(rc));
+    return rc;
+  }
+  rc = stage->handle_sub_sql(this->sub_query_event_.get());
   if (rc != RC::SUCCESS) {
     LOG_WARN("failed to handle sub sql. rc=%s", strrc(rc));
     return rc;
   }
-  // Handle sub query
-  assert(this->type_ == SubResultType::SUB_QUERY);
-  assert(this->sub_query_event_ != nullptr);
-  // Project physical operator
   auto &root_oper = this->sub_query_event_->physical_operator();
   auto select_stmt = dynamic_cast<SelectStmt *>(this->sub_query_event_->stmt());
   this->result_schema_ = create_sub_result_schema(select_stmt);
@@ -108,16 +179,14 @@ RC SubQueryExpr::init() {
     }
   }
   root_oper->close();
-  return RC::SUCCESS;
-}
 
-RC SubQueryExpr::get_value(const Tuple &tuple, Value &value) const {
+  parent_tuples.pop_back();
+
   if (!should_return_value) {
     value.set_int(1);
     return RC::SUCCESS;
   }
-  // For : select * from ssq_1 where (select ssq_2.id from ssq_2 where col2 = 47) = id;
-  // !!! Not for IN and EXIST compare
+
   if (this->tuple_list.empty()) {
     value.set_int(1919810);
     return RC::SUCCESS;
@@ -128,12 +197,12 @@ RC SubQueryExpr::get_value(const Tuple &tuple, Value &value) const {
   }
 
   auto &sub_tuple = this->tuple_list[0];
-  RC rc = RC::SUCCESS;
   if (this->result_schema_.cell_at(0).alias() != nullptr) {
     // Aggregate function , value list tuple
     rc = sub_tuple->cell_at(0, value);
   } else {
     rc = sub_tuple->find_cell(this->result_schema_.cell_at(0), value);
   }
+  this->tuple_list.clear();
   return rc;
 }

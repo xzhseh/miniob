@@ -49,6 +49,7 @@ RC DeleteStmt::create(Db *db, const DeleteSqlNode &delete_sql, Stmt *&stmt) {
   std::vector<RelAttrSqlNode> empty_rel_attr;
   RC rc = FilterStmt::create(db,
                              table,
+                             nullptr,
                              &table_map,
                              empty_rel_attr,
                              std::vector<RelationSqlNode>(),

@@ -34,6 +34,7 @@ struct FilterObj {
   // Different usage , so we won't merge them into one.
   std::vector<Value> value_list;
   std::shared_ptr<ParsedSqlNode> sub_query{nullptr};
+  std::unordered_map<std::string, Table *> table_map;
 
   void init_attr(const Field &field) {
     this->type = FilterObjType::ATTR;
@@ -71,8 +72,16 @@ class FilterUnit {
   const FilterObj &left() const { return left_; }
   const FilterObj &right() const { return right_; }
 
+  void set_is_and(bool is_and) { is_and_ = is_and; }
+  [[nodiscard]] bool is_and() const {
+    assert(is_and_ != -1);
+    return is_and_;
+  }
+
  private:
   CompOp comp_ = NO_OP;
+  // -1 is invalid, 0 is AND, 1 is OR
+  int is_and_{-1};
   FilterObj left_;
   FilterObj right_;
 };
@@ -91,10 +100,12 @@ class FilterStmt {
 
  public:
   static RC create(Db *db, Table *default_table, std::unordered_map<std::string, Table *> *tables,
-                   const std::vector<RelAttrSqlNode> &rel_attr, const std::vector<RelationSqlNode> &relations,
-                   const ConditionSqlNode *conditions, int condition_num, FilterStmt *&stmt);
+                   std::unordered_map<std::string, Table *> *parent_tables, const std::vector<RelAttrSqlNode> &rel_attr,
+                   const std::vector<RelationSqlNode> &relations, const ConditionSqlNode *conditions, int condition_num,
+                   FilterStmt *&stmt);
 
   static RC create_filter_unit(Db *db, Table *default_table, std::unordered_map<std::string, Table *> *tables,
+                               std::unordered_map<std::string, Table *> *parent_tables,
                                const std::vector<RelAttrSqlNode> &rel_attr,
                                const std::vector<RelationSqlNode> &relations, const ConditionSqlNode &condition,
                                FilterUnit *&filter_unit);
@@ -102,3 +113,5 @@ class FilterStmt {
  private:
   std::vector<FilterUnit *> filter_units_;  // 默认当前都是AND关系
 };
+
+void resolve_sub_query(SelectSqlNode &sub_node, std::unordered_map<std::string, Table *> *table_map);

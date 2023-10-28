@@ -73,6 +73,7 @@ struct RelAttrSqlNode {
 struct RelationSqlNode {
   std::string relation_name;
   std::string alias_name;
+  bool is_parent{false};  // for sub query
 };
 
 struct IndexAttr {
@@ -117,9 +118,10 @@ struct ConditionSqlNode {
                                        ///< 3时，是常量列表
   std::vector<Value> left_value_list;  ///< const value list for IN/NOT IN,EXISTS/NOT EXISTS
   SelectSqlNode *left_sub_select = {nullptr};
-  Value left_value;           ///< left-hand side value if left_is_attr = FALSE
-  RelAttrSqlNode left_attr;   ///< left-hand side attribute
-  CompOp comp;                ///< comparison operator
+  Value left_value;          ///< left-hand side value if left_is_attr = FALSE
+  RelAttrSqlNode left_attr;  ///< left-hand side attribute
+  CompOp comp;               ///< comparison operator
+  bool is_and{true};
   int right_is_attr;          ///< TRUE if right-hand side is an attribute
                               ///< 1时，操作符右边是属性名，0时，是属性值
                               ///< 2时，是子查询
@@ -156,6 +158,8 @@ struct SelectSqlNode {
   std::vector<OrderBySqlNode> order_bys;     ///< order by clause
   std::vector<RelAttrSqlNode> group_bys;     ///< group by clause
   ConditionSqlNode having;                   ///< Currently treat it as a single condition node
+  // The void * is Tuple *
+  std::vector<void *> context_tuples;  ///< context tuples for sub query
 
   SelectSqlNode() = default;
   SelectSqlNode(const SelectSqlNode &other) = default;

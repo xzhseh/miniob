@@ -38,17 +38,6 @@ struct OrderByStmt {
   bool asc;
 };
 
-struct QueryTable {
-  Table *table;
-  std::string alias;
-};
-
-struct AliasCell {
-  bool is_alias = false;
-  std::string field_alias;
-  std::string table_alias;
-};
-
 /**
  * @brief 表示select语句
  * @ingroup Statement
@@ -69,16 +58,14 @@ class SelectStmt : public Stmt {
   [[nodiscard]] const std::vector<JoinStmt> &join_stmts() const { return join_stmts_; }
   [[nodiscard]] FilterStmt *filter_stmt() const { return filter_stmt_; }
   [[nodiscard]] const std::vector<OrderByStmt> &order_by() const { return order_by_; }
-  [[nodiscard]] const std::vector<AliasCell> &alias_vec() const { return alias_vec_; }
   static RC resolve_tables(Db *db, const SelectSqlNode &select_sql, std::vector<Table *> &tables,
                            std::unordered_map<std::string, Table *> &table_map,
-                           std::unordered_map<std::string, std::string> &table_alias_map);
+                           std::unordered_map<std::string, Table *> &parent_table_map);
 
   AggStmt *agg_stmt() const { return agg_stmt_; }
 
  private:
   std::vector<Field> query_fields_;
-  std::vector<AliasCell> alias_vec_;  // Map query_fields_ to alias,if size of alias_vec_ is 0,then no alias
   std::vector<Table *> tables_;
   std::vector<JoinStmt> join_stmts_;
   std::vector<OrderByStmt> order_by_;
