@@ -317,7 +317,7 @@ RC AggPhysicalOperator::next() {
         (having_.right_is_attr && having_.right_attr.attribute_name == "*" &&
          having_.right_attr.aggregate_func == agg::AGG_COUNT)) {
       Value v;
-      std::cout << "current count: " << a_v.count << std::endl;
+      // std::cout << "current count: " << a_v.count << std::endl;
       v.set_int(a_v.count);
       if (!check_having(v, agg::AGG_COUNT, having_, field_exprs_.front().field(), true)) {
         continue;
