@@ -599,58 +599,9 @@ update_value_list:
 ;
 
 select_stmt:        /*  select 语句的语法解析树*/
-    SELECT select_attr FROM ID rel_list expr_where_not_null {
-      $$ = new ParsedSqlNode(SCF_SELECT);
-
-      $$->selection.attributes.swap(*$2);
-      delete $2;
-
-      // expr_where
-      if ($6 != nullptr) {
-        $$->selection.where_expr = $6;
-        $$->selection.where_expr_flag = true;
-      }
-
-      // ID & rel_list
-      if ($5 != nullptr) {
-        $$->selection.relations.swap(*$5);
-        delete $5;
-      }
-      RelationSqlNode relation;
-      relation.relation_name = $4;
-      free($4);
-      $$->selection.relations.push_back(relation);
-      std::reverse($$->selection.relations.begin(), $$->selection.relations.end());
-    }
-    | SELECT expression_list FROM ID rel_list expr_where {
-      $$ = new ParsedSqlNode(SCF_SELECT);
-
-      // expression_list
-      $$->selection.expressions.swap(*$2);
-      std::reverse($$->selection.expressions.begin(), $$->selection.expressions.end());
-      $$->selection.select_expr_flag = true;
-      delete $2;
-
-      // expr_where
-      if ($6 != nullptr) {
-        $$->selection.where_expr = $6;
-        $$->selection.where_expr_flag = true;
-      }
-
-      // ID & rel_list
-      if ($5 != nullptr) {
-        $$->selection.relations.swap(*$5);
-        delete $5;
-      }
-      RelationSqlNode relation;
-      relation.relation_name = $4;
-      free($4);
-      $$->selection.relations.push_back(relation);
-      std::reverse($$->selection.relations.begin(), $$->selection.relations.end());
-    }
     // FIXME: Please ensure the order of group by and order by
     // Currently group by is placed after order by to prevent renaming issue.
-    | SELECT select_attr FROM ID option_as rel_list where order_by_clause group_by_clause having
+    SELECT select_attr FROM ID option_as rel_list where order_by_clause group_by_clause having
     {
       $$ = new ParsedSqlNode(SCF_SELECT);
 
@@ -741,6 +692,55 @@ select_stmt:        /*  select 语句的语法解析树*/
 	    $$->selection.order_bys.insert($$->selection.order_bys.end(),$8->begin(),$8->end());
 	    delete $8;
 	  }
+        }
+    | SELECT select_attr FROM ID rel_list expr_where_not_null {
+      $$ = new ParsedSqlNode(SCF_SELECT);
+
+      $$->selection.attributes.swap(*$2);
+      delete $2;
+
+      // expr_where
+      if ($6 != nullptr) {
+        $$->selection.where_expr = $6;
+        $$->selection.where_expr_flag = true;
+      }
+
+      // ID & rel_list
+      if ($5 != nullptr) {
+        $$->selection.relations.swap(*$5);
+        delete $5;
+      }
+      RelationSqlNode relation;
+      relation.relation_name = $4;
+      free($4);
+      $$->selection.relations.push_back(relation);
+      std::reverse($$->selection.relations.begin(), $$->selection.relations.end());
+    }
+    | SELECT expression_list FROM ID rel_list expr_where {
+      $$ = new ParsedSqlNode(SCF_SELECT);
+
+      // expression_list
+      $$->selection.expressions.swap(*$2);
+      std::reverse($$->selection.expressions.begin(), $$->selection.expressions.end());
+      $$->selection.select_expr_flag = true;
+      delete $2;
+
+      // expr_where
+      if ($6 != nullptr) {
+        $$->selection.where_expr = $6;
+        $$->selection.where_expr_flag = true;
+      }
+
+      // ID & rel_list
+      if ($5 != nullptr) {
+        $$->selection.relations.swap(*$5);
+        delete $5;
+      }
+      RelationSqlNode relation;
+      relation.relation_name = $4;
+      free($4);
+      $$->selection.relations.push_back(relation);
+      std::reverse($$->selection.relations.begin(), $$->selection.relations.end());
     }
     ;
 inner_join_constr:

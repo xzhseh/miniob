@@ -608,7 +608,7 @@ static const yytype_int16 yyrline[] =
      308,   314,   322,   335,   349,   360,   368,   371,   384,   394,
      413,   416,   430,   443,   462,   465,   468,   475,   479,   480,
      481,   482,   483,   486,   502,   505,   516,   520,   524,   530,
-     536,   544,   556,   583,   586,   602,   625,   653,   704,   747,
+     536,   544,   556,   583,   586,   604,   655,   696,   719,   747,
      759,   762,   778,   781,   788,   796,   814,   817,   824,   827,
      833,   838,   850,   858,   866,   877,   887,   892,   903,   906,
      909,   912,   915,   919,   922,   927,   932,   949,   956,   968,
@@ -685,8 +685,8 @@ static const yytype_uint8 yydefact[] =
       38,   113,     0,   124,     0,    70,   119,     0,   114,     0,
      117,     0,     0,     0,     0,     0,     0,   118,     0,     0,
        0,     0,     0,   122,   127,     0,     0,    48,    50,    49,
-      51,    52,    44,     0,     0,     0,     0,    99,     0,    66,
-       0,     0,   121,   121,     0,    65,    99,   102,     0,     0,
+      51,    52,    44,     0,     0,     0,     0,    99,     0,    68,
+       0,     0,   121,   121,     0,    67,    99,   102,     0,     0,
        0,    99,     0,    54,     0,   145,   146,   147,   148,   149,
      150,     0,   151,   153,     0,     0,     0,   141,   143,     0,
        0,   126,    63,     0,     0,     0,    45,    43,    40,    39,
@@ -694,12 +694,12 @@ static const yytype_uint8 yydefact[] =
        0,   115,   106,     0,   105,   103,     0,     0,     0,   152,
      154,   130,     0,   132,     0,   142,   144,     0,     0,   129,
      131,   128,     0,   121,   155,    47,     0,    46,    41,    32,
-       0,    34,     0,   120,     0,   126,     0,     0,    68,    72,
+       0,    34,     0,   120,     0,   126,     0,     0,    66,    72,
        0,     0,    54,    53,     0,     0,     0,    54,     0,    54,
        0,     0,    62,    44,    36,    33,   125,    69,   126,     0,
        0,    76,   123,    55,     0,   139,     0,     0,     0,   135,
        0,   137,     0,    42,    37,    70,    79,    80,    82,     0,
-       0,    67,     0,   134,   133,   136,   138,    63,    71,     0,
+       0,    65,     0,   134,   133,   136,   138,    63,    71,     0,
       84,    83,    73,    74,    77,   140,    64,    81,     0,    75
 };
 
@@ -887,7 +887,7 @@ static const yytype_int8 yyr2[] =
        2,     2,     8,     9,     2,     1,     0,     3,     5,     7,
        0,     3,     6,     3,     0,     1,     2,     1,     1,     1,
        1,     1,     1,     8,     0,     3,     1,     1,     1,     1,
-       1,     4,     8,     0,     5,     6,     6,    10,     8,     5,
+       1,     4,     8,     0,     5,    10,     8,     6,     6,     5,
        0,     6,     0,     3,     1,     3,     0,     2,     0,     3,
        1,     3,     1,     2,     2,     2,     1,     3,     3,     3,
        3,     3,     3,     2,     1,     1,     1,     1,     3,     0,
@@ -2117,67 +2117,8 @@ yyuserAction (yyRuleNum yyrule, int yyrhslen, yyGLRStackItem* yyvsp,
 #line 2118 "yacc_sql.cpp"
     break;
 
-  case 65: /* select_stmt: SELECT select_attr FROM ID rel_list expr_where_not_null  */
-#line 602 "yacc_sql.y"
-                                                            {
-      ((*yyvalp).sql_node) = new ParsedSqlNode(SCF_SELECT);
-
-      ((*yyvalp).sql_node)->selection.attributes.swap(*(YY_CAST (yyGLRStackItem const *, yyvsp)[YYFILL (-4)].yystate.yysemantics.yyval.rel_attr_list));
-      delete (YY_CAST (yyGLRStackItem const *, yyvsp)[YYFILL (-4)].yystate.yysemantics.yyval.rel_attr_list);
-
-      // expr_where
-      if ((YY_CAST (yyGLRStackItem const *, yyvsp)[YYFILL (0)].yystate.yysemantics.yyval.condition) != nullptr) {
-        ((*yyvalp).sql_node)->selection.where_expr = (YY_CAST (yyGLRStackItem const *, yyvsp)[YYFILL (0)].yystate.yysemantics.yyval.condition);
-        ((*yyvalp).sql_node)->selection.where_expr_flag = true;
-      }
-
-      // ID & rel_list
-      if ((YY_CAST (yyGLRStackItem const *, yyvsp)[YYFILL (-1)].yystate.yysemantics.yyval.relation_list) != nullptr) {
-        ((*yyvalp).sql_node)->selection.relations.swap(*(YY_CAST (yyGLRStackItem const *, yyvsp)[YYFILL (-1)].yystate.yysemantics.yyval.relation_list));
-        delete (YY_CAST (yyGLRStackItem const *, yyvsp)[YYFILL (-1)].yystate.yysemantics.yyval.relation_list);
-      }
-      RelationSqlNode relation;
-      relation.relation_name = (YY_CAST (yyGLRStackItem const *, yyvsp)[YYFILL (-2)].yystate.yysemantics.yyval.string);
-      free((YY_CAST (yyGLRStackItem const *, yyvsp)[YYFILL (-2)].yystate.yysemantics.yyval.string));
-      ((*yyvalp).sql_node)->selection.relations.push_back(relation);
-      std::reverse(((*yyvalp).sql_node)->selection.relations.begin(), ((*yyvalp).sql_node)->selection.relations.end());
-    }
-#line 2146 "yacc_sql.cpp"
-    break;
-
-  case 66: /* select_stmt: SELECT expression_list FROM ID rel_list expr_where  */
-#line 625 "yacc_sql.y"
-                                                         {
-      ((*yyvalp).sql_node) = new ParsedSqlNode(SCF_SELECT);
-
-      // expression_list
-      ((*yyvalp).sql_node)->selection.expressions.swap(*(YY_CAST (yyGLRStackItem const *, yyvsp)[YYFILL (-4)].yystate.yysemantics.yyval.expression_list));
-      std::reverse(((*yyvalp).sql_node)->selection.expressions.begin(), ((*yyvalp).sql_node)->selection.expressions.end());
-      ((*yyvalp).sql_node)->selection.select_expr_flag = true;
-      delete (YY_CAST (yyGLRStackItem const *, yyvsp)[YYFILL (-4)].yystate.yysemantics.yyval.expression_list);
-
-      // expr_where
-      if ((YY_CAST (yyGLRStackItem const *, yyvsp)[YYFILL (0)].yystate.yysemantics.yyval.condition) != nullptr) {
-        ((*yyvalp).sql_node)->selection.where_expr = (YY_CAST (yyGLRStackItem const *, yyvsp)[YYFILL (0)].yystate.yysemantics.yyval.condition);
-        ((*yyvalp).sql_node)->selection.where_expr_flag = true;
-      }
-
-      // ID & rel_list
-      if ((YY_CAST (yyGLRStackItem const *, yyvsp)[YYFILL (-1)].yystate.yysemantics.yyval.relation_list) != nullptr) {
-        ((*yyvalp).sql_node)->selection.relations.swap(*(YY_CAST (yyGLRStackItem const *, yyvsp)[YYFILL (-1)].yystate.yysemantics.yyval.relation_list));
-        delete (YY_CAST (yyGLRStackItem const *, yyvsp)[YYFILL (-1)].yystate.yysemantics.yyval.relation_list);
-      }
-      RelationSqlNode relation;
-      relation.relation_name = (YY_CAST (yyGLRStackItem const *, yyvsp)[YYFILL (-2)].yystate.yysemantics.yyval.string);
-      free((YY_CAST (yyGLRStackItem const *, yyvsp)[YYFILL (-2)].yystate.yysemantics.yyval.string));
-      ((*yyvalp).sql_node)->selection.relations.push_back(relation);
-      std::reverse(((*yyvalp).sql_node)->selection.relations.begin(), ((*yyvalp).sql_node)->selection.relations.end());
-    }
-#line 2177 "yacc_sql.cpp"
-    break;
-
-  case 67: /* select_stmt: SELECT select_attr FROM ID option_as rel_list where order_by_clause group_by_clause having  */
-#line 654 "yacc_sql.y"
+  case 65: /* select_stmt: SELECT select_attr FROM ID option_as rel_list where order_by_clause group_by_clause having  */
+#line 605 "yacc_sql.y"
     {
       ((*yyvalp).sql_node) = new ParsedSqlNode(SCF_SELECT);
 
@@ -2228,11 +2169,11 @@ yyuserAction (yyRuleNum yyrule, int yyrhslen, yyGLRStackItem* yyvsp,
         ((*yyvalp).sql_node)->selection.having = having;
       }
     }
-#line 2232 "yacc_sql.cpp"
+#line 2173 "yacc_sql.cpp"
     break;
 
-  case 68: /* select_stmt: SELECT select_attr FROM ID inner_join_constr inner_join_list where order_by_clause  */
-#line 705 "yacc_sql.y"
+  case 66: /* select_stmt: SELECT select_attr FROM ID inner_join_constr inner_join_list where order_by_clause  */
+#line 656 "yacc_sql.y"
         {
           ((*yyvalp).sql_node) = new ParsedSqlNode(SCF_SELECT);
           if ((YY_CAST (yyGLRStackItem const *, yyvsp)[YYFILL (-6)].yystate.yysemantics.yyval.rel_attr_list) != nullptr) {
@@ -2272,6 +2213,65 @@ yyuserAction (yyRuleNum yyrule, int yyrhslen, yyGLRStackItem* yyvsp,
 	    ((*yyvalp).sql_node)->selection.order_bys.insert(((*yyvalp).sql_node)->selection.order_bys.end(),(YY_CAST (yyGLRStackItem const *, yyvsp)[YYFILL (0)].yystate.yysemantics.yyval.order_by_list_type)->begin(),(YY_CAST (yyGLRStackItem const *, yyvsp)[YYFILL (0)].yystate.yysemantics.yyval.order_by_list_type)->end());
 	    delete (YY_CAST (yyGLRStackItem const *, yyvsp)[YYFILL (0)].yystate.yysemantics.yyval.order_by_list_type);
 	  }
+        }
+#line 2218 "yacc_sql.cpp"
+    break;
+
+  case 67: /* select_stmt: SELECT select_attr FROM ID rel_list expr_where_not_null  */
+#line 696 "yacc_sql.y"
+                                                              {
+      ((*yyvalp).sql_node) = new ParsedSqlNode(SCF_SELECT);
+
+      ((*yyvalp).sql_node)->selection.attributes.swap(*(YY_CAST (yyGLRStackItem const *, yyvsp)[YYFILL (-4)].yystate.yysemantics.yyval.rel_attr_list));
+      delete (YY_CAST (yyGLRStackItem const *, yyvsp)[YYFILL (-4)].yystate.yysemantics.yyval.rel_attr_list);
+
+      // expr_where
+      if ((YY_CAST (yyGLRStackItem const *, yyvsp)[YYFILL (0)].yystate.yysemantics.yyval.condition) != nullptr) {
+        ((*yyvalp).sql_node)->selection.where_expr = (YY_CAST (yyGLRStackItem const *, yyvsp)[YYFILL (0)].yystate.yysemantics.yyval.condition);
+        ((*yyvalp).sql_node)->selection.where_expr_flag = true;
+      }
+
+      // ID & rel_list
+      if ((YY_CAST (yyGLRStackItem const *, yyvsp)[YYFILL (-1)].yystate.yysemantics.yyval.relation_list) != nullptr) {
+        ((*yyvalp).sql_node)->selection.relations.swap(*(YY_CAST (yyGLRStackItem const *, yyvsp)[YYFILL (-1)].yystate.yysemantics.yyval.relation_list));
+        delete (YY_CAST (yyGLRStackItem const *, yyvsp)[YYFILL (-1)].yystate.yysemantics.yyval.relation_list);
+      }
+      RelationSqlNode relation;
+      relation.relation_name = (YY_CAST (yyGLRStackItem const *, yyvsp)[YYFILL (-2)].yystate.yysemantics.yyval.string);
+      free((YY_CAST (yyGLRStackItem const *, yyvsp)[YYFILL (-2)].yystate.yysemantics.yyval.string));
+      ((*yyvalp).sql_node)->selection.relations.push_back(relation);
+      std::reverse(((*yyvalp).sql_node)->selection.relations.begin(), ((*yyvalp).sql_node)->selection.relations.end());
+    }
+#line 2246 "yacc_sql.cpp"
+    break;
+
+  case 68: /* select_stmt: SELECT expression_list FROM ID rel_list expr_where  */
+#line 719 "yacc_sql.y"
+                                                         {
+      ((*yyvalp).sql_node) = new ParsedSqlNode(SCF_SELECT);
+
+      // expression_list
+      ((*yyvalp).sql_node)->selection.expressions.swap(*(YY_CAST (yyGLRStackItem const *, yyvsp)[YYFILL (-4)].yystate.yysemantics.yyval.expression_list));
+      std::reverse(((*yyvalp).sql_node)->selection.expressions.begin(), ((*yyvalp).sql_node)->selection.expressions.end());
+      ((*yyvalp).sql_node)->selection.select_expr_flag = true;
+      delete (YY_CAST (yyGLRStackItem const *, yyvsp)[YYFILL (-4)].yystate.yysemantics.yyval.expression_list);
+
+      // expr_where
+      if ((YY_CAST (yyGLRStackItem const *, yyvsp)[YYFILL (0)].yystate.yysemantics.yyval.condition) != nullptr) {
+        ((*yyvalp).sql_node)->selection.where_expr = (YY_CAST (yyGLRStackItem const *, yyvsp)[YYFILL (0)].yystate.yysemantics.yyval.condition);
+        ((*yyvalp).sql_node)->selection.where_expr_flag = true;
+      }
+
+      // ID & rel_list
+      if ((YY_CAST (yyGLRStackItem const *, yyvsp)[YYFILL (-1)].yystate.yysemantics.yyval.relation_list) != nullptr) {
+        ((*yyvalp).sql_node)->selection.relations.swap(*(YY_CAST (yyGLRStackItem const *, yyvsp)[YYFILL (-1)].yystate.yysemantics.yyval.relation_list));
+        delete (YY_CAST (yyGLRStackItem const *, yyvsp)[YYFILL (-1)].yystate.yysemantics.yyval.relation_list);
+      }
+      RelationSqlNode relation;
+      relation.relation_name = (YY_CAST (yyGLRStackItem const *, yyvsp)[YYFILL (-2)].yystate.yysemantics.yyval.string);
+      free((YY_CAST (yyGLRStackItem const *, yyvsp)[YYFILL (-2)].yystate.yysemantics.yyval.string));
+      ((*yyvalp).sql_node)->selection.relations.push_back(relation);
+      std::reverse(((*yyvalp).sql_node)->selection.relations.begin(), ((*yyvalp).sql_node)->selection.relations.end());
     }
 #line 2277 "yacc_sql.cpp"
     break;
