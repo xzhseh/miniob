@@ -982,6 +982,13 @@ rel_attr:
       free($1);
       free($3);
     }
+    | ID DOT '*' {
+      $$ = new RelAttrSqlNode;
+      $$->relation_name = $1;
+      $$->attribute_name = "*";
+      $$->aggregate_func = agg::NONE;
+      free($1);
+    }
     // TODO : Add alias name for agg ?
     | agg LBRACE ID RBRACE {
       $$ = new RelAttrSqlNode;
