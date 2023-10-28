@@ -889,13 +889,14 @@ select_attr:
       $$->emplace_back(attr);
     }
     // TODO: Add the syntax for cases like `select agg(c1), count(*) from t1;`
-    | agg LBRACE '*' RBRACE attr_list  {
+    | agg LBRACE '*' RBRACE option_as attr_list   {
       /* AGG_FUNC(*) */
-      if ($5 != nullptr) {
-        $$ = $5;
+      if ($6 != nullptr) {
+        $$ = $6;
       } else {
         $$ = new std::vector<RelAttrSqlNode>;
       }
+
 
       // Construct the aggregation attribute
       RelAttrSqlNode attr;
@@ -903,15 +904,24 @@ select_attr:
       attr.attribute_name = "*";
       attr.aggregate_func = $1;
 
+      if($5 != nullptr) {
+      	attr.alias_name = $5;
+      	free($5);
+      }
+
       $$->emplace_back(attr);
     }
-    | rel_attr COMMA agg LBRACE '*' RBRACE {
+    | rel_attr COMMA agg LBRACE '*' RBRACE option_as {
       /* AGG_FUNC(*) */
       $$ = new std::vector<RelAttrSqlNode>;
       RelAttrSqlNode attr;
       attr.relation_name = "";
       attr.attribute_name = "*";
       attr.aggregate_func = $3;
+      if($7 != nullptr) {
+           attr.alias_name = $7;
+           free($7);
+      }
       $$->emplace_back(attr);
       $$->emplace_back(*$1);
     }
@@ -926,13 +936,13 @@ select_attr:
       delete $1;
     }
     // FIXME: Memory leak
-    | agg LBRACE rel_attr COMMA rel_attr RBRACE {
+    | agg LBRACE rel_attr COMMA rel_attr RBRACE{
       $$ = new std::vector<RelAttrSqlNode>;
       RelAttrSqlNode attr;
       attr.agg_valid_flag = false;
       $$->emplace_back(attr);
     }
-    | agg LBRACE '*' COMMA rel_attr RBRACE {
+    | agg LBRACE '*' COMMA rel_attr RBRACE  {
       $$ = new std::vector<RelAttrSqlNode>;
       RelAttrSqlNode attr;
       attr.agg_valid_flag = false;
@@ -990,18 +1000,27 @@ rel_attr:
       free($1);
     }
     // TODO : Add alias name for agg ?
-    | agg LBRACE ID RBRACE {
+    | agg LBRACE ID RBRACE option_as {
       $$ = new RelAttrSqlNode;
       $$->relation_name = "";
       $$->attribute_name = $3;
       $$->aggregate_func = $1;
+      if($5 != nullptr)
+      {
+      	$$->alias_name = $5;
+      	free($5);
+      }
       free($3);
     }
-    | agg LBRACE ID DOT ID RBRACE {
+    | agg LBRACE ID DOT ID RBRACE option_as {
       $$ = new RelAttrSqlNode;
       $$->relation_name = $3;
       $$->attribute_name = $5;
       $$->aggregate_func = $1;
+      if($7 != nullptr) {
+      	$$->alias_name = $7;
+      	free($7);
+      }
       free($3);
       free($5);
     }
