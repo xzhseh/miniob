@@ -219,6 +219,12 @@ RC aggregation_builder(Db *db, const std::vector<Table *> &tables, std::unordere
   for (int i = attributes.size() - 1; i >= 0; --i) {
     const auto &attr = attributes[i];
 
+    if (attr.expression != nullptr) {
+      // FIXME: may need to deal with this when later parsing agg arithmetic
+      // Expression field , ignore this
+      continue;
+    }
+
     if (!attr.agg_valid_flag) {
       // Syntax error for the current aggregation
       return RC::INVALID_ARGUMENT;
@@ -345,7 +351,7 @@ RC field_expr_transformation(Db *db, const std::vector<Table *> &tables, Express
 }
 
 /// TODO: We definitely need to refactor this part, the current implementation is so embarrassed 😅
-RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt) {
+RC SelectStmt::create(Db *db, SelectSqlNode &select_sql, Stmt *&stmt) {
   assert(stmt == nullptr && "`stmt` must be nullptr at the beginning");
   if (nullptr == db) {
     LOG_WARN("invalid argument. db is null");
@@ -360,6 +366,78 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt) {
   if (rc != RC::SUCCESS) {
     LOG_WARN("failed to resolve tables");
     return rc;
+  }
+
+  for (int i = select_sql.attributes.size() - 1; i >= 0; --i) {
+    if (select_sql.attributes[i].expression != nullptr) {
+      select_sql.select_expr_flag = true;
+      break;
+    }
+  }
+
+  // Construct the `expressions` in select clause
+  for (int i = select_sql.attributes.size() - 1; i >= 0; --i) {
+    if (select_sql.select_expr_flag) {
+      if (select_sql.attributes[i].expression != nullptr) {
+        // The current node is parsed as the expression
+        select_sql.expressions.push_back(select_sql.attributes[i].expression);
+      } else {
+        // If there is any expression exist, we should add the single field to it
+        std::cout << "[select stmt] current attr: " << select_sql.attributes[i].attribute_name << std::endl;
+        FieldExpr *f = new FieldExpr(select_sql.attributes[i]);
+
+        // Remember to set the field name
+        std::string f_name =
+            (select_sql.attributes[i].relation_name.empty()) ?
+            select_sql.attributes[i].attribute_name :
+            (select_sql.attributes[i].relation_name + "." + select_sql.attributes[i].attribute_name);
+
+        f->set_name(f_name);
+        select_sql.expressions.push_back(f);
+      }
+    }
+  }
+
+  // Construct the `expressions` in where clause
+  if (select_sql.conditions.size() == 1) {
+    auto &curr_condition = select_sql.conditions[0];
+    if (curr_condition.left_expr && curr_condition.right_expr) {
+      select_sql.where_expr_flag = true;
+      select_sql.where_expr = new ConditionSqlNode;
+      select_sql.where_expr->left_expr = curr_condition.left_expr;
+      select_sql.where_expr->right_expr = curr_condition.right_expr;
+      select_sql.where_expr->comp = curr_condition.comp;
+    } else if (curr_condition.left_expr) {
+      assert(curr_condition.right_expr == nullptr);
+      select_sql.where_expr_flag = true;
+      select_sql.where_expr = new ConditionSqlNode;
+      select_sql.where_expr->left_expr = curr_condition.left_expr;
+      select_sql.where_expr->comp = curr_condition.comp;
+      if (curr_condition.right_is_attr) {
+        // Expression comp Field
+        FieldExpr *f_expr = new FieldExpr(curr_condition.right_attr);
+        select_sql.where_expr->right_expr = f_expr;
+      } else {
+        // Expression comp Value
+        ValueExpr *v_expr = new ValueExpr(curr_condition.right_value);
+        select_sql.where_expr->right_expr = v_expr;
+      }
+    } else if (curr_condition.right_expr) {
+      assert(curr_condition.left_expr == nullptr);
+      select_sql.where_expr_flag = true;
+      select_sql.where_expr = new ConditionSqlNode;
+      select_sql.where_expr->right_expr = curr_condition.right_expr;
+      select_sql.where_expr->comp = curr_condition.comp;
+      if (curr_condition.left_is_attr) {
+        // Field comp Expression
+        FieldExpr *f_expr = new FieldExpr(curr_condition.left_attr);
+        select_sql.where_expr->left_expr = f_expr;
+      } else {
+        // Value comp Expression
+        ValueExpr *v_expr = new ValueExpr(curr_condition.left_value);
+        select_sql.where_expr->left_expr = v_expr;
+      }
+    }
   }
 
   // Make the expression transformation for select attribute, specifically for `FieldExpr`
@@ -400,6 +478,13 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt) {
   // Resolve the query fields
   for (int i = static_cast<int>(select_sql.attributes.size()) - 1; i >= 0; i--) {
     const RelAttrSqlNode &relation_attr = select_sql.attributes[i];
+
+    if (relation_attr.expression != nullptr) {
+      // This is an actual expression
+      // We just ignore this, since the field information has been resolved above
+      continue;
+    }
+
     if (!relation_attr.agg_valid_flag) {
       // Invalid syntax
       return RC::INVALID_ARGUMENT;
