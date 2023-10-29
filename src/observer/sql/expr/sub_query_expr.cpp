@@ -128,7 +128,7 @@ RC SubQueryExpr::get_const_value(Value &value) {
   }
 
   auto &sub_tuple = this->tuple_list[0];
-  if (this->result_schema_.cell_at(0).alias() != nullptr) {
+  if (this->result_schema_.cell_at(0).field_name_length() == 0) {
     // Aggregate function , value list tuple
     rc = sub_tuple->cell_at(0, value);
   } else {
@@ -270,7 +270,7 @@ RC SubQueryExpr::get_value(const Tuple &tuple, Value &value) {
   }
 
   auto &sub_tuple = this->tuple_list[0];
-  if (this->result_schema_.cell_at(0).alias() != nullptr) {
+  if (this->result_schema_.cell_at(0).field_name_length() == 0) {
     // Aggregate function , value list tuple
     rc = sub_tuple->cell_at(0, value);
   } else {

@@ -27,6 +27,8 @@ class TupleCellSpec {
   const char *field_name() const { return field_name_.c_str(); }
   const char *alias() const { return alias_.c_str(); }
 
+  size_t field_name_length() const { return field_name_.size(); }
+
  private:
   std::string table_name_;
   std::string field_name_;
