@@ -75,6 +75,9 @@ RC UpdateStmt::create(Db *db, UpdateSqlNode &update, Stmt *&stmt) {
         LOG_WARN("failed to get sub query value. rc=%d:%s", rc, strrc(rc));
         return rc;
       }
+      if (Value::check_null(update_value)) {
+        update_value.set_null();
+      }
     } else {
       update_value = update_value_node;
     }

@@ -10,7 +10,7 @@ INSERT INTO Update_select_t2 VALUES(2, 't2', 7, 8);
 INSERT INTO Update_select_t2 VALUES(2, 't2', 8, 6);
 
 select * from Update_select_t1;
-
+UPDATE Update_select_t2 SET t_name=(select Update_select_t1.t_name from Update_select_t1 where Update_select_t1.id=14) WHERE col1=8 and col2=6;
 UPDATE Update_select_t2 SET t_name=(select Update_select_t1.t_name from Update_select_t1 where Update_select_t1.id=9) WHERE col1=8 and col2=6;
 
 select * from Update_select_t1;
