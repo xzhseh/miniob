@@ -14,6 +14,7 @@ See the Mulan PSL v2 for more details. */
 
 #include "sql/stmt/update_stmt.h"
 #include "common/log/log.h"
+#include "sql/expr/sub_query_expr.h"
 #include "sql/stmt/filter_stmt.h"
 #include "storage/db/db.h"
 #include "storage/table/table.h"
@@ -21,6 +22,24 @@ See the Mulan PSL v2 for more details. */
 UpdateStmt::UpdateStmt(Table *table, std::vector<Value> values, std::vector<FieldMeta> field_meta,
                        FilterStmt *filter_stmt)
     : table_(table), values_(values), field_metas_(field_meta), filter_stmt_(filter_stmt) {}
+
+RC get_sub_query_value(Db *db, const SelectSqlNode &sub_query, Value &value) {
+  std::unordered_map<std::string, Table *> table_map;
+  //  std::unordered_map<std::string, Table *> parent_table_map;
+  //  std::vector<Table *> tables;
+  //  RC rc = SelectStmt::resolve_tables(db, sub_query, tables, table_map, parent_table_map);
+  //  if (rc != RC::SUCCESS) {
+  //    LOG_WARN("failed to resolve tables. rc=%d:%s", rc, strrc(rc));
+  //    return rc;
+  //  }
+  std::shared_ptr<ParsedSqlNode> sub_query_node(new ParsedSqlNode);
+  sub_query_node->flag = SCF_SELECT;
+  sub_query_node->selection = sub_query;
+  SubQueryExpr sub_query_expr(sub_query_node, table_map);
+  // Should return value
+  sub_query_expr.set_return_value(true);
+  return sub_query_expr.get_const_value(value);
+}
 
 RC UpdateStmt::create(Db *db, UpdateSqlNode &update, Stmt *&stmt) {
   const char *table_name = update.relation_name.c_str();
@@ -43,11 +62,21 @@ RC UpdateStmt::create(Db *db, UpdateSqlNode &update, Stmt *&stmt) {
   std::vector<Value> values;
   std::vector<FieldMeta> field_metas;
 
-  for (auto &[update_attr, update_value] : update.update_values) {
+  for (auto &[update_attr, update_value_node, update_sub_query] : update.update_values) {
     const FieldMeta *field_meta = table_meta.field(update_attr.c_str());
     if (nullptr == field_meta) {
       LOG_WARN("field not exist");
       return RC::SCHEMA_FIELD_NOT_EXIST;
+    }
+    Value update_value;
+    if (update_sub_query) {
+      RC rc = get_sub_query_value(db, *update_sub_query, update_value);
+      if (rc != RC::SUCCESS) {
+        LOG_WARN("failed to get sub query value. rc=%d:%s", rc, strrc(rc));
+        return rc;
+      }
+    } else {
+      update_value = update_value_node;
     }
 
     // Check if update_attr and update_value are of the same type

@@ -1,0 +1,14 @@
+CREATE TABLE Update_select_t1(id int, t_name char(10), col1 int, col2 int);
+CREATE TABLE Update_select_t2(id int, t_name char(10), col1 int, col2 int);
+
+INSERT INTO Update_select_t1 VALUES(1, 't1', 1, 2);
+INSERT INTO Update_select_t1 VALUES(6, 't1', 3, 4);
+
+INSERT INTO Update_select_t2 VALUES(1, 't2', 5, 6);
+INSERT INTO Update_select_t2 VALUES(2, 't2', 7, 8);
+
+select * from Update_select_t1;
+
+UPDATE Update_select_t1 SET col1=2, col2=(select Update_select_t2.col2 from Update_select_t2 where Update_select_t2.id=1) WHERE id=6;
+
+select * from Update_select_t1;

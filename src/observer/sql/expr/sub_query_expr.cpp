@@ -65,6 +65,79 @@ RC SubQueryExpr::in_or_not(const Value &value, const std::unique_ptr<Expression>
 
 RC SubQueryExpr::try_get_value(Value &value) const { return RC::INTERNAL; }
 
+/// @brief Try to get value from sub query
+RC SubQueryExpr::get_const_value(Value &value) {
+  this->tuple_list.clear();
+  if (this->type_ != SubResultType::SUB_QUERY) {
+    value.set_int(123);
+    return RC::SUCCESS;
+  }
+  assert(this->type_ == SubResultType::SUB_QUERY);
+  SessionStage *stage = dynamic_cast<SessionStage *>(SessionStage::make_stage("SessionStage"));
+  auto copy_node = this->sub_query_node.get()->selection;
+  std::shared_ptr<ParsedSqlNode> sub_query = std::make_shared<ParsedSqlNode>();
+  sub_query->selection = copy_node;
+  sub_query->flag = SCF_SELECT;
+  this->sub_query_event_ = std::make_unique<SQLStageEvent>(sub_query);
+  RC rc = stage->handle_sub_sql(this->sub_query_event_.get());
+  if (rc != RC::SUCCESS) {
+    LOG_WARN("failed to handle sub sql. rc=%s", strrc(rc));
+    return rc;
+  }
+  auto &root_oper = this->sub_query_event_->physical_operator();
+  auto select_stmt = dynamic_cast<SelectStmt *>(this->sub_query_event_->stmt());
+  this->result_schema_ = create_sub_result_schema(select_stmt);
+  if (result_schema_.cell_num() != 1) {
+    return RC::INTERNAL;
+  }
+  rc = root_oper->open(nullptr);
+  if (rc != RC::SUCCESS) {
+    LOG_WARN("failed to open root operator. rc=%s", strrc(rc));
+    return rc;
+  }
+  Tuple *tuple_ptr = nullptr;
+  while (true) {
+    rc = root_oper->next();
+    if (rc == RC::RECORD_EOF) {
+      break;
+    }
+    if (rc == RC::SUCCESS) {
+      tuple_ptr = root_oper->current_tuple();
+      auto copy_tuple = tuple_ptr->copy();
+      assert(copy_tuple != nullptr);
+      this->tuple_list.emplace_back(std::move(copy_tuple));
+    } else {
+      LOG_WARN("failed to get next tuple. rc=%s", strrc(rc));
+      return rc;
+    }
+  }
+  root_oper->close();
+
+  if (!should_return_value) {
+    value.set_int(1);
+    return RC::SUCCESS;
+  }
+
+  if (this->tuple_list.empty()) {
+    value.set_int(1919810);
+    return RC::SUCCESS;
+  }
+
+  if (this->tuple_list.size() != 1) {
+    return RC::INTERNAL;
+  }
+
+  auto &sub_tuple = this->tuple_list[0];
+  if (this->result_schema_.cell_at(0).alias() != nullptr) {
+    // Aggregate function , value list tuple
+    rc = sub_tuple->cell_at(0, value);
+  } else {
+    rc = sub_tuple->find_cell(this->result_schema_.cell_at(0), value);
+  }
+  this->tuple_list.clear();
+  return rc;
+}
+
 RC replace_field(std::shared_ptr<ParsedSqlNode> &sub_query, const std::unordered_map<std::string, Table *> &table_map) {
   //  Now we get a sub query parsed sql node, we need to replace the parent field
   for (auto &condition : sub_query->selection.conditions) {

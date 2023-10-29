@@ -41,6 +41,8 @@ class SubQueryExpr : public Expression {
   // ! Don't call this function, it will return RC::INTERNAL
   RC try_get_value(Value &value) const override;
 
+  RC get_const_value(Value &value);
+
   void set_return_value(bool should_return) { this->should_return_value = should_return; }
 
   RC init();

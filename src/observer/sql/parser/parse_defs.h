@@ -206,6 +206,7 @@ struct DeleteSqlNode {
 struct UpdateValueNode {
   std::string attribute_name;  ///< 更新的字段
   Value value;                 ///< 更新的值
+  SelectSqlNode *sub_query{nullptr};
 };
 
 ;
