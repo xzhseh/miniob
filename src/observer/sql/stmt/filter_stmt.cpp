@@ -72,17 +72,6 @@ RC get_table_and_field(Db *db, Table *default_table, std::unordered_map<std::str
   }
 
   field = table->table_meta().field(attr.attribute_name.c_str());
-  // Check if alias is used
-  for (const auto &query_field : rel_attr) {
-    if (query_field.alias_name.empty()) {
-      continue;
-    }
-    // The condition's attribute name is an alias name
-    if (query_field.alias_name == attr.attribute_name) {
-      field = table->table_meta().field(query_field.attribute_name.c_str());
-      break;
-    }
-  }
   if (nullptr == field) {
     LOG_WARN("no such field in table: table %s, field %s", table->name(), attr.attribute_name.c_str());
     table = nullptr;
