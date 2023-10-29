@@ -171,6 +171,7 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
 %type <attr_name_list>      attr_name_list           
 %type <agg>                 agg
 %type <rel_attr>            rel_attr
+%type <rel_attr>            condition_attr
 %type <rel_attr>            expr_attr
 %type <attr_infos>          attr_def_list
 %type <attr_info>           attr_def
@@ -183,8 +184,6 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
 %type <group_by_list_type>  group_by_list
 %type <condition>           having
 %type <condition_list>      where
-%type <condition>           expr_where
-%type <condition>           expr_where_not_null
 %type <condition_list>      condition_list
 %type <rel_attr_list>       select_attr
 %type <relation_list>       rel_list
@@ -225,10 +224,7 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
 %nonassoc UMINUS
 
 // Enable glr-parser for ambiguity grammar
-%glr-parser
-// please do NOT edit these
-%expect-rr 5
-%expect 1
+// %glr-parser
 
 %%
 
@@ -693,56 +689,8 @@ select_stmt:        /*  select 语句的语法解析树*/
 	    delete $8;
 	  }
         }
-    | SELECT select_attr FROM ID rel_list expr_where_not_null {
-      $$ = new ParsedSqlNode(SCF_SELECT);
-
-      $$->selection.attributes.swap(*$2);
-      delete $2;
-
-      // expr_where
-      if ($6 != nullptr) {
-        $$->selection.where_expr = $6;
-        $$->selection.where_expr_flag = true;
-      }
-
-      // ID & rel_list
-      if ($5 != nullptr) {
-        $$->selection.relations.swap(*$5);
-        delete $5;
-      }
-      RelationSqlNode relation;
-      relation.relation_name = $4;
-      free($4);
-      $$->selection.relations.push_back(relation);
-      std::reverse($$->selection.relations.begin(), $$->selection.relations.end());
-    }
-    | SELECT expression_list FROM ID rel_list expr_where {
-      $$ = new ParsedSqlNode(SCF_SELECT);
-
-      // expression_list
-      $$->selection.expressions.swap(*$2);
-      std::reverse($$->selection.expressions.begin(), $$->selection.expressions.end());
-      $$->selection.select_expr_flag = true;
-      delete $2;
-
-      // expr_where
-      if ($6 != nullptr) {
-        $$->selection.where_expr = $6;
-        $$->selection.where_expr_flag = true;
-      }
-
-      // ID & rel_list
-      if ($5 != nullptr) {
-        $$->selection.relations.swap(*$5);
-        delete $5;
-      }
-      RelationSqlNode relation;
-      relation.relation_name = $4;
-      free($4);
-      $$->selection.relations.push_back(relation);
-      std::reverse($$->selection.relations.begin(), $$->selection.relations.end());
-    }
     ;
+
 inner_join_constr:
     INNER JOIN ID ON condition_list
     {
@@ -919,15 +867,133 @@ expression:
     | '-' expression %prec UMINUS {
       $$ = create_arithmetic_expression(ArithmeticExpr::Type::NEGATIVE, $2, nullptr, sql_string, &@$);
     }
-    | value {
-      $$ = new ValueExpr(*$1);
-      $$->set_name(token_name(sql_string, &@$));
-      delete $1;
+    | value '+' value {
+   assert($1 != nullptr && $3 != nullptr && "Expect lhs & rhs not to be nullptr");
+         ValueExpr *lhs = new ValueExpr(*$1);
+         ValueExpr *rhs = new ValueExpr(*$3);
+         $$ = create_arithmetic_expression(ArithmeticExpr::Type::ADD, lhs, rhs, sql_string, &@$);
+         delete $1;
+         delete $3;
     }
-    | expr_attr {
-      $$ = new FieldExpr(*$1);
-      $$->set_name(token_name(sql_string, &@$));
+    | value '-' value {
+       assert($1 != nullptr && $3 != nullptr && "Expect lhs & rhs not to be nullptr");
+             ValueExpr *lhs = new ValueExpr(*$1);
+             ValueExpr *rhs = new ValueExpr(*$3);
+             $$ = create_arithmetic_expression(ArithmeticExpr::Type::SUB, lhs, rhs, sql_string, &@$);
+             delete $1;
+             delete $3;
+        }
+    | value '*' value {
+       assert($1 != nullptr && $3 != nullptr && "Expect lhs & rhs not to be nullptr");
+             ValueExpr *lhs = new ValueExpr(*$1);
+             ValueExpr *rhs = new ValueExpr(*$3);
+             $$ = create_arithmetic_expression(ArithmeticExpr::Type::MUL, lhs, rhs, sql_string, &@$);
+             delete $1;
+             delete $3;
+        }
+    | value '/' value {
+       assert($1 != nullptr && $3 != nullptr && "Expect lhs & rhs not to be nullptr");
+             ValueExpr *lhs = new ValueExpr(*$1);
+             ValueExpr *rhs = new ValueExpr(*$3);
+             $$ = create_arithmetic_expression(ArithmeticExpr::Type::DIV, lhs, rhs, sql_string, &@$);
+             delete $1;
+             delete $3;
+        }
+    | expr_attr '+' expr_attr {
+      assert($1 != nullptr && $3 != nullptr && "Expect lhs & rhs not to be nullptr");
+      FieldExpr *lhs = new FieldExpr(*$1);
+      FieldExpr *rhs = new FieldExpr(*$3);
+      $$ = create_arithmetic_expression(ArithmeticExpr::Type::ADD, lhs, rhs, sql_string, &@$);
       delete $1;
+      delete $3;
+    }
+    | expr_attr '-' expr_attr {
+      assert($1 != nullptr && $3 != nullptr && "Expect lhs & rhs not to be nullptr");
+      FieldExpr *lhs = new FieldExpr(*$1);
+      FieldExpr *rhs = new FieldExpr(*$3);
+      $$ = create_arithmetic_expression(ArithmeticExpr::Type::SUB, lhs, rhs, sql_string, &@$);
+      delete $1;
+      delete $3;
+    }
+    | expr_attr '*' expr_attr {
+      assert($1 != nullptr && $3 != nullptr && "Expect lhs & rhs not to be nullptr");
+      FieldExpr *lhs = new FieldExpr(*$1);
+      FieldExpr *rhs = new FieldExpr(*$3);
+      $$ = create_arithmetic_expression(ArithmeticExpr::Type::MUL, lhs, rhs, sql_string, &@$);
+      delete $1;
+      delete $3;
+    }
+    | expr_attr '/' expr_attr {
+      assert($1 != nullptr && $3 != nullptr && "Expect lhs & rhs not to be nullptr");
+      FieldExpr *lhs = new FieldExpr(*$1);
+      FieldExpr *rhs = new FieldExpr(*$3);
+      $$ = create_arithmetic_expression(ArithmeticExpr::Type::DIV, lhs, rhs, sql_string, &@$);
+      delete $1;
+      delete $3;
+    }
+    | expr_attr '+' value {
+      assert($1 != nullptr && $3 != nullptr && "Expect lhs & rhs not to be nullptr");
+      FieldExpr *lhs = new FieldExpr(*$1);
+      ValueExpr *rhs = new ValueExpr(*$3);
+      $$ = create_arithmetic_expression(ArithmeticExpr::Type::ADD, lhs, rhs, sql_string, &@$);
+      delete $1;
+      delete $3;
+    }
+    | expr_attr '-' value {
+assert($1 != nullptr && $3 != nullptr && "Expect lhs & rhs not to be nullptr");
+      FieldExpr *lhs = new FieldExpr(*$1);
+      ValueExpr *rhs = new ValueExpr(*$3);
+      $$ = create_arithmetic_expression(ArithmeticExpr::Type::SUB, lhs, rhs, sql_string, &@$);
+      delete $1;
+      delete $3;
+    }
+    | expr_attr '*' value {
+assert($1 != nullptr && $3 != nullptr && "Expect lhs & rhs not to be nullptr");
+      FieldExpr *lhs = new FieldExpr(*$1);
+      ValueExpr *rhs = new ValueExpr(*$3);
+      $$ = create_arithmetic_expression(ArithmeticExpr::Type::MUL, lhs, rhs, sql_string, &@$);
+      delete $1;
+      delete $3;
+    }
+    | expr_attr '/' value {
+assert($1 != nullptr && $3 != nullptr && "Expect lhs & rhs not to be nullptr");
+      FieldExpr *lhs = new FieldExpr(*$1);
+      ValueExpr *rhs = new ValueExpr(*$3);
+      $$ = create_arithmetic_expression(ArithmeticExpr::Type::DIV, lhs, rhs, sql_string, &@$);
+      delete $1;
+      delete $3;
+    }
+    | value '+' expr_attr {
+assert($1 != nullptr && $3 != nullptr && "Expect lhs & rhs not to be nullptr");
+       ValueExpr *lhs = new ValueExpr(*$1);
+       FieldExpr *rhs = new FieldExpr(*$3);
+       $$ = create_arithmetic_expression(ArithmeticExpr::Type::ADD, lhs, rhs, sql_string, &@$);
+       delete $1;
+       delete $3;
+    }
+    | value '-' expr_attr {
+assert($1 != nullptr && $3 != nullptr && "Expect lhs & rhs not to be nullptr");
+       ValueExpr *lhs = new ValueExpr(*$1);
+       FieldExpr *rhs = new FieldExpr(*$3);
+       $$ = create_arithmetic_expression(ArithmeticExpr::Type::SUB, lhs, rhs, sql_string, &@$);
+       delete $1;
+       delete $3;
+    }
+    | value '*' expr_attr {
+assert($1 != nullptr && $3 != nullptr && "Expect lhs & rhs not to be nullptr");
+       ValueExpr *lhs = new ValueExpr(*$1);
+       FieldExpr *rhs = new FieldExpr(*$3);
+       $$ = create_arithmetic_expression(ArithmeticExpr::Type::MUL, lhs, rhs, sql_string, &@$);
+       delete $1;
+       delete $3;
+    }
+    | value '/' expr_attr {
+assert($1 != nullptr && $3 != nullptr && "Expect lhs & rhs not to be nullptr");
+       ValueExpr *lhs = new ValueExpr(*$1);
+       FieldExpr *rhs = new FieldExpr(*$3);
+       $$ = create_arithmetic_expression(ArithmeticExpr::Type::DIV, lhs, rhs, sql_string, &@$);
+       delete $1;
+       delete $3;
     }
     | ID_MINUS {
       char *ptr = strchr($1, '-');
@@ -960,6 +1026,21 @@ expr_attr:
       $$->aggregate_func = agg::NONE;
       free($1);
       free($3);
+    }
+    | agg LBRACE ID RBRACE {
+      $$ = new RelAttrSqlNode;
+      $$->relation_name = "";
+      $$->attribute_name = $3;
+      $$->aggregate_func = $1;
+      free($3);
+    }
+    | agg LBRACE ID DOT ID RBRACE {
+      $$ = new RelAttrSqlNode;
+      $$->relation_name  = $3;
+      $$->attribute_name = $5;
+      $$->aggregate_func = $1;
+      free($3);
+      free($5);
     }
     ;
 
@@ -1053,7 +1134,18 @@ agg:
     ;
 
 rel_attr:
-    ID option_as {
+    // For expression parsing, currently only arithmetic expression will be parsed
+    expression {
+      // Unfortunately we could not grab the parsed `RelAttrSqlNode` inside the expression
+      // This will be handled through `select_stmt.cpp`
+      // Also note that this may contain agg function, which also need to be parsed and resolved
+      $$ = new RelAttrSqlNode;
+      $$->relation_name = "";
+      $$->attribute_name = "";
+      $$->expr_flag = true;
+      $$->expression = $1;
+    }
+    | ID option_as {
       $$ = new RelAttrSqlNode;
       $$->relation_name = "";
       $$->attribute_name = $1;
@@ -1099,6 +1191,55 @@ rel_attr:
       $$->agg_valid_flag = false;
     }
     ;
+
+// Used for normal condition
+condition_attr:
+    ID option_as {
+          $$ = new RelAttrSqlNode;
+          $$->relation_name = "";
+          $$->attribute_name = $1;
+          $$->aggregate_func = agg::NONE;
+          if($2 != nullptr) {
+          	$$->alias_name = $2;
+          	free($2);
+          }
+          free($1);
+        }
+        | ID DOT ID option_as {
+          $$ = new RelAttrSqlNode;
+          $$->relation_name  = $1;
+          $$->attribute_name = $3;
+          $$->aggregate_func = agg::NONE;
+          if($4 != nullptr) {
+            $$->alias_name = $4;
+            free($4);
+          }
+          free($1);
+          free($3);
+        }
+        // TODO : Add alias name for agg ?
+        | agg LBRACE ID RBRACE {
+          $$ = new RelAttrSqlNode;
+          $$->relation_name = "";
+          $$->attribute_name = $3;
+          $$->aggregate_func = $1;
+          free($3);
+        }
+        | agg LBRACE ID DOT ID RBRACE {
+          $$ = new RelAttrSqlNode;
+          $$->relation_name = $3;
+          $$->attribute_name = $5;
+          $$->aggregate_func = $1;
+          free($3);
+          free($5);
+        }
+        // Invalid syntax, miniob requires the output to be FAILURE
+        // So we must at least parse the syntax here 😅
+        | agg LBRACE RBRACE {
+          $$ = new RelAttrSqlNode;
+          $$->agg_valid_flag = false;
+        }
+        ;
 
 attr_list:
     /* empty */
@@ -1148,27 +1289,6 @@ where:
     }
     ;
 
-expr_where_not_null:
-    WHERE expression comp_op expression {
-      $$ = new ConditionSqlNode;
-      $$->comp = $3;
-      $$->left_expr = $2;
-      $$->right_expr = $4;
-    }
-    ;
-
-expr_where:
-    {
-      $$ = nullptr;
-    }
-    | WHERE expression comp_op expression {
-      $$ = new ConditionSqlNode;
-      $$->comp = $3;
-      $$->left_expr = $2;
-      $$->right_expr = $4;
-    }
-    ;
-
 condition_list:
     /* empty */
     {
@@ -1186,7 +1306,14 @@ condition_list:
     }
     ;
 condition:
-    rel_attr comp_op value
+    expression comp_op expression
+    {
+      $$ = new ConditionSqlNode;
+      $$->left_expr = $1;
+      $$->right_expr = $3;
+      $$->comp = $2;
+    }
+    | condition_attr comp_op value
     {
       $$ = new ConditionSqlNode;
       $$->left_is_attr = 1;
@@ -1210,7 +1337,8 @@ condition:
       delete $1;
       delete $3;
     }
-    | rel_attr comp_op rel_attr
+    // | rel_attr comp_op rel_attr
+    | condition_attr comp_op condition_attr
     {
       $$ = new ConditionSqlNode;
       $$->left_is_attr = 1;
@@ -1222,7 +1350,8 @@ condition:
       delete $1;
       delete $3;
     }
-    | value comp_op rel_attr
+    // | value comp_op rel_attr
+    | value comp_op condition_attr
     {
       $$ = new ConditionSqlNode;
       $$->left_is_attr = 0;
@@ -1261,7 +1390,8 @@ condition:
 
       delete $1;
     }
-    | rel_attr in_op LBRACE select_stmt RBRACE
+    // | rel_attr in_op LBRACE select_stmt RBRACE
+    | condition_attr in_op LBRACE select_stmt RBRACE
     {
       $$ = new ConditionSqlNode;
       $$->left_is_attr = 1;
@@ -1271,7 +1401,8 @@ condition:
       $$->comp = $2;
       delete $1;
     }
-    | rel_attr in_op LBRACE value value_list RBRACE
+    // | rel_attr in_op LBRACE value value_list RBRACE
+    | condition_attr in_op LBRACE value value_list RBRACE
     {
       $$ = new ConditionSqlNode;
       $$->left_is_attr = 1;
@@ -1286,7 +1417,8 @@ condition:
       delete $1;
       delete $4;
     }
-    | rel_attr comp_op LBRACE select_stmt RBRACE
+    // | rel_attr comp_op LBRACE select_stmt RBRACE
+    | condition_attr comp_op LBRACE select_stmt RBRACE
     {
       $$ = new ConditionSqlNode;
       $$->left_is_attr = 1;
@@ -1296,7 +1428,8 @@ condition:
       $$->comp = $2;
       delete $1;
     }
-    | rel_attr comp_op LBRACE value value_list RBRACE
+    // | rel_attr comp_op LBRACE value value_list RBRACE
+    | condition_attr comp_op LBRACE value value_list RBRACE
     {
       $$ = new ConditionSqlNode;
       $$->left_is_attr = 1;
@@ -1311,7 +1444,8 @@ condition:
       delete $1;
       delete $4;
       }
-      | LBRACE select_stmt RBRACE comp_op rel_attr
+      // | LBRACE select_stmt RBRACE comp_op rel_attr
+      | LBRACE select_stmt RBRACE comp_op condition_attr
       {
 	$$ = new ConditionSqlNode;
 	$$->left_is_attr = 2;

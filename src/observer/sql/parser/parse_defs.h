@@ -63,11 +63,13 @@ inline std::string agg_to_string(agg a) {
  * Attr -> Attribute
  */
 struct RelAttrSqlNode {
-  std::string relation_name;   ///< relation / table name (may be NULL/EMPTY)
-  std::string attribute_name;  ///< attribute / column name
-  enum agg aggregate_func;     ///< aggregate function (may be NULL/EMPTY)
-  bool agg_valid_flag{true};   ///< Whether the parsed aggregate syntax is valid, i.e., COUNT(c1, c2) will be invalid
-  std::string alias_name;      ///< alias name (may be NULL/EMPTY)
+  std::string relation_name;       ///< relation / table name (may be NULL/EMPTY)
+  std::string attribute_name;      ///< attribute / column name
+  enum agg aggregate_func;         ///< aggregate function (may be NULL/EMPTY)
+  bool agg_valid_flag{true};       ///< Whether the parsed aggregate syntax is valid, i.e., COUNT(c1, c2) will be invalid
+  std::string alias_name;          ///< alias name (may be NULL/EMPTY)
+  bool expr_flag{false};           ///< Whether this rel_attr should be seen / parsed as expression, i.e., arithmetic expression
+  Expression *expression{nullptr}; ///< store the possible parsed expression
 };
 
 struct RelationSqlNode {
