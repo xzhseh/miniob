@@ -199,17 +199,9 @@ RC PlainCommunicator::write_result_internal(SessionEvent *event, bool &need_disc
         std::cerr<<"checkout"<<std::endl;
         const char* table_name = spec.table_name();
         const char* filed_name = spec.field_name();
-        if(nullptr == table_name || nullptr == filed_name) {
-          std::cerr<<"null table, name: ";
-          exit(0);
-        }
-        if(session_ == nullptr || session_->get_current_db() == nullptr) {
-          std::cerr<<"null err";
-        }
         Table* table  = session_->get_current_db()->find_table(table_name);
         if(table == nullptr) {
-          std::cerr<<"null err1"<<" table_name"<<table_name;
-          exit(0);
+          return RC::SCHEMA_TABLE_NOT_EXIST;
         }
         const FieldMeta* field_meta = table->table_meta().field(filed_name);
         if(nullptr == field_meta) {
@@ -262,8 +254,9 @@ RC PlainCommunicator::write_result_internal(SessionEvent *event, bool &need_disc
             return rc;
           }
       }
-      std::cerr<<"reach here4, "<<cell_num<<std::endl;
-      return RC::SUCCESS;
+     RC rc_close = sql_result->close();
+     sql_result->set_return_code(RC::SUCCESS);
+     return write_state(event, need_disconnect);
   }
   
 
