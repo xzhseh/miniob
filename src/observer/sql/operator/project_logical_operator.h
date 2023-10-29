@@ -28,7 +28,8 @@ See the Mulan PSL v2 for more details. */
  */
 class ProjectLogicalOperator : public LogicalOperator {
  public:
-  ProjectLogicalOperator(const std::vector<Field> &fields, std::string create_table_name, const std::vector<AttrInfoSqlNode>& attrs);
+  ProjectLogicalOperator(const std::vector<Field> &fields, std::string create_table_name,
+                         const std::vector<AttrInfoSqlNode> &attrs);
   virtual ~ProjectLogicalOperator() = default;
 
   LogicalOperatorType type() const override { return LogicalOperatorType::PROJECTION; }
@@ -36,10 +37,8 @@ class ProjectLogicalOperator : public LogicalOperator {
   std::vector<std::unique_ptr<Expression>> &expressions() override { return expressions_; }
   const std::vector<std::unique_ptr<Expression>> &expressions() const { return expressions_; }
   const std::vector<Field> &fields() const { return fields_; }
-  const std::string create_table_name() const {return create_table_name_;}
-  const std::vector<AttrInfoSqlNode> attrs() const {
-    return attrs_;
-  }
+  const std::string create_table_name() const { return create_table_name_; }
+  const std::vector<AttrInfoSqlNode> attrs() const { return attrs_; }
 
  private:
   //! 投影映射的字段名称

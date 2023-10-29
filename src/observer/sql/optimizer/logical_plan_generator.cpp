@@ -215,7 +215,8 @@ RC LogicalPlanGenerator::create_plan(SelectStmt *select_stmt, unique_ptr<Logical
       return RC::INTERNAL;
     }
   }
-  unique_ptr<LogicalOperator> project_oper(new ProjectLogicalOperator(select_stmt->query_fields(), select_stmt->create_table_name(), select_stmt->get_attrs()));
+  unique_ptr<LogicalOperator> project_oper(new ProjectLogicalOperator(
+      select_stmt->query_fields(), select_stmt->create_table_name(), select_stmt->get_attrs()));
   if (order_by_op) {
     project_oper->add_child(std::move(order_by_op));
   } else if (agg_oper) {

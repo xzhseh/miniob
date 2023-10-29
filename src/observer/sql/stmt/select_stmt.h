@@ -63,12 +63,8 @@ class SelectStmt : public Stmt {
                            std::unordered_map<std::string, Table *> &parent_table_map);
 
   AggStmt *agg_stmt() const { return agg_stmt_; }
-  const std::string create_table_name() const {
-    return create_table_name_;
-  }
-  const std::vector<AttrInfoSqlNode> get_attrs() const {
-    return attrs;
-  }
+  const std::string create_table_name() const { return create_table_name_; }
+  const std::vector<AttrInfoSqlNode> get_attrs() const { return attrs; }
 
  private:
   std::vector<Field> query_fields_;
