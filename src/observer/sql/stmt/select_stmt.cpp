@@ -311,7 +311,8 @@ RC SelectStmt::resolve_tables(Db *db, const SelectSqlNode &select_sql, std::vect
 }
 
 /// Recursively transform the `RelAttrSqlNode` in `FieldExpr` to real field
-RC field_expr_transformation(Db *db, const std::vector<Table *> &tables, Expression *expr) {
+RC field_expr_transformation(Db *db, const std::vector<Table *> &tables, Expression *expr,
+                             std::unordered_map<std::string, Table *> *table_map) {
   RC rc = RC::SUCCESS;
   if (expr == nullptr) {
     return RC::INVALID_ARGUMENT;
@@ -321,7 +322,7 @@ RC field_expr_transformation(Db *db, const std::vector<Table *> &tables, Express
     Field f;
     FieldExpr *f_expr = dynamic_cast<FieldExpr *>(expr);
     assert(f_expr != nullptr && "Expect `f_expr` not to be nullptr");
-    rc = get_field(db, tables, f_expr->get_rel_attr(), f);
+    rc = get_field(db, tables, table_map, f_expr->get_rel_attr(), f);
     if (rc != RC::SUCCESS) {
       LOG_WARN("[field_expr_transformation] failed to get field for expr: %s", f_expr->name().c_str());
       return rc;
@@ -330,10 +331,10 @@ RC field_expr_transformation(Db *db, const std::vector<Table *> &tables, Express
   }
   // Recursively transformation the child expression, if exists any
   if (expr->left() != nullptr) {
-    rc = field_expr_transformation(db, tables, expr->left());
+    rc = field_expr_transformation(db, tables, expr->left(), table_map);
   }
   if (expr->right() != nullptr) {
-    rc = field_expr_transformation(db, tables, expr->right());
+    rc = field_expr_transformation(db, tables, expr->right(), table_map);
   }
   return rc;
 }
@@ -359,7 +360,7 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt) {
   // Make the expression transformation for select attribute, specifically for `FieldExpr`
   if (select_sql.select_expr_flag) {
     for (int i = 0; i < select_sql.expressions.size(); ++i) {
-      rc = field_expr_transformation(db, tables, select_sql.expressions[i]);
+      rc = field_expr_transformation(db, tables, select_sql.expressions[i], &table_map);
       if (rc != RC::SUCCESS) {
         LOG_WARN("[SelectStmt::create] failed to transform select expressions");
         return rc;
@@ -373,12 +374,12 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt) {
     if (select_sql.where_expr->left_expr != nullptr && select_sql.where_expr->right_expr != nullptr) {
       // We should evaluate the where clause based on pure expressions
       // Do the transformation for the left expression and right expression
-      rc = field_expr_transformation(db, tables, select_sql.where_expr->left_expr);
+      rc = field_expr_transformation(db, tables, select_sql.where_expr->left_expr, &table_map);
       if (rc != RC::SUCCESS) {
         LOG_WARN("[SelectStmt::create] failed to transform where left expressions");
         return rc;
       }
-      rc = field_expr_transformation(db, tables, select_sql.where_expr->right_expr);
+      rc = field_expr_transformation(db, tables, select_sql.where_expr->right_expr, &table_map);
       if (rc != RC::SUCCESS) {
         LOG_WARN("[SelectStmt::create] failed to transform where right expressions");
         return rc;

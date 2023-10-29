@@ -56,7 +56,7 @@ Tuple *ProjectPhysicalOperator::current_tuple() {
   if (select_expr_flag_) {
     // Construct the `expr_tuple_`
     std::vector<Value> cells;
-    for (const auto *expr: select_expr_) {
+    for (auto *expr: select_expr_) {
       Value v;
       RC rc = expr->get_value(*children_[0]->current_tuple(), v);
       if (rc != RC::SUCCESS) {
