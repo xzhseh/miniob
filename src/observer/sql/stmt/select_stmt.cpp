@@ -382,7 +382,6 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt) {
             LOG_WARN("no such field. field=%s.%s.%s", db->name(), table->name(), field_name);
             return RC::SCHEMA_FIELD_MISSING;
           }
-
           query_fields.emplace_back(table, field_meta);
         }
       }
@@ -519,6 +518,7 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt) {
   select_stmt->agg_stmt_ = agg_stmt;
   select_stmt->join_stmts_ = join_stmts;
   select_stmt->order_by_ = order_by_stmts;
+  select_stmt->create_table_name_ = select_sql.create_table_name;
   stmt = select_stmt;
   return RC::SUCCESS;
 }

@@ -129,7 +129,6 @@ RC ExecuteStage::handle_request_with_physical_operator(SQLStageEvent *sql_event)
         }
         break;
       }
-
       for (size_t i = 0; i < select_stmt->query_fields().size(); i++) {
         const auto &field = select_stmt->query_fields()[i];
         if (with_table_name) {

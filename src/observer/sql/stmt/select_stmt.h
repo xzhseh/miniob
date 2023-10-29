@@ -63,10 +63,14 @@ class SelectStmt : public Stmt {
                            std::unordered_map<std::string, Table *> &parent_table_map);
 
   AggStmt *agg_stmt() const { return agg_stmt_; }
+  const std::string create_table_name() const {
+    return create_table_name_;
+  }
 
  private:
   std::vector<Field> query_fields_;
   std::vector<Table *> tables_;
+  std::string create_table_name_;
   std::vector<JoinStmt> join_stmts_;
   std::vector<OrderByStmt> order_by_;
   FilterStmt *filter_stmt_ = nullptr;

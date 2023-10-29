@@ -590,6 +590,11 @@ update_value_list:
 select_stmt:        /*  select 语句的语法解析树*/
     // FIXME: Please ensure the order of group by and order by
     // Currently group by is placed after order by to prevent renaming issue.
+    CREATE TABLE ID AS select_stmt {
+      $$ = $5;
+      $$->selection.create_table_name = $3;
+    }
+    |
     SELECT select_attr FROM ID option_as rel_list where order_by_clause group_by_clause having
     {
       $$ = new ParsedSqlNode(SCF_SELECT);

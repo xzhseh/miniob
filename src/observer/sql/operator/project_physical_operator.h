@@ -37,10 +37,18 @@ class ProjectPhysicalOperator : public PhysicalOperator {
   RC close() override;
 
   int cell_num() const { return tuple_.cell_num(); }
-
+  std::string name() const override{
+    return create_table_name;
+  }
   Tuple *current_tuple() override;
-
+  void set_name(std::string name) {
+    create_table_name = name;
+  }
+  const ProjectTuple& get_project_tuple() const {
+    return tuple_;
+  } 
  private:
   ProjectTuple tuple_;
+  std::string create_table_name;
   bool agg_flag_{false};
 };
