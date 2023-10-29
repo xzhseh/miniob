@@ -30,4 +30,16 @@ INSERT INTO join_table_1 VALUES (1, 'a');
 INSERT INTO join_table_2 VALUES (1, 2);
 Select * from join_table_1 as t1, join_table_2 as t2 where join_table_1.id=join_table_2.id;
 
+CREATE TABLE table_alias_1(id int, col1 int, feat1 float);
+CREATE TABLE table_alias_2(id int, col2 int, feat2 float);
+CREATE TABLE table_alias_3(id int, col3 int, feat3 float);
+
+INSERT INTO table_alias_1 VALUES (13, 62, 67.4);
+INSERT INTO table_alias_1 VALUES (49, 49, 98.1);
+
+
+INSERT INTO table_alias_2 VALUES (12, 123, 67.4);
+INSERT INTO table_alias_2 VALUES (123, 23, 98.1);
+INSERT INTO table_alias_2 VALUES (49, 49, 98.1);
+
 select * from table_alias_1 t1 where id in (select t2.id from table_alias_2 t2 where t2.col2 >= t1.col1);

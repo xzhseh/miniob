@@ -140,6 +140,7 @@ BY                                      RETURN_TOKEN(BY);
 ASC                                     RETURN_TOKEN(ASC);
 AS                                      RETURN_TOKEN(AS);
 GROUP                                   RETURN_TOKEN(GROUP);
+OR                                      RETURN_TOKEN(OR);
 HAVING                                  RETURN_TOKEN(HAVING);
 {ID}                                    yylval->string=strdup(yytext); RETURN_TOKEN(ID);
 "("                                     RETURN_TOKEN(LBRACE);

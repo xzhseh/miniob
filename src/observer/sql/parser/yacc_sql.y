@@ -119,8 +119,9 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
         AS
         GROUP
         HAVING
-        IN
-        EXISTS
+	IN
+	EXISTS
+	OR
 
 /** union 中定义各种数据类型，真实生成的代码也是union类型，所以不能有非POD类型的数据 **/
 %union {
@@ -1052,25 +1053,33 @@ option_as:
     | AS ID {
       $$ = $2;
     }
+    | ID {
+      $$ = $1;
+    }
     ;
 
 select_attr:
-    '*' {
+    '*' option_as {
       $$ = new std::vector<RelAttrSqlNode>;
       RelAttrSqlNode attr;
       attr.relation_name  = "";
       attr.attribute_name = "*";
       attr.aggregate_func = agg::NONE;
+      if($2 != nullptr) {
+      	attr.agg_valid_flag = false;
+      	free($2);
+      }
       $$->emplace_back(attr);
     }
     // TODO: Add the syntax for cases like `select agg(c1), count(*) from t1;`
-    | agg LBRACE '*' RBRACE attr_list  {
+    | agg LBRACE '*' RBRACE option_as attr_list   {
       /* AGG_FUNC(*) */
-      if ($5 != nullptr) {
-        $$ = $5;
+      if ($6 != nullptr) {
+        $$ = $6;
       } else {
         $$ = new std::vector<RelAttrSqlNode>;
       }
+
 
       // Construct the aggregation attribute
       RelAttrSqlNode attr;
@@ -1078,15 +1087,24 @@ select_attr:
       attr.attribute_name = "*";
       attr.aggregate_func = $1;
 
+      if($5 != nullptr) {
+      	attr.alias_name = $5;
+      	free($5);
+      }
+
       $$->emplace_back(attr);
     }
-    | rel_attr COMMA agg LBRACE '*' RBRACE {
+    | rel_attr COMMA agg LBRACE '*' RBRACE option_as {
       /* AGG_FUNC(*) */
       $$ = new std::vector<RelAttrSqlNode>;
       RelAttrSqlNode attr;
       attr.relation_name = "";
       attr.attribute_name = "*";
       attr.aggregate_func = $3;
+      if($7 != nullptr) {
+           attr.alias_name = $7;
+           free($7);
+      }
       $$->emplace_back(attr);
       $$->emplace_back(*$1);
     }
@@ -1101,13 +1119,13 @@ select_attr:
       delete $1;
     }
     // FIXME: Memory leak
-    | agg LBRACE rel_attr COMMA rel_attr RBRACE {
+    | agg LBRACE rel_attr COMMA rel_attr RBRACE{
       $$ = new std::vector<RelAttrSqlNode>;
       RelAttrSqlNode attr;
       attr.agg_valid_flag = false;
       $$->emplace_back(attr);
     }
-    | agg LBRACE '*' COMMA rel_attr RBRACE {
+    | agg LBRACE '*' COMMA rel_attr RBRACE  {
       $$ = new std::vector<RelAttrSqlNode>;
       RelAttrSqlNode attr;
       attr.agg_valid_flag = false;
@@ -1168,19 +1186,35 @@ rel_attr:
       free($1);
       free($3);
     }
+    | ID DOT '*' {
+      $$ = new RelAttrSqlNode;
+      $$->relation_name = $1;
+      $$->attribute_name = "*";
+      $$->aggregate_func = agg::NONE;
+      free($1);
+    }
     // TODO : Add alias name for agg ?
-    | agg LBRACE ID RBRACE {
+    | agg LBRACE ID RBRACE option_as {
       $$ = new RelAttrSqlNode;
       $$->relation_name = "";
       $$->attribute_name = $3;
       $$->aggregate_func = $1;
+      if($5 != nullptr)
+      {
+      	$$->alias_name = $5;
+      	free($5);
+      }
       free($3);
     }
-    | agg LBRACE ID DOT ID RBRACE {
+    | agg LBRACE ID DOT ID RBRACE option_as {
       $$ = new RelAttrSqlNode;
       $$->relation_name = $3;
       $$->attribute_name = $5;
       $$->aggregate_func = $1;
+      if($7 != nullptr) {
+      	$$->alias_name = $7;
+      	free($7);
+      }
       free($3);
       free($5);
     }
@@ -1301,6 +1335,13 @@ condition_list:
     }
     | condition AND condition_list {
       $$ = $3;
+      $1->is_and = true;
+      $$->emplace_back(*$1);
+      delete $1;
+    }
+    | condition OR condition_list {
+      $$ = $3;
+      $1->is_and = false;
       $$->emplace_back(*$1);
       delete $1;
     }

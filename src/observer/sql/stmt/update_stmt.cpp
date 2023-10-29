@@ -92,6 +92,7 @@ RC UpdateStmt::create(Db *db, UpdateSqlNode &update, Stmt *&stmt) {
   RC rc = FilterStmt::create(db,
                              table,
                              &table_map,
+                             nullptr,
                              empty_rel_attr,
                              // Do nothing now, future support
                              std::vector<RelationSqlNode>(),

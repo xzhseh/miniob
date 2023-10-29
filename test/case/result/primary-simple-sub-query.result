@@ -81,6 +81,11 @@ select * from ssq_1 where feat1 <> (select avg(ssq_2.feat2) from ssq_2);
 3 | 3 | 13.5
 ID | COL1 | FEAT1
 
+select * from ssq_1 where feat1 <> (select min(ssq_2.feat2) from ssq_2 where ssq_2.feat2 > ssq_1.feat1);
+1 | 4 | 11.2
+2 | 2 | 12
+ID | COL1 | FEAT1
+
 2. SELECT WITH EMPTY TABLE
 select * from ssq_1 where feat1 < (select max(ssq_2.feat2) from ssq_2 where 1=0);
 ID | COL1 | FEAT1

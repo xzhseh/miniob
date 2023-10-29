@@ -31,6 +31,8 @@ INSERT INTO ssq_2 VALUES (5, 3, 12.6);
 
 -- sort select * from ssq_1 where feat1 <> (select avg(ssq_2.feat2) from ssq_2);
 
+-- sort select * from ssq_1 where feat1 <> (select min(ssq_2.feat2) from ssq_2 where ssq_2.feat2 > ssq_1.feat1);
+
 -- echo 2. Select with empty table
 -- sort select * from ssq_1 where feat1 < (select max(ssq_2.feat2) from ssq_2 where 1=0);
 -- sort select * from ssq_1 where id in (select ssq_2.id from ssq_2 where 1=0);

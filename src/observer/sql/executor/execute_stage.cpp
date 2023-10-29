@@ -150,19 +150,10 @@ RC ExecuteStage::handle_request_with_physical_operator(SQLStageEvent *sql_event)
 
       for (size_t i = 0; i < select_stmt->query_fields().size(); i++) {
         const auto &field = select_stmt->query_fields()[i];
-        const auto &alias = select_stmt->alias_vec()[i];
         if (with_table_name) {
-          if (alias.is_alias) {
-            schema.append_cell(alias.table_alias.c_str(), alias.field_alias.c_str());
-          } else {
-            schema.append_cell(field.table_name(), field.field_name());
-          }
+          schema.append_cell(field.table_name(), field.field_name());
         } else {
-          if (alias.is_alias) {
-            schema.append_cell(alias.field_alias.c_str());
-          } else {
-            schema.append_cell(field.field_name());
-          }
+          schema.append_cell(field.field_name());
         }
       }
     } break;
