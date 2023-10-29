@@ -255,7 +255,7 @@ class ProjectTuple : public Tuple {
   }
 
   virtual std::unique_ptr<Tuple> copy() const override { return tuple_->copy(); }
-
+  const std::vector<TupleCellSpec *> &get_specs() const { return speces_; }
   RC find_cell(const TupleCellSpec &spec, Value &cell) const override { return tuple_->find_cell(spec, cell); }
 
 #if 0
