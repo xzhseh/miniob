@@ -193,6 +193,7 @@ RC PlainCommunicator::write_result_internal(SessionEvent *event, bool &need_disc
       const auto specs =  project_tuple.get_specs();
       std::cerr<<"reach here1, "<<cell_num<<std::endl;
       std::vector<AttrInfoSqlNode> attrs;
+      if(oper->attrs_.size() == 0) {
       for(int i = 0; i < cell_num; i++) {
         std::cerr<<"checkout"<<std::endl;
         const TupleCellSpec &spec = *specs[i];
@@ -219,6 +220,9 @@ RC PlainCommunicator::write_result_internal(SessionEvent *event, bool &need_disc
         }
         attrs.push_back(attr);
         
+      }
+      } else {
+        attrs = oper->attrs_;
       }
       rc = session_->get_current_db()->create_table(oper->name().c_str(), cell_num, attrs.data());
       if(OB_FAIL(rc)) {
@@ -247,11 +251,18 @@ RC PlainCommunicator::write_result_internal(SessionEvent *event, bool &need_disc
           }
           Record record;
           rc = table->make_record(cell_num, vals.data(), record);
+          if (rc != RC::SUCCESS) {
+            sql_result->close();
+            sql_result->set_return_code(rc);
+            session_->get_current_db()->drop_table(oper->name().c_str());
+            return write_state(event, need_disconnect);
+          }
           rc = table->insert_record(record);
           if (rc != RC::SUCCESS) {
             sql_result->close();
             sql_result->set_return_code(rc);
-            return rc;
+            session_->get_current_db()->drop_table(oper->name().c_str());
+            return write_state(event, need_disconnect);
           }
       }
      RC rc_close = sql_result->close();

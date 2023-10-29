@@ -150,7 +150,7 @@ struct OrderBySqlNode {
  * where 条件 conditions，这里表示使用AND串联起来多个条件。正常的SQL语句会有OR，NOT等，
  * 甚至可以包含复杂的表达式。
  */
-
+struct AttrInfoSqlNode;
 struct SelectSqlNode {
   std::vector<RelAttrSqlNode> attributes;    ///< attributes in select clause
   std::vector<RelationSqlNode> relations;    ///< 查询的表
@@ -161,6 +161,7 @@ struct SelectSqlNode {
   // The void * is Tuple *
   std::vector<void *> context_tuples;  ///< context tuples for sub query
   std::string create_table_name = "";
+  std::vector<AttrInfoSqlNode> attr_infos;
   SelectSqlNode() = default;
   SelectSqlNode(const SelectSqlNode &other) = default;
 };

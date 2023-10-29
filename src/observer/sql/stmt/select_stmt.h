@@ -66,11 +66,15 @@ class SelectStmt : public Stmt {
   const std::string create_table_name() const {
     return create_table_name_;
   }
+  const std::vector<AttrInfoSqlNode> get_attrs() const {
+    return attrs;
+  }
 
  private:
   std::vector<Field> query_fields_;
   std::vector<Table *> tables_;
   std::string create_table_name_;
+  std::vector<AttrInfoSqlNode> attrs;
   std::vector<JoinStmt> join_stmts_;
   std::vector<OrderByStmt> order_by_;
   FilterStmt *filter_stmt_ = nullptr;

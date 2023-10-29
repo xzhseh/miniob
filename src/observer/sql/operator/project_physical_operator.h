@@ -47,6 +47,8 @@ class ProjectPhysicalOperator : public PhysicalOperator {
   const ProjectTuple& get_project_tuple() const {
     return tuple_;
   } 
+  // 为了方便
+  std::vector<AttrInfoSqlNode> attrs_;
  private:
   ProjectTuple tuple_;
   std::string create_table_name;
