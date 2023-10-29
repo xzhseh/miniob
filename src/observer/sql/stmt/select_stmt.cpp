@@ -163,6 +163,11 @@ bool group_by_sanity_check(const std::vector<RelAttrSqlNode> &group_by_keys, con
   for (int i = 0; i < fields.size(); ++i) {
     const auto &field = fields[i];
 
+    if (field.meta() == nullptr && field.table() == nullptr && agg_stmt.get_agg_types()[i] == agg::AGG_COUNT) {
+      // This is COUNT(*), we just ignore this
+      continue;
+    }
+
     if (!agg_stmt.get_is_agg()[i]) {
       count += 1;
     }
