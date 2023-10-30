@@ -48,6 +48,12 @@ bool filter(ConditionSqlNode *condition, Tuple &tuple) {
     LOG_WARN("[filter] failed to get the right expr value, expr: %s", condition->right_expr->name().c_str());
   }
 
+  std::cout << "[filter] left_expr: " << condition->left_expr->name() << std::endl;
+  std::cout << "[filter] right_expr: " << condition->right_expr->name() << std::endl;
+
+  std::cout << "[filter] lhs: " << lhs.to_string() << std::endl;
+  std::cout << "[filter] rhs: " << rhs.to_string() << std::endl;
+
   if (Value::check_null(lhs) || Value::check_null(rhs)) {
     return false;
   }
