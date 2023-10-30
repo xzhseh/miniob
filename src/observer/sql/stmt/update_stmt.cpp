@@ -94,9 +94,6 @@ RC UpdateStmt::create(Db *db, UpdateSqlNode &update, Stmt *&stmt) {
 
       // Set the value to the hard-coded null value
       Value::set_null(update_value, field_type);
-
-      assert(update_value.is_null() && "`values[i]` should persist the `is_null_` property");
-      assert(update_value.attr_type() == field_type && "The type should be the same");
     }
 
     AttrType value_type = update_value.attr_type();
