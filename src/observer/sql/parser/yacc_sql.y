@@ -44,7 +44,8 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
 
 %}
 
-%define api.pure full
+%define api.pure true
+/* %define api.pure full */
 %define parse.error verbose
 /** 启用位置标识 **/
 %locations
@@ -156,6 +157,13 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
 %token <string> ID
 %token <string> SSS
 %token <string> DATE_STR
+%token <string> ID_MINUS
+%token <string> ID_DOT_ID_MINUS
+%token <string> MIN_MINUS
+%token <string> MAX_MINUS
+%token <string> AVG_MINUS
+%token <string> SUM_MINUS
+%token <string> COUNT_MINUS
 //非终结符
 
 /** type 定义了各种解析后的结果输出的是什么类型。类型对应了 union 中的定义的成员变量名称 **/
@@ -184,7 +192,6 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
 %type <condition_list>      condition_list
 %type <rel_attr_list>       select_attr
 %type <relation_list>       rel_list
-%type <rel_attr_list>       attr_list
 %type <expression>          expression
 %type <expression_list>     expression_list
 %type <join_list>           inner_join_list
@@ -219,6 +226,10 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
 %left '+' '-'
 %left '*' '/'
 %nonassoc UMINUS
+
+// Enable glr-parser for ambiguity grammar
+%glr-parser
+
 %%
 
 commands: command_wrapper opt_semicolon  //commands or sqls. parser starts here.
@@ -701,8 +712,9 @@ select_stmt:        /*  select 语句的语法解析树*/
 	    $$->selection.order_bys.insert($$->selection.order_bys.end(),$8->begin(),$8->end());
 	    delete $8;
 	  }
-    }
+        }
     ;
+
 inner_join_constr:
     INNER JOIN ID ON condition_list
     {
@@ -859,6 +871,7 @@ expression_list:
       $$->emplace_back($1);
     }
     ;
+
 expression:
     expression '+' expression {
       $$ = create_arithmetic_expression(ArithmeticExpr::Type::ADD, $1, $3, sql_string, &@$);
@@ -883,6 +896,116 @@ expression:
       $$ = new ValueExpr(*$1);
       $$->set_name(token_name(sql_string, &@$));
       delete $1;
+    }
+    | rel_attr {
+      // The actual field will be parsed in select statement
+      $$ = new FieldExpr(*$1);
+      $$->set_name(token_name(sql_string, &@$));
+    }
+    // Resolve cases like `id1-2 > 3`
+    // FIXME: The below expressions have not been set name, we could set name if needed
+    // i.e., f_expr->set_name(...)
+    | ID_MINUS {
+      char *ptr = strchr($1, '-');
+      assert(ptr != nullptr && "Expect `ptr` not to be nullptr");
+      *ptr = '\0';
+      RelAttrSqlNode rel_attr;
+      rel_attr.attribute_name = $1;
+      rel_attr.aggregate_func = agg::NONE;
+      FieldExpr *f_expr = new FieldExpr(rel_attr);
+      int v = atoi(ptr + 1);
+      Value value;
+      value.set_int(v);
+      ValueExpr *value_expr = new ValueExpr(value);
+      $$ = create_arithmetic_expression(ArithmeticExpr::Type::SUB, f_expr, value_expr, sql_string, &@$);
+    }
+    | ID_DOT_ID_MINUS {
+          char *ptr = strchr($1, '-');
+          assert(ptr != nullptr && "Expect `ptr` not to be nullptr");
+          *ptr = '\0';
+          char *ptr1 = strchr($1, '.');
+          *ptr1 = '\0';
+          RelAttrSqlNode rel_attr;
+          rel_attr.relation_name = $1;
+          rel_attr.attribute_name = (ptr1 + 1);
+          rel_attr.aggregate_func = agg::NONE;
+          FieldExpr *f_expr = new FieldExpr(rel_attr);
+          int v = atoi(ptr + 1);
+          Value value;
+          value.set_int(v);
+          ValueExpr *value_expr = new ValueExpr(value);
+          $$ = create_arithmetic_expression(ArithmeticExpr::Type::SUB, f_expr, value_expr, sql_string, &@$);
+        }
+    // Resolve cases like `MIN(id1)-2 > 3`
+    | MIN_MINUS {
+          char *ptr = strchr($1, '-');
+          assert(ptr != nullptr && "Expect `ptr` not to be nullptr");
+          *(ptr - 1) = '\0';
+          RelAttrSqlNode rel_attr;
+          rel_attr.attribute_name = ($1 + 4);
+          rel_attr.aggregate_func = AGG_MIN;
+          FieldExpr *f_expr = new FieldExpr(rel_attr);
+          int v = atoi(ptr + 1);
+          Value value;
+          value.set_int(v);
+          ValueExpr *value_expr = new ValueExpr(value);
+          $$ = create_arithmetic_expression(ArithmeticExpr::Type::SUB, f_expr, value_expr, sql_string, &@$);
+        }
+    | MAX_MINUS {
+   char *ptr = strchr($1, '-');
+             assert(ptr != nullptr && "Expect `ptr` not to be nullptr");
+             *(ptr - 1) = '\0';
+             RelAttrSqlNode rel_attr;
+             rel_attr.attribute_name = ($1 + 4);
+             rel_attr.aggregate_func = AGG_MAX;
+             FieldExpr *f_expr = new FieldExpr(rel_attr);
+             int v = atoi(ptr + 1);
+             Value value;
+             value.set_int(v);
+             ValueExpr *value_expr = new ValueExpr(value);
+             $$ = create_arithmetic_expression(ArithmeticExpr::Type::SUB, f_expr, value_expr, sql_string, &@$);
+    }
+    | SUM_MINUS {
+   char *ptr = strchr($1, '-');
+             assert(ptr != nullptr && "Expect `ptr` not to be nullptr");
+             *(ptr - 1) = '\0';
+             RelAttrSqlNode rel_attr;
+             rel_attr.attribute_name = ($1 + 4);
+             rel_attr.aggregate_func = AGG_SUM;
+             FieldExpr *f_expr = new FieldExpr(rel_attr);
+             int v = atoi(ptr + 1);
+             Value value;
+             value.set_int(v);
+             ValueExpr *value_expr = new ValueExpr(value);
+             $$ = create_arithmetic_expression(ArithmeticExpr::Type::SUB, f_expr, value_expr, sql_string, &@$);
+    }
+    | AVG_MINUS {
+   char *ptr = strchr($1, '-');
+             assert(ptr != nullptr && "Expect `ptr` not to be nullptr");
+             *(ptr - 1) = '\0';
+             RelAttrSqlNode rel_attr;
+             rel_attr.attribute_name = ($1 + 4);
+             rel_attr.aggregate_func = AGG_AVG;
+             FieldExpr *f_expr = new FieldExpr(rel_attr);
+             int v = atoi(ptr + 1);
+             Value value;
+             value.set_int(v);
+             ValueExpr *value_expr = new ValueExpr(value);
+             $$ = create_arithmetic_expression(ArithmeticExpr::Type::SUB, f_expr, value_expr, sql_string, &@$);
+    }
+    | COUNT_MINUS {
+   char *ptr = strchr($1, '-');
+             assert(ptr != nullptr && "Expect `ptr` not to be nullptr");
+             *(ptr - 1) = '\0';
+             RelAttrSqlNode rel_attr;
+             rel_attr.attribute_name = ($1 + 6);
+             rel_attr.aggregate_func = AGG_COUNT;
+             FieldExpr *f_expr = new FieldExpr(rel_attr);
+             int v = atoi(ptr + 1);
+             Value value;
+             value.set_int(v);
+             ValueExpr *value_expr = new ValueExpr(value);
+             $$ = create_arithmetic_expression(ArithmeticExpr::Type::SUB, f_expr, value_expr, sql_string, &@$);
     }
     ;
 
@@ -912,54 +1035,23 @@ select_attr:
       }
       $$->emplace_back(attr);
     }
-    // TODO: Add the syntax for cases like `select agg(c1), count(*) from t1;`
-    | agg LBRACE '*' RBRACE option_as attr_list   {
-      /* AGG_FUNC(*) */
-      if ($6 != nullptr) {
-        $$ = $6;
-      } else {
-        $$ = new std::vector<RelAttrSqlNode>;
-      }
-
-
-      // Construct the aggregation attribute
-      RelAttrSqlNode attr;
-      attr.relation_name = "";
-      attr.attribute_name = "*";
-      attr.aggregate_func = $1;
-
-      if($5 != nullptr) {
-      	attr.alias_name = $5;
-      	free($5);
-      }
-
-      $$->emplace_back(attr);
-    }
-    | rel_attr COMMA agg LBRACE '*' RBRACE option_as {
-      /* AGG_FUNC(*) */
+    // FIXME: Ensure the sequence / order of the final results
+    | expression_list {
       $$ = new std::vector<RelAttrSqlNode>;
-      RelAttrSqlNode attr;
-      attr.relation_name = "";
-      attr.attribute_name = "*";
-      attr.aggregate_func = $3;
-      if($7 != nullptr) {
-           attr.alias_name = $7;
-           free($7);
+      for (auto *expr : *$1) {
+        RelAttrSqlNode rel_attr;
+        if (dynamic_cast<FieldExpr *>(expr) != nullptr) {
+          // The expression is field expression
+          rel_attr = dynamic_cast<FieldExpr *>(expr)->get_rel_attr();
+        } else {
+          rel_attr.expr_flag = true;
+          rel_attr.expression = expr;
+        }
+        $$->push_back(rel_attr);
       }
-      $$->emplace_back(attr);
-      $$->emplace_back(*$1);
-    }
-    | rel_attr attr_list {
-      /* Implicity AGG in `rel_attr` */
-      if ($2 != nullptr) {
-        $$ = $2;
-      } else {
-        $$ = new std::vector<RelAttrSqlNode>;
-      }
-      $$->emplace_back(*$1);
-      delete $1;
     }
     // FIXME: Memory leak
+    // Note that the following is only for invalid agg syntax
     | agg LBRACE rel_attr COMMA rel_attr RBRACE{
       $$ = new std::vector<RelAttrSqlNode>;
       RelAttrSqlNode attr;
@@ -1048,28 +1140,24 @@ rel_attr:
       free($3);
       free($5);
     }
+    | agg LBRACE '*' RBRACE option_as {
+      $$ = new RelAttrSqlNode;
+
+      // Construct the aggregation attribute
+      $$->relation_name = "";
+      $$->attribute_name = "*";
+      $$->aggregate_func = $1;
+
+      if ($5 != nullptr) {
+       $$->alias_name = $5;
+       free($5);
+      }
+    }
     // Invalid syntax, miniob requires the output to be FAILURE
     // So we must at least parse the syntax here 😅
     | agg LBRACE RBRACE {
       $$ = new RelAttrSqlNode;
       $$->agg_valid_flag = false;
-    }
-    ;
-
-attr_list:
-    /* empty */
-    {
-      $$ = nullptr;
-    }
-    | COMMA rel_attr attr_list {
-      if ($3 != nullptr) {
-        $$ = $3;
-      } else {
-        $$ = new std::vector<RelAttrSqlNode>;
-      }
-
-      $$->emplace_back(*$2);
-      delete $2;
     }
     ;
 
@@ -1100,9 +1188,10 @@ where:
       $$ = nullptr;
     }
     | WHERE condition_list {
-      $$ = $2;  
+      $$ = $2;
     }
     ;
+
 condition_list:
     /* empty */
     {
@@ -1126,97 +1215,142 @@ condition_list:
       delete $1;
     }
     ;
+
 condition:
-    rel_attr comp_op value
+    expression comp_op expression {
+      FieldExpr *f_lhs = dynamic_cast<FieldExpr *>($1);
+      ValueExpr *v_lhs = dynamic_cast<ValueExpr *>($1);
+      FieldExpr *f_rhs = dynamic_cast<FieldExpr *>($3);
+      ValueExpr *v_rhs = dynamic_cast<ValueExpr *>($3);
+
+      $$ = new ConditionSqlNode;
+
+      if (f_lhs && f_rhs) {
+        // Field comp Field
+        $$->left_is_attr = 1;
+        $$->right_is_attr = 1;
+
+        $$->comp = $2;
+
+        $$->left_attr = f_lhs->get_rel_attr();
+        $$->right_attr = f_rhs->get_rel_attr();
+
+        delete $1;
+        delete $3;
+      } else if (f_lhs && v_rhs) {
+        // Field comp Value
+        $$->left_is_attr = 1;
+        $$->right_is_attr = 0;
+
+        $$->comp = $2;
+
+        $$->left_attr = f_lhs->get_rel_attr();
+        $$->right_value = v_rhs->get_value();
+
+        delete $1;
+        delete $3;
+      } else if (v_lhs && f_rhs) {
+        // Value comp Field
+        $$->left_is_attr = 0;
+        $$->right_is_attr = 1;
+
+        $$->comp = $2;
+
+        $$->left_value = v_lhs->get_value();
+        $$->right_attr = f_rhs->get_rel_attr();
+
+        delete $1;
+        delete $3;
+      } else if (v_lhs && v_rhs) {
+        // Value comp Value
+        $$->left_is_attr = 0;
+        $$->right_is_attr = 0;
+
+        $$->comp = $2;
+
+        $$->left_value = v_lhs->get_value();
+        $$->right_value = v_rhs->get_value();
+
+        delete $1;
+        delete $3;
+      } else if (f_lhs && (!f_rhs && !v_rhs)) {
+        // Field comp Expression
+        $$->left_is_attr = 1;
+        $$->right_is_attr = 0;
+
+        $$->comp = $2;
+
+        $$->left_attr = f_lhs->get_rel_attr();
+        $$->right_expr = $3;
+
+        delete $1;
+      } else if (v_lhs && (!f_rhs && !v_rhs)) {
+        // Value comp Expression
+        $$->left_is_attr = 0;
+        $$->right_is_attr = 0;
+
+        $$->comp = $2;
+
+        $$->left_value = v_lhs->get_value();
+        $$->right_expr = $3;
+
+        delete $1;
+      } else if ((!f_lhs && !v_lhs) && f_rhs) {
+        // Expression comp Field
+        $$->left_is_attr = 0;
+        $$->right_is_attr = 1;
+
+        $$->comp = $2;
+
+        $$->left_expr = $1;
+        $$->right_attr = f_rhs->get_rel_attr();
+
+        delete $3;
+      } else if ((!f_lhs && !v_lhs) && v_rhs) {
+        // Expression comp Value
+        $$->left_is_attr = 0;
+        $$->right_is_attr = 0;
+
+        $$->comp = $2;
+
+        $$->left_expr = $1;
+        $$->right_value = v_rhs->get_value();
+
+        delete $3;
+      } else if (!f_lhs && !v_lhs && !f_rhs && !v_rhs) {
+        // Expression comp Expression
+        $$->left_is_attr = 0;
+        $$->right_is_attr = 0;
+
+        $$->comp = $2;
+
+        $$->left_expr = $1;
+        $$->right_expr = $3;
+      } else {
+        assert(false && "This path is impossible");
+      }
+    }
+    // | rel_attr in_op LBRACE select_stmt RBRACE
+    | expression in_op LBRACE select_stmt RBRACE
     {
+    FieldExpr *lhs = dynamic_cast<FieldExpr *>($1);
+          assert(lhs != nullptr && "Expect lhs to be `FieldExpr *`");
       $$ = new ConditionSqlNode;
       $$->left_is_attr = 1;
-      $$->left_attr = *$1;
-      $$->right_is_attr = 0;
-      $$->right_value = *$3;
-      $$->comp = $2;
-
-      delete $1;
-      delete $3;
-    }
-    | value comp_op value 
-    {
-      $$ = new ConditionSqlNode;
-      $$->left_is_attr = 0;
-      $$->left_value = *$1;
-      $$->right_is_attr = 0;
-      $$->right_value = *$3;
-      $$->comp = $2;
-
-      delete $1;
-      delete $3;
-    }
-    | rel_attr comp_op rel_attr
-    {
-      $$ = new ConditionSqlNode;
-      $$->left_is_attr = 1;
-      $$->left_attr = *$1;
-      $$->right_is_attr = 1;
-      $$->right_attr = *$3;
-      $$->comp = $2;
-
-      delete $1;
-      delete $3;
-    }
-    | value comp_op rel_attr
-    {
-      $$ = new ConditionSqlNode;
-      $$->left_is_attr = 0;
-      $$->left_value = *$1;
-      $$->right_is_attr = 1;
-      $$->right_attr = *$3;
-      $$->comp = $2;
-
-      delete $1;
-      delete $3;
-    }
-    // FIXME: Currently hard-coded
-    | agg LBRACE '*' RBRACE comp_op value {
-      $$ = new ConditionSqlNode;
-      RelAttrSqlNode left;
-      left.attribute_name = "*";
-      left.aggregate_func = AGG_COUNT;
-      $$->left_is_attr = 1;
-      $$->left_attr = left;
-      $$->right_is_attr = 0;
-      $$->right_value = *$6;
-      $$->comp = $5;
-
-      delete $6;
-    }
-    | value comp_op agg LBRACE '*' RBRACE {
-      $$ = new ConditionSqlNode;
-      RelAttrSqlNode right;
-      right.attribute_name = "*";
-      right.aggregate_func = AGG_COUNT;
-      $$->left_is_attr = 0;
-      $$->left_value = *$1;
-      $$->right_is_attr = 1;
-      $$->right_attr = right;
-      $$->comp = $2;
-
-      delete $1;
-    }
-    | rel_attr in_op LBRACE select_stmt RBRACE
-    {
-      $$ = new ConditionSqlNode;
-      $$->left_is_attr = 1;
-      $$->left_attr = *$1;
+      $$->left_attr = lhs->get_rel_attr();
       $$->right_is_attr = 2;
       $$->right_sub_select = new SelectSqlNode($4->selection);
       $$->comp = $2;
       delete $1;
     }
-    | rel_attr in_op LBRACE value value_list RBRACE
+    // | rel_attr in_op LBRACE value value_list RBRACE
+    | expression in_op LBRACE value value_list RBRACE
     {
+    FieldExpr *lhs = dynamic_cast<FieldExpr *>($1);
+          assert(lhs != nullptr && "Expect lhs to be `FieldExpr *`");
       $$ = new ConditionSqlNode;
       $$->left_is_attr = 1;
-      $$->left_attr = *$1;
+      $$->left_attr = lhs->get_rel_attr();
       $$->right_is_attr = 3;
       if($5 != nullptr) {
 	$$->right_value_list.swap(*$5);
@@ -1227,30 +1361,38 @@ condition:
       delete $1;
       delete $4;
     }
-    | rel_attr comp_op LBRACE select_stmt RBRACE
+    // | rel_attr comp_op LBRACE select_stmt RBRACE
+    | expression comp_op LBRACE select_stmt RBRACE
     {
+      FieldExpr *lhs = dynamic_cast<FieldExpr *>($1);
+      assert(lhs != nullptr && "Expect lhs to be `FieldExpr *`");
       $$ = new ConditionSqlNode;
       $$->left_is_attr = 1;
-      $$->left_attr = *$1;
+      $$->left_attr = lhs->get_rel_attr();
       $$->right_is_attr = 2;
       $$->right_sub_select = new SelectSqlNode($4->selection);
       $$->comp = $2;
       delete $1;
     }
-    | rel_attr comp_op LBRACE value value_list RBRACE
+    // | rel_attr comp_op LBRACE value value_list RBRACE
+    | expression comp_op LBRACE value COMMA value value_list RBRACE
     {
+      FieldExpr *lhs = dynamic_cast<FieldExpr *>($1);
+      assert(lhs != nullptr && "Expect lhs to be `FieldExpr *`");
       $$ = new ConditionSqlNode;
       $$->left_is_attr = 1;
-      $$->left_attr = *$1;
+      $$->left_attr = lhs->get_rel_attr();
       $$->right_is_attr = 3;
-      if($5 != nullptr) {
-      	$$->right_value_list.swap(*$5);
-      	delete $5;
+      if($7 != nullptr) {
+      	$$->right_value_list.swap(*$7);
+      	delete $7;
       }
+      $$->right_value_list.push_back(*$6);
       $$->right_value_list.push_back(*$4);
       $$->comp = $2;
       delete $1;
       delete $4;
+      delete $6;
       }
       | LBRACE select_stmt RBRACE comp_op rel_attr
       {
@@ -1272,6 +1414,7 @@ condition:
       	$$->comp = $4;
       }
     ;
+
 in_op:
     IN { $$ = IN_OP; }
     | NOT IN { $$ = NOT_IN; }

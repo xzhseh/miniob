@@ -14,6 +14,7 @@ See the Mulan PSL v2 for more details. */
 
 #include "sql/optimizer/logical_plan_generator.h"
 #include <memory>
+#include "sql/expr/expression.h"
 #include "sql/expr/sub_query_expr.h"
 #include "sql/operator/agg_logical_operator.h"
 #include "sql/operator/calc_logical_operator.h"
@@ -177,11 +178,13 @@ RC LogicalPlanGenerator::create_plan(SelectStmt *select_stmt, unique_ptr<Logical
     auto is_agg = select_stmt->agg_stmt()->get_is_agg();
     auto agg_types = select_stmt->agg_stmt()->get_agg_types();
     auto having = select_stmt->agg_stmt()->get_having();
+    auto agg_exprs = select_stmt->agg_stmt()->get_agg_exprs();
     std::unique_ptr<AggLogicalOperator> agg_oper_t = std::make_unique<AggLogicalOperator>();
     agg_oper_t->set_fields(std::move(fields));
     agg_oper_t->set_is_agg(std::move(is_agg));
     agg_oper_t->set_agg_types(std::move(agg_types));
     agg_oper_t->set_having(std::move(having));
+    agg_oper_t->set_agg_exprs(std::move(agg_exprs));
     agg_oper = std::move(agg_oper_t);
     assert(agg_oper != nullptr);
   }
@@ -215,8 +218,21 @@ RC LogicalPlanGenerator::create_plan(SelectStmt *select_stmt, unique_ptr<Logical
       return RC::INTERNAL;
     }
   }
-  unique_ptr<LogicalOperator> project_oper(new ProjectLogicalOperator(
-      select_stmt->query_fields(), select_stmt->create_table_name(), select_stmt->get_attrs()));
+
+  auto project_op = std::make_unique<ProjectLogicalOperator>(select_stmt->query_fields(), select_stmt->create_table_name(), select_stmt->get_attrs());
+
+  if (select_stmt->get_select_expr_flag()) {
+    project_op->select_expr_flag_ = true;
+    project_op->select_expr_ = select_stmt->get_select_expr();
+  }
+
+  // FIXME: Is this enough to identify create table select statement?
+  if (select_stmt->create_table_name() != "") {
+    project_op->tables_ = select_stmt->tables();
+  }
+
+  unique_ptr<LogicalOperator> project_oper(std::move(project_op));
+
   if (order_by_op) {
     project_oper->add_child(std::move(order_by_op));
   } else if (agg_oper) {
@@ -264,6 +280,14 @@ void generate_conjunction(const vector<FilterUnit *> &filter_units, size_t i, ve
 }
 
 RC LogicalPlanGenerator::create_plan(FilterStmt *filter_stmt, unique_ptr<LogicalOperator> &logical_operator) {
+  if (filter_stmt->is_where_expr()) {
+    auto predicate_oper = std::make_unique<PredicateLogicalOperator>();
+    predicate_oper->where_expr_flag_ = true;
+    predicate_oper->where_expr_ = filter_stmt->get_where_expr();
+    logical_operator = std::move(predicate_oper);
+    return RC::SUCCESS;
+  }
+
   std::vector<unique_ptr<Expression>> cmp_exprs;
   const std::vector<FilterUnit *> &filter_units = filter_stmt->filter_units();
   for (const FilterUnit *filter_unit : filter_units) {

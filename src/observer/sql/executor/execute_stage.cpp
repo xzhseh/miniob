@@ -57,6 +57,15 @@ TupleSchema create_sub_result_schema(const SelectStmt *select_stmt) {
   // FIXME: Refactor this (This is currently hard-coded for aggregation case)
   bool with_table_name = select_stmt->tables().size() > 1;
 
+  // FIXME: Hardcoded for expression
+  // if (select_stmt->get_select_expr_flag()) {
+  //   for (const auto *expr : select_stmt->get_select_expr()) {
+  //     std::cout << "[create_sub_result_schema] current expr: " << expr->name() << std::endl;
+  //     schema.append_cell(expr->name().c_str());
+  //   }
+  //   return schema;
+  // }
+
   // FIXME: Refactor this (This is currently hard-coded for aggregation case)
   if (select_stmt->agg_stmt() != nullptr) {
     // Construct the schema based on the agg_stmt
@@ -104,6 +113,15 @@ RC ExecuteStage::handle_request_with_physical_operator(SQLStageEvent *sql_event)
     case StmtType::SELECT: {
       auto *select_stmt = dynamic_cast<SelectStmt *>(stmt);
       bool with_table_name = select_stmt->tables().size() > 1;
+
+      // FIXME: Hardcoded for expression
+      if (select_stmt->get_select_expr_flag()) {
+        for (const auto *expr : select_stmt->get_select_expr()) {
+          std::cout << "[ExecuteStage::handle_request_with_physical_operator] current expr: " << expr->name() << std::endl;
+          schema.append_cell(expr->name().c_str());
+        }
+        break;
+      }
 
       // FIXME: Refactor this (This is currently hard-coded for aggregation case)
       if (select_stmt->agg_stmt() != nullptr) {

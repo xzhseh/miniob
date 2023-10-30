@@ -47,10 +47,26 @@ RC ProjectPhysicalOperator::close() {
   return RC::SUCCESS;
 }
 Tuple *ProjectPhysicalOperator::current_tuple() {
-  // std::cout << "[project] Current children tuple: " << children_[0]->current_tuple()->to_string() << std::endl;
-  if (dynamic_cast<ValueListTuple *>(children_[0]->current_tuple()) != nullptr) {
+  if (dynamic_cast<ValueListTuple *>(children_[0]->current_tuple()) != nullptr && !select_expr_flag_) {
     // The child is of type aggregation, produce the value tuple
     return children_[0]->current_tuple();
+  }
+
+  if (select_expr_flag_) {
+    // Construct the `expr_tuple_`
+    std::vector<Value> cells;
+    for (auto *expr: select_expr_) {
+      Value v;
+      std::cout << "[ProjectPhysicalOperator::current_tuple] current expr: " << expr->name() << std::endl;
+      RC rc = expr->get_value(*children_[0]->current_tuple(), v);
+      if (rc != RC::SUCCESS) {
+        LOG_WARN("[ProjectPhysicalOperator::current_tuple] failed to get the value of expression");
+        return nullptr;
+      }
+      cells.push_back(v);
+    }
+    expr_tuple_.set_cells(cells);
+    return &expr_tuple_;
   }
 
   tuple_.set_tuple(children_[0]->current_tuple());
@@ -61,8 +77,8 @@ Tuple *ProjectPhysicalOperator::current_tuple() {
 void ProjectPhysicalOperator::add_projection(const Table *table, const FieldMeta *field_meta) {
   // 对单表来说，展示的(alias) 字段总是字段名称，
   // 对多表查询来说，展示的alias 需要带表名字
-  std::cout << "add prjection"
-            << " " << table->name();
+  // std::cout << "add prjection"
+  //           << " " << table->name();
   auto *spec = new TupleCellSpec(table->name(), field_meta->name(), field_meta->name());
   tuple_.add_cell_spec(spec);
 }

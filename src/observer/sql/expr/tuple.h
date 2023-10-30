@@ -327,6 +327,8 @@ class ValueListTuple : public Tuple {
 
   virtual RC find_cell(const TupleCellSpec &spec, Value &cell) const override { return RC::INTERNAL; }
 
+  std::vector<Value> get_cells() { return cells_; }
+
   [[nodiscard]] std::unique_ptr<Tuple> copy() const override {
     std::unique_ptr<ValueListTuple> tuple(new ValueListTuple());
     tuple->cells_ = cells_;

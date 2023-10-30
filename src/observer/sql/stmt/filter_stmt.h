@@ -110,8 +110,19 @@ class FilterStmt {
                                const std::vector<RelationSqlNode> &relations, const ConditionSqlNode &condition,
                                FilterUnit *&filter_unit);
 
+  bool is_where_expr() { return where_expr_flag_; }
+
+  ConditionSqlNode *get_where_expr() { return where_expr_; }
+
+  void set_where_expr(ConditionSqlNode *where_expr) {
+    where_expr_ = where_expr;
+    where_expr_flag_ = true;
+  }
+
  private:
   std::vector<FilterUnit *> filter_units_;  // 默认当前都是AND关系
+  ConditionSqlNode *where_expr_{nullptr};
+  bool where_expr_flag_{false};
 };
 
 void resolve_sub_query(SelectSqlNode &sub_node, std::unordered_map<std::string, Table *> *table_map);

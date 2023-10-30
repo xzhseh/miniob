@@ -168,6 +168,36 @@ RC PlainCommunicator::write_result(SessionEvent *event, bool &need_disconnect) {
   return rc;
 }
 
+std::vector<std::string> split_string(const std::string &s) {
+  std::istringstream iss(s);
+  std::vector<std::string> tokens;
+  std::string token;
+  while (iss >> token) {
+    tokens.push_back(token);
+  }
+  return tokens;
+}
+
+RC get_fields_name_from_expr(Db *db, Expression *expr, std::vector<std::string> &expr_names_vec) {
+  RC rc = RC::SUCCESS;
+  if (expr == nullptr) {
+    return RC::INVALID_ARGUMENT;
+  }
+  if (expr->type() == ExprType::FIELD) {
+    FieldExpr *f_expr = dynamic_cast<FieldExpr *>(expr);
+    assert(f_expr != nullptr && "Expect `f_expr` not to be nullptr");
+    expr_names_vec.push_back(f_expr->field().field_name());
+  }
+  // Recursively transformation the child expression, if exists any
+  if (expr->left() != nullptr) {
+    rc = get_fields_name_from_expr(db, expr->left(), expr_names_vec);
+  }
+  if (expr->right() != nullptr) {
+    rc = get_fields_name_from_expr(db, expr->right(), expr_names_vec);
+  }
+  return rc;
+}
+
 RC PlainCommunicator::write_result_internal(SessionEvent *event, bool &need_disconnect) {
   RC rc = RC::SUCCESS;
   need_disconnect = true;
@@ -184,14 +214,93 @@ RC PlainCommunicator::write_result_internal(SessionEvent *event, bool &need_disc
     sql_result->set_return_code(rc);
     return write_state(event, need_disconnect);
   }
+
   const TupleSchema &schema = sql_result->tuple_schema();
   const int cell_num = schema.cell_num();
   ProjectPhysicalOperator *oper = dynamic_cast<ProjectPhysicalOperator *>(sql_result->get_operator()->get());
-  if (nullptr != oper && oper->name() != "") {
+
+  if (oper != nullptr && oper->name() != "") {
+    if (oper->select_expr_flag_) {
+      std::vector<AttrInfoSqlNode> expr_table_attrs;
+      // The select statement contains expression
+      assert(oper->select_expr_.size() > 0);
+      assert(oper->tables_.size() > 0);
+
+      for (auto *expr : oper->select_expr_) {
+        // Each expression will correspond to a specific tuple cell
+        std::cout << "[PlainCommunicator::write_result_internal] current expr: " << expr->name() << std::endl;
+        std::vector<std::string> expr_vec;
+        rc = get_fields_name_from_expr(session_->get_current_db(), expr, expr_vec);
+        std::vector<std::string> expr_alias_vec = split_string(expr->name());
+        AttrInfoSqlNode expr_attr;
+
+        if (expr_vec.size() > 1) {
+          // There must be an alias for identification purpose
+          assert(expr_alias_vec[expr_alias_vec.size() - 2] == "as");
+          expr_attr.name = expr_vec.back();
+        } else {
+          assert(expr_vec.size() == 1);
+          expr_attr.name = expr_vec[0];
+        }
+
+        FieldMeta *expr_field_meta{nullptr};
+
+        // Note that this should be the same for single col / multi col expression
+        for (const auto &t : oper->tables_) {
+          expr_field_meta = (FieldMeta*) t->table_meta().field(expr_vec[0].c_str());
+          if (expr_field_meta == nullptr) {
+            continue;
+          }
+        }
+        if (expr_field_meta == nullptr) {
+          LOG_WARN("[PlainCommunicator::write_result_internal] failed to retrieve field meta for col: %s.", expr_vec[0].c_str());
+          return RC::INVALID_ARGUMENT;
+        }
+
+        expr_attr.type = expr_field_meta->type();
+        expr_attr.length = expr_field_meta->len();
+        expr_attr.is_null = expr_field_meta->is_null();
+
+        expr_table_attrs.push_back(expr_attr);
+      }
+
+      rc = session_->get_current_db()->create_table(oper->name().c_str(), oper->select_expr_.size(), expr_table_attrs.data());
+      if (rc != RC::SUCCESS) {
+        LOG_WARN("[PlainCommunicator::write_result_internal] failed to create table %s.", oper->name().c_str());
+        return rc;
+      }
+
+      Table *expr_table = session_->get_current_db()->find_table(oper->name().c_str());
+      assert(expr_table != nullptr);
+      while ((rc = oper->next()) == RC::SUCCESS) {
+        ValueListTuple *expr_tuple = dynamic_cast<ValueListTuple *>(oper->current_tuple());
+        assert(expr_tuple != nullptr);
+        Record record;
+        rc = expr_table->make_record(oper->select_expr_.size(), expr_tuple->get_cells().data(), record);
+        if (rc != RC::SUCCESS) {
+          LOG_WARN("[PlainCommunicator::write_result_internal] failed to make record");
+          return rc;
+        }
+        rc = expr_table->insert_record(record);
+        if (rc != RC::SUCCESS) {
+          LOG_WARN("[PlainCommunicator::write_result_internal] failed to insert record");
+          sql_result->close();
+          sql_result->set_return_code(rc);
+          session_->get_current_db()->drop_table(oper->name().c_str());
+          return write_state(event, need_disconnect);
+        }
+      }
+
+      rc = sql_result->close();
+      sql_result->set_return_code(RC::SUCCESS);
+      return write_state(event, need_disconnect);
+    }
+
     const auto &project_tuple = oper->get_project_tuple();
     const auto specs = project_tuple.get_specs();
     std::vector<AttrInfoSqlNode> attrs;
     if (oper->attrs_.size() == 0) {
+      std::cout << "hi!" << std::endl;
       for (int i = 0; i < cell_num; i++) {
         const TupleCellSpec &spec = *specs[i];
         const char *table_name = spec.table_name();
@@ -202,7 +311,7 @@ RC PlainCommunicator::write_result_internal(SessionEvent *event, bool &need_disc
         }
         const FieldMeta *field_meta = table->table_meta().field(filed_name);
         if (nullptr == field_meta) {
-          std::cout << "null field meta, name: " << filed_name;
+          // std::cout << "null field meta, name: " << filed_name;
         }
         AttrInfoSqlNode attr;
         attr.type = field_meta->type();
@@ -210,10 +319,10 @@ RC PlainCommunicator::write_result_internal(SessionEvent *event, bool &need_disc
         attr.length = field_meta->len();
         attr.is_null = field_meta->is_null();
         // alis
-        const char *alias = schema.cell_at(i).alias();
-        if (nullptr != alias || alias[0] != 0) {
-          attr.name = alias;
-        }
+//        const char *alias = schema.cell_at(i).alias();
+//        if (nullptr != alias || alias[0] != 0) {
+//          attr.name = alias;
+//        }
         attrs.push_back(attr);
       }
     } else {

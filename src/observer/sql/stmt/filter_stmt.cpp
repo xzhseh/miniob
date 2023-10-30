@@ -121,7 +121,7 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
     sub_query->flag = SqlCommandFlag::SCF_SELECT;
     sub_query->selection = *condition.left_sub_select;
     for (const auto &relation : relations) {
-      sub_query->selection.relations.push_back(RelationSqlNode(relation.relation_name, relation.alias_name, true));
+      sub_query->selection.relations.push_back(RelationSqlNode{relation.relation_name, relation.alias_name, true});
     }
     filter_obj.table_map = *tables;
     for (const auto &parent_table : *parent_tables) {
@@ -166,7 +166,7 @@ RC FilterStmt::create_filter_unit(Db *db, Table *default_table, std::unordered_m
     sub_query->flag = SqlCommandFlag::SCF_SELECT;
     sub_query->selection = *condition.right_sub_select;
     for (const auto &relation : relations) {
-      sub_query->selection.relations.push_back(RelationSqlNode(relation.relation_name, relation.alias_name, true));
+      sub_query->selection.relations.push_back(RelationSqlNode{relation.relation_name, relation.alias_name, true});
     }
     filter_obj.table_map = *tables;
     for (const auto &parent_table : *parent_tables) {

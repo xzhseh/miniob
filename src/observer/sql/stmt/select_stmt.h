@@ -19,6 +19,7 @@ See the Mulan PSL v2 for more details. */
 #include <vector>
 
 #include "common/rc.h"
+#include "sql/expr/expression.h"
 #include "sql/stmt/agg_stmt.h"
 #include "sql/stmt/stmt.h"
 #include "storage/field/field.h"
@@ -50,7 +51,7 @@ class SelectStmt : public Stmt {
   StmtType type() const override { return StmtType::SELECT; }
 
  public:
-  static RC create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt);
+  static RC create(Db *db, SelectSqlNode &select_sql, Stmt *&stmt);
 
  public:
   [[nodiscard]] const std::vector<Table *> &tables() const { return tables_; }
@@ -63,6 +64,8 @@ class SelectStmt : public Stmt {
                            std::unordered_map<std::string, Table *> &parent_table_map);
 
   AggStmt *agg_stmt() const { return agg_stmt_; }
+  const std::vector<Expression *> & get_select_expr() const { return expressions_; }
+  bool get_select_expr_flag() const { return select_expr_flag_; }
   const std::string create_table_name() const { return create_table_name_; }
   const std::vector<AttrInfoSqlNode> get_attrs() const { return attrs; }
 
@@ -73,6 +76,9 @@ class SelectStmt : public Stmt {
   std::vector<AttrInfoSqlNode> attrs;
   std::vector<JoinStmt> join_stmts_;
   std::vector<OrderByStmt> order_by_;
-  FilterStmt *filter_stmt_ = nullptr;
-  AggStmt *agg_stmt_ = nullptr;
+  FilterStmt *filter_stmt_{nullptr};
+  AggStmt *agg_stmt_{nullptr};
+  // This will be propagated to projection operator
+  std::vector<Expression *> expressions_;
+  bool select_expr_flag_{false};
 };
