@@ -2568,11 +2568,11 @@ yyuserAction (yyRuleNum yyrule, int yyrhslen, yyGLRStackItem* yyvsp,
           char *ptr = strchr((YY_CAST (yyGLRStackItem const *, yyvsp)[YYFILL (0)].yystate.yysemantics.yyval.string), '-');
           assert(ptr != nullptr && "Expect `ptr` not to be nullptr");
           *ptr = '\0';
-          ptr = strchr((YY_CAST (yyGLRStackItem const *, yyvsp)[YYFILL (0)].yystate.yysemantics.yyval.string), '.');
-          *ptr = '\0';
+          char *ptr1 = strchr((YY_CAST (yyGLRStackItem const *, yyvsp)[YYFILL (0)].yystate.yysemantics.yyval.string), '.');
+          *ptr1 = '\0';
           RelAttrSqlNode rel_attr;
           rel_attr.relation_name = (YY_CAST (yyGLRStackItem const *, yyvsp)[YYFILL (0)].yystate.yysemantics.yyval.string);
-          rel_attr.attribute_name = (ptr + 1);
+          rel_attr.attribute_name = (ptr1 + 1);
           rel_attr.aggregate_func = agg::NONE;
           FieldExpr *f_expr = new FieldExpr(rel_attr);
           int v = atoi(ptr + 1);
