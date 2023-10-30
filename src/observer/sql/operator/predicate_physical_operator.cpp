@@ -68,6 +68,9 @@ bool filter(ConditionSqlNode *condition, Tuple &tuple) {
     case CompOp::LESS_THAN: {
       return lhs.compare(rhs) < 0;
     }
+    case CompOp::NOT_EQUAL: {
+      return lhs.compare(rhs) != 0;
+    }
     default: assert(false); // Not yet support
   }
 }
