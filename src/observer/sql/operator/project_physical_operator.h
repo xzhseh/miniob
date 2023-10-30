@@ -51,6 +51,6 @@ class ProjectPhysicalOperator : public PhysicalOperator {
  private:
   ProjectTuple tuple_;
   ValueListTuple expr_tuple_;
-  std::string create_table_name;
+  std::string create_table_name{""};
   bool agg_flag_{false};
 };

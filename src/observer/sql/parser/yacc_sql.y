@@ -158,6 +158,7 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
 %token <string> SSS
 %token <string> DATE_STR
 %token <string> ID_MINUS
+%token <string> ID_DOT_ID_MINUS
 %token <string> MIN_MINUS
 %token <string> MAX_MINUS
 %token <string> AVG_MINUS
@@ -918,6 +919,23 @@ expression:
       ValueExpr *value_expr = new ValueExpr(value);
       $$ = create_arithmetic_expression(ArithmeticExpr::Type::SUB, f_expr, value_expr, sql_string, &@$);
     }
+    | ID_DOT_ID_MINUS {
+          char *ptr = strchr($1, '-');
+          assert(ptr != nullptr && "Expect `ptr` not to be nullptr");
+          *ptr = '\0';
+          ptr = strchr($1, '.');
+          *ptr = '\0';
+          RelAttrSqlNode rel_attr;
+          rel_attr.relation_name = $1;
+          rel_attr.attribute_name = (ptr + 1);
+          rel_attr.aggregate_func = agg::NONE;
+          FieldExpr *f_expr = new FieldExpr(rel_attr);
+          int v = atoi(ptr + 1);
+          Value value;
+          value.set_int(v);
+          ValueExpr *value_expr = new ValueExpr(value);
+          $$ = create_arithmetic_expression(ArithmeticExpr::Type::SUB, f_expr, value_expr, sql_string, &@$);
+        }
     // Resolve cases like `MIN(id1)-2 > 3`
     | MIN_MINUS {
           char *ptr = strchr($1, '-');

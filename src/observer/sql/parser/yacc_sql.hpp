@@ -121,12 +121,13 @@ extern int yydebug;
     SSS = 327,                     /* SSS  */
     DATE_STR = 328,                /* DATE_STR  */
     ID_MINUS = 329,                /* ID_MINUS  */
-    MIN_MINUS = 330,               /* MIN_MINUS  */
-    MAX_MINUS = 331,               /* MAX_MINUS  */
-    AVG_MINUS = 332,               /* AVG_MINUS  */
-    SUM_MINUS = 333,               /* SUM_MINUS  */
-    COUNT_MINUS = 334,             /* COUNT_MINUS  */
-    UMINUS = 335                   /* UMINUS  */
+    ID_DOT_ID_MINUS = 330,         /* ID_DOT_ID_MINUS  */
+    MIN_MINUS = 331,               /* MIN_MINUS  */
+    MAX_MINUS = 332,               /* MAX_MINUS  */
+    AVG_MINUS = 333,               /* AVG_MINUS  */
+    SUM_MINUS = 334,               /* SUM_MINUS  */
+    COUNT_MINUS = 335,             /* COUNT_MINUS  */
+    UMINUS = 336                   /* UMINUS  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -163,7 +164,7 @@ union YYSTYPE
   enum agg                          agg;
   bool                              null;
 
-#line 167 "yacc_sql.hpp"
+#line 168 "yacc_sql.hpp"
 
 };
 typedef union YYSTYPE YYSTYPE;

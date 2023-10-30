@@ -198,8 +198,8 @@ RC PlainCommunicator::write_result_internal(SessionEvent *event, bool &need_disc
   const TupleSchema &schema = sql_result->tuple_schema();
   const int cell_num = schema.cell_num();
   ProjectPhysicalOperator *oper = dynamic_cast<ProjectPhysicalOperator *>(sql_result->get_operator()->get());
-  if (nullptr != oper && oper->name() != "") {
-
+  assert(oper != nullptr);
+  if (oper->name() != "") {
     if (oper->select_expr_flag_) {
       std::vector<AttrInfoSqlNode> expr_table_attrs;
       // The select statement contains expression
