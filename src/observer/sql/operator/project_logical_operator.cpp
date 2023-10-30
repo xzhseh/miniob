@@ -14,4 +14,6 @@ See the Mulan PSL v2 for more details. */
 
 #include "sql/operator/project_logical_operator.h"
 
-ProjectLogicalOperator::ProjectLogicalOperator(const std::vector<Field> &fields) : fields_(fields) {}
+ProjectLogicalOperator::ProjectLogicalOperator(const std::vector<Field> &fields, std::string create_table_name,
+                                               const std::vector<AttrInfoSqlNode> &attrs)
+    : fields_(fields), create_table_name_(create_table_name), attrs_(attrs) {}

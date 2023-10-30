@@ -37,8 +37,12 @@ class ProjectPhysicalOperator : public PhysicalOperator {
   RC close() override;
 
   int cell_num() const { return tuple_.cell_num(); }
-
+  std::string name() const override { return create_table_name; }
   Tuple *current_tuple() override;
+  void set_name(std::string name) { create_table_name = name; }
+  const ProjectTuple &get_project_tuple() const { return tuple_; }
+  // 为了方便
+  std::vector<AttrInfoSqlNode> attrs_;
 
   std::vector<Expression *> select_expr_;
   bool select_expr_flag_{false};
@@ -46,5 +50,6 @@ class ProjectPhysicalOperator : public PhysicalOperator {
  private:
   ProjectTuple tuple_;
   ValueListTuple expr_tuple_;
+  std::string create_table_name;
   bool agg_flag_{false};
 };

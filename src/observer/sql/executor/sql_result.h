@@ -48,6 +48,7 @@ class SqlResult {
   RC open();
   RC close();
   RC next_tuple(Tuple *&tuple);
+  const std::unique_ptr<PhysicalOperator> *get_operator() const { return &operator_; }
 
  private:
   Session *session_ = nullptr;                  ///< 当前所属会话
