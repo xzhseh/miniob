@@ -449,7 +449,7 @@ attr_def:
 null:
     // Could be empty
   {
-    $$ = false;
+    $$ = true;
   }
   | OB_NULL {
     $$ = true;

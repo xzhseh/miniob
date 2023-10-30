@@ -2139,7 +2139,7 @@ yyreduce:
   case 44: /* null: %empty  */
 #line 451 "yacc_sql.y"
   {
-    (yyval.null) = false;
+    (yyval.null) = true;
   }
 #line 2145 "yacc_sql.cpp"
     break;
