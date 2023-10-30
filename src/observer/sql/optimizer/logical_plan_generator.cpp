@@ -226,6 +226,11 @@ RC LogicalPlanGenerator::create_plan(SelectStmt *select_stmt, unique_ptr<Logical
     project_op->select_expr_ = select_stmt->get_select_expr();
   }
 
+  // FIXME: Is this enough to identify create table select statement?
+  if (select_stmt->create_table_name() != "") {
+    project_op->tables_ = select_stmt->tables();
+  }
+
   unique_ptr<LogicalOperator> project_oper(std::move(project_op));
 
   if (order_by_op) {

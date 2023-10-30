@@ -40,6 +40,8 @@ class ProjectLogicalOperator : public LogicalOperator {
   const std::string create_table_name() const { return create_table_name_; }
   const std::vector<AttrInfoSqlNode> attrs() const { return attrs_; }
 
+  std::vector<Table *> tables_;
+
   std::vector<Expression *> select_expr_;
   bool select_expr_flag_{false};
 

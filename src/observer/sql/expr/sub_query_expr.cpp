@@ -17,10 +17,11 @@ SubQueryExpr::SubQueryExpr(const std::shared_ptr<ParsedSqlNode> &sub_query,
   this->table_map_ = std::move(table_map);
 }
 // 受不了了，直接简单粗暴一点
+// 23333
 std::vector<std::unique_ptr<Tuple>> parent_tuples;
 
 RC SubQueryExpr::in_or_not(const Value &value, const std::unique_ptr<Expression> &field_expr, bool &result) const {
-  std::cout << "Compare value is " << value.to_string() << std::endl;
+  // std::cout << "Compare value is " << value.to_string() << std::endl;
   if (this->type_ == SubResultType::UNDEFINED) {
     return RC::INTERNAL;
   }

@@ -43,6 +43,7 @@ class ProjectPhysicalOperator : public PhysicalOperator {
   const ProjectTuple &get_project_tuple() const { return tuple_; }
   // 为了方便
   std::vector<AttrInfoSqlNode> attrs_;
+  std::vector<Table *> tables_;
 
   std::vector<Expression *> select_expr_;
   bool select_expr_flag_{false};
