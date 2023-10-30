@@ -178,6 +178,25 @@ std::vector<std::string> split_string(const std::string &s) {
   return tokens;
 }
 
+RC get_fields_name_from_expr(Db *db, Expression *expr, std::vector<std::string> &expr_names_vec) {
+  RC rc = RC::SUCCESS;
+  if (expr == nullptr) {
+    return RC::INVALID_ARGUMENT;
+  }
+  if (expr->type() == ExprType::FIELD) {
+    FieldExpr *f_expr = dynamic_cast<FieldExpr *>(expr);
+    assert(f_expr != nullptr && "Expect `f_expr` not to be nullptr");
+    expr_names_vec.push_back(f_expr->field().field_name());
+  }
+  // Recursively transformation the child expression, if exists any
+  if (expr->left() != nullptr) {
+    rc = get_fields_name_from_expr(db, expr->left(), expr_names_vec);
+  }
+  if (expr->right() != nullptr) {
+    rc = get_fields_name_from_expr(db, expr->right(), expr_names_vec);
+  }
+  return rc;
+}
 
 RC PlainCommunicator::write_result_internal(SessionEvent *event, bool &need_disconnect) {
   RC rc = RC::SUCCESS;
@@ -195,9 +214,11 @@ RC PlainCommunicator::write_result_internal(SessionEvent *event, bool &need_disc
     sql_result->set_return_code(rc);
     return write_state(event, need_disconnect);
   }
+
   const TupleSchema &schema = sql_result->tuple_schema();
   const int cell_num = schema.cell_num();
   ProjectPhysicalOperator *oper = dynamic_cast<ProjectPhysicalOperator *>(sql_result->get_operator()->get());
+
   if (oper != nullptr && oper->name() != "") {
     if (oper->select_expr_flag_) {
       std::vector<AttrInfoSqlNode> expr_table_attrs;
@@ -205,15 +226,17 @@ RC PlainCommunicator::write_result_internal(SessionEvent *event, bool &need_disc
       assert(oper->select_expr_.size() > 0);
       assert(oper->tables_.size() > 0);
 
-      for (const auto *expr : oper->select_expr_) {
+      for (auto *expr : oper->select_expr_) {
         // Each expression will correspond to a specific tuple cell
         std::cout << "[PlainCommunicator::write_result_internal] current expr: " << expr->name() << std::endl;
-        std::vector<std::string> expr_vec = split_string(expr->name());
+        std::vector<std::string> expr_vec;
+        rc = get_fields_name_from_expr(session_->get_current_db(), expr, expr_vec);
+        std::vector<std::string> expr_alias_vec = split_string(expr->name());
         AttrInfoSqlNode expr_attr;
 
         if (expr_vec.size() > 1) {
           // There must be an alias for identification purpose
-          assert(expr_vec[expr_vec.size() - 2] == "as");
+          assert(expr_alias_vec[expr_alias_vec.size() - 2] == "as");
           expr_attr.name = expr_vec.back();
         } else {
           assert(expr_vec.size() == 1);
@@ -248,6 +271,7 @@ RC PlainCommunicator::write_result_internal(SessionEvent *event, bool &need_disc
       }
 
       Table *expr_table = session_->get_current_db()->find_table(oper->name().c_str());
+      assert(expr_table != nullptr);
       while ((rc = oper->next()) == RC::SUCCESS) {
         ValueListTuple *expr_tuple = dynamic_cast<ValueListTuple *>(oper->current_tuple());
         assert(expr_tuple != nullptr);
