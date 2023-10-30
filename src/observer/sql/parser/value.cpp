@@ -460,8 +460,86 @@ bool Value::get_boolean() const {
   }
   return false;
 }
+struct NumberFromStr {
+  bool float_or_int;
+  float float_ = 0;
+  int int_ = 0;
+  float to_float() {
+    if (float_or_int) {
+      return float_;
+    }
+    return int_;
+  }
+  explicit NumberFromStr(const char *str);
+};
+
+NumberFromStr::NumberFromStr(const char *str) {
+  int state = 0;  // 0 整数 1小数
+  char *c = (char *)str;
+  int float_jw = 10;
+  while (*c) {
+    if (*c >= '0' && *c <= '9') {
+      if (state == 0) {
+        int_ *= 10;
+        int_ += *c - '0';
+      } else {
+        float_ += 1.0 * (*c - '0') / float_jw;
+        float_jw *= 10;
+      }
+    } else if (*c == '.') {
+      state = 1;
+      float_ = int_;
+    } else {
+      break;
+    }
+    c++;
+  }
+  float_or_int = state;
+}
 
 int Value::get_date() const {
   assert(attr_type_ == DATE && "Currently expect `attr_type_` to be of type `DATE`");
   return num_value_.date_value_;
+}
+bool Value::cast_to(const AttrType &target_type, Value &result) const {
+  // Null value cast
+  if (Value::check_null(*this)) {
+    return false;
+  }
+  // Same type cast
+  if (this->attr_type_ == target_type) {
+    result = *this;
+    return true;
+  }
+  // Char --> int
+  if (this->attr_type_ == CHARS && target_type == INTS) {
+    auto conv = NumberFromStr(this->str_value_.c_str());
+    if (conv.float_or_int) {
+      result.set_float(conv.float_);
+    } else {
+      result.set_int(conv.int_);
+    }
+    return true;
+  }
+  // int --> float
+  if (this->attr_type_ == INTS && target_type == FLOATS) {
+    result.set_float(this->num_value_.int_value_);
+    return true;
+  }
+  // float --> int
+  if (this->attr_type_ == FLOATS && target_type == INTS) {
+    result.set_int(this->num_value_.float_value_);
+    return true;
+  }
+  // float --> char
+  if (this->attr_type_ == FLOATS && target_type == CHARS) {
+    result.set_string(common::double_to_str(this->num_value_.float_value_).c_str());
+    return true;
+  }
+  // int --> char
+  if (this->attr_type_ == INTS && target_type == CHARS) {
+    result.set_string(std::to_string(this->num_value_.int_value_).c_str());
+    return true;
+  }
+  return false;
 }

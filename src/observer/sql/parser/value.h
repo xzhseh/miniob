@@ -126,6 +126,7 @@ class Value {
 
   int compare(const Value &other) const;
   RC like(const Value &other, bool &result) const;
+  bool cast_to(const AttrType &target_type, Value &result) const;
 
   const char *data() const;
 

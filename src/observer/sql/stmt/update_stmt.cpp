@@ -107,9 +107,13 @@ RC UpdateStmt::create(Db *db, UpdateSqlNode &update, Stmt *&stmt) {
     }
 
     if (field_type != value_type) {
-      LOG_ERROR("field type mismatch. table=%s, field=%s, field type=%d, value_type=%d",
-          table_name, field_meta->name(), field_type, value_type);
-      return RC::SCHEMA_FIELD_TYPE_MISMATCH;
+      Value cast_result;
+      if (!update_value.cast_to(field_type, cast_result)) {
+        LOG_WARN("failed to cast value. field_type=%d, value_type=%d", field_type, value_type);
+        return RC::SCHEMA_FIELD_TYPE_MISMATCH;
+      }
+      // Cast successfully
+      update_value = cast_result;
     }
     values.push_back(update_value);
     field_metas.push_back(*field_meta);
