@@ -101,12 +101,14 @@ class AggPhysicalOperator : public PhysicalOperator {
 
   explicit AggPhysicalOperator(PhysicalOperator *child, ConditionSqlNode &&having,
                                const std::vector<FieldExpr> &&field_exprs, const std::vector<bool> &&is_agg_,
-                               const std::vector<agg> &&agg_types)
+                               const std::vector<agg> &&agg_types,
+                               const std::vector<FieldExpr *> &&agg_exprs)
       : child_(child),
         having_(std::move(having)),
         field_exprs_(std::move(field_exprs)),
         is_agg_(std::move(is_agg_)),
-        agg_types_(std::move(agg_types)) {}
+        agg_types_(std::move(agg_types)),
+        agg_exprs_(std::move(agg_exprs)) {}
 
   ~AggPhysicalOperator() override = default;
 
@@ -165,4 +167,5 @@ class AggPhysicalOperator : public PhysicalOperator {
   std::vector<agg> agg_types_;
   std::unordered_map<AggregateKey, AggregateValue> agg_ht_;
   int count_;
+  std::vector<FieldExpr *> agg_exprs_;
 };

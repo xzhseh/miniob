@@ -82,6 +82,31 @@ QUOTE            [\'\"]
   RETURN_TOKEN(ID_MINUS);
 }
 
+"MIN("{ID}")-"{DIGIT}+ {
+  yylval->string = strdup(yytext);
+  RETURN_TOKEN(MIN_MINUS);
+}
+
+"MAX("{ID}")-"{DIGIT}+ {
+  yylval->string = strdup(yytext);
+  RETURN_TOKEN(MAX_MINUS);
+}
+
+"AVG("{ID}")-"{DIGIT}+ {
+  yylval->string = strdup(yytext);
+  RETURN_TOKEN(AVG_MINUS);
+}
+
+"SUM("{ID}")-"{DIGIT}+ {
+  yylval->string = strdup(yytext);
+  RETURN_TOKEN(SUM_MINUS);
+}
+
+"COUNT("{ID}")-"{DIGIT}+ {
+  yylval->string = strdup(yytext);
+  RETURN_TOKEN(COUNT_MINUS);
+}
+
 [\-]?{DIGIT}+                           yylval->number=atoi(yytext); RETURN_TOKEN(NUMBER);
 [\-]?{DIGIT}+{DOT}{DIGIT}+              yylval->floats=(float)(atof(yytext)); RETURN_TOKEN(FLOAT);
 

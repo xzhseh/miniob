@@ -47,12 +47,6 @@ RC ProjectPhysicalOperator::close() {
   return RC::SUCCESS;
 }
 Tuple *ProjectPhysicalOperator::current_tuple() {
-  // std::cout << "[project] Current children tuple: " << children_[0]->current_tuple()->to_string() << std::endl;
-  if (dynamic_cast<ValueListTuple *>(children_[0]->current_tuple()) != nullptr) {
-    // The child is of type aggregation, produce the value tuple
-    return children_[0]->current_tuple();
-  }
-
   if (select_expr_flag_) {
     // Construct the `expr_tuple_`
     std::vector<Value> cells;
@@ -67,6 +61,11 @@ Tuple *ProjectPhysicalOperator::current_tuple() {
     }
     expr_tuple_.set_cells(cells);
     return &expr_tuple_;
+  }
+
+  if (dynamic_cast<ValueListTuple *>(children_[0]->current_tuple()) != nullptr) {
+    // The child is of type aggregation, produce the value tuple
+    return children_[0]->current_tuple();
   }
 
   tuple_.set_tuple(children_[0]->current_tuple());

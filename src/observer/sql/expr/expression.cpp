@@ -23,6 +23,10 @@ See the Mulan PSL v2 for more details. */
 using namespace std;
 
 RC FieldExpr::get_value(const Tuple &tuple, Value &value) {
+  if (agg_flag_)  {
+    value = agg_value_;
+    return RC::SUCCESS;
+  }
   auto rc = tuple.find_cell(TupleCellSpec(table_name(), field_name()), value);
   if (value.attr_type() == DATE && value.get_date() == -1) {
     rc = RC::INVALID_ARGUMENT;

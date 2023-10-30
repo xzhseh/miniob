@@ -367,6 +367,13 @@ RC AggPhysicalOperator::next() {
         }
       }
 
+      // This part of logic is served for `select ... expression with aggregation ... from ...`
+      for (const auto &f : agg_exprs_) {
+        if (f->field().table() == field_exprs_[i].field().table() && f->field().meta() == field_exprs_[i].field().meta()) {
+          dynamic_cast<FieldExpr *>(f)->set_agg_value(front_value);
+        }
+      }
+
       output.push_back(front_value);
       cur_value.erase(cur_value.begin());
     } else {

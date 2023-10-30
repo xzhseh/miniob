@@ -207,6 +207,36 @@ bool group_by_sanity_check(const std::vector<RelAttrSqlNode> &group_by_keys, con
   return true;
 }
 
+RC get_agg_fields_from_expr(Db *db, const std::vector<Table *> &tables, Expression *expr,
+                            std::vector<Field> &fields, std::vector<bool> &is_agg,
+                            std::vector<FieldExpr *> &agg_exprs, std::vector<agg> &agg_types) {
+  RC rc = RC::SUCCESS;
+  if (expr == nullptr) {
+    return RC::INVALID_ARGUMENT;
+  }
+  if (expr->type() == ExprType::FIELD) {
+    std::cout << "[get_agg_fields_from_expr] field expr name: " << expr->name() << std::endl;
+    Field f;
+    FieldExpr *f_expr = dynamic_cast<FieldExpr *>(expr);
+    assert(f_expr != nullptr && "Expect `f_expr` not to be nullptr");
+
+    if (f_expr->get_rel_attr().aggregate_func != agg::NONE) {
+      fields.push_back(f_expr->field());
+      agg_exprs.push_back(f_expr);
+      is_agg.push_back(true);
+      agg_types.push_back(f_expr->get_rel_attr().aggregate_func);
+    }
+  }
+  // Recursively transformation the child expression, if exists any
+  if (expr->left() != nullptr) {
+    rc = get_agg_fields_from_expr(db, tables, expr->left(), fields, is_agg, agg_exprs, agg_types);
+  }
+  if (expr->right() != nullptr) {
+    rc = get_agg_fields_from_expr(db, tables, expr->right(), fields, is_agg, agg_exprs, agg_types);
+  }
+  return rc;
+}
+
 /// Find the corresponding fields and bind they to group by statements
 RC aggregation_builder(Db *db, const std::vector<Table *> &tables, std::unordered_map<std::string, Table *> *table_map,
                        const std::vector<RelAttrSqlNode> &attributes, AggStmt &agg_stmt) {
@@ -214,14 +244,18 @@ RC aggregation_builder(Db *db, const std::vector<Table *> &tables, std::unordere
   std::vector<Field> fields;
   std::vector<bool> is_agg;
   std::vector<agg> agg_types;
+  std::vector<FieldExpr *> agg_exprs;
 
   // Should in reverse order
   for (int i = attributes.size() - 1; i >= 0; --i) {
     const auto &attr = attributes[i];
 
     if (attr.expression != nullptr) {
-      // FIXME: may need to deal with this when later parsing agg arithmetic
-      // Expression field , ignore this
+      rc = get_agg_fields_from_expr(db, tables, attr.expression, fields, is_agg, agg_exprs, agg_types);
+      if (rc != RC::SUCCESS) {
+        LOG_WARN("[aggregation_builder] failed to get the agg fields from expression");
+        return rc;
+      }
       continue;
     }
 
@@ -280,6 +314,7 @@ RC aggregation_builder(Db *db, const std::vector<Table *> &tables, std::unordere
   agg_stmt.set_is_agg(std::move(is_agg));
   agg_stmt.set_agg_types(std::move(agg_types));
   agg_stmt.set_fields(std::move(fields));
+  agg_stmt.set_agg_exprs(std::move(agg_exprs));
 
   return rc;
 }
@@ -642,14 +677,14 @@ RC SelectStmt::create(Db *db, SelectSqlNode &select_sql, Stmt *&stmt) {
   }
 
   // i.e., select count(id), id from t1; is INVALID
-  if (!group_by_sanity_check(select_sql.group_bys, *agg_stmt)) {
+  if (agg_stmt->get_agg_exprs().size() == 0 && !group_by_sanity_check(select_sql.group_bys, *agg_stmt)) {
     LOG_WARN("invalid group by syntax.");
     return RC::INVALID_ARGUMENT;
   }
 
   bool agg_flag{false};
   for (const auto &a : agg_stmt->get_is_agg()) {
-    if (a == true) {
+    if (a) {
       agg_flag = true;
       break;
     }

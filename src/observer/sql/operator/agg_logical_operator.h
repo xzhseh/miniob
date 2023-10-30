@@ -23,6 +23,8 @@ class AggLogicalOperator : public LogicalOperator {
 
   auto get_having() const -> const ConditionSqlNode & { return having_; }
 
+  auto get_agg_exprs() const -> const std::vector<FieldExpr *> & { return agg_exprs_; }
+
   void set_fields(std::vector<Field> &&fields) { fields_ = std::move(fields); }
 
   void set_is_agg(std::vector<bool> &&is_agg) { is_agg_ = std::move(is_agg); }
@@ -31,9 +33,12 @@ class AggLogicalOperator : public LogicalOperator {
 
   void set_having(ConditionSqlNode &&having) { having_ = std::move(having); }
 
+  void set_agg_exprs(std::vector<FieldExpr *> &&agg_exprs) { agg_exprs_ = std::move(agg_exprs); }
+
  private:
   std::vector<Field> fields_;
   std::vector<bool> is_agg_;
   std::vector<agg> agg_types_;
+  std::vector<FieldExpr *> agg_exprs_;
   ConditionSqlNode having_;
 };

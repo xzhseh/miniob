@@ -126,6 +126,11 @@ class FieldExpr : public Expression {
 
   RC get_value(const Tuple &tuple, Value &value) override;
 
+  void set_agg_value(Value &v) {
+    agg_flag_ = true;
+    agg_value_ = v;
+  }
+
   Expression *left() const override { return nullptr; }
   Expression *right() const override { return nullptr; }
 
@@ -136,6 +141,9 @@ class FieldExpr : public Expression {
  private:
   Field field_;
   RelAttrSqlNode rel_attr_;
+  // To deal with agg in expression
+  Value agg_value_;
+  bool agg_flag_{false};
 };
 
 /**
