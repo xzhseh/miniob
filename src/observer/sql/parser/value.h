@@ -112,6 +112,8 @@ class Value {
 
   bool is_null() const { return is_null_; }
 
+  void trick_update() { this->length_ = INT32_MAX; }
+
   void set_data(char *data, int length);
   void set_int(int val);
   void set_float(float val);

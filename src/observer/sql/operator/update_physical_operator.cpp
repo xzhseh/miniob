@@ -22,7 +22,7 @@ RC UpdatePhysicalOperator::open(Trx *trx) {
 }
 
 RC UpdatePhysicalOperator::next() {
-  RC rc = RC::SUCCESS;
+  RC rc;
   if (children_.empty()) {
     sql_debug("update: no child operator");
     return RC::RECORD_EOF;

@@ -99,13 +99,13 @@ RC PlainCommunicator::write_state(SessionEvent *event, bool &need_disconnect) {
   char *buf = new char[buf_size];
   const std::string &state_string = sql_result->state_string();
   if (state_string.empty()) {
-    const char *result = RC::SUCCESS == sql_result->return_code() ? "SUCCESS" : "FAILURE";
+    const char *result = (RC::SUCCESS == sql_result->return_code()) ? "SUCCESS" : "FAILURE";
     snprintf(buf, buf_size, "%s\n", result);
   } else {
     snprintf(buf, buf_size, "%s > %s\n", strrc(sql_result->return_code()), state_string.c_str());
   }
 
-  RC rc = writer_->writen(buf, strlen(buf));
+  RC rc = writer_->writen(buf, strlen(buf) + 1);
   if (OB_FAIL(rc)) {
     LOG_WARN("failed to send data to client. err=%s", strerror(errno));
     need_disconnect = true;
@@ -157,20 +157,14 @@ RC PlainCommunicator::write_debug(SessionEvent *request, bool &need_disconnect) 
 RC PlainCommunicator::write_result(SessionEvent *event, bool &need_disconnect) {
   RC rc = write_result_internal(event, need_disconnect);
   if (!need_disconnect) {
-    RC rc1 = write_debug(event, need_disconnect);
-    if (OB_FAIL(rc1)) {
-      LOG_WARN("failed to send debug info to client. rc=%s, err=%s", strrc(rc), strerror(errno));
-    }
+    (void)write_debug(event, need_disconnect);
   }
-  if (!need_disconnect) {
-    rc = writer_->writen(send_message_delimiter_.data(), send_message_delimiter_.size());
-    if (OB_FAIL(rc)) {
-      LOG_ERROR("Failed to send data back to client. ret=%s, error=%s", strrc(rc), strerror(errno));
-      need_disconnect = true;
-      return rc;
-    }
+  if (rc == RC::SUCCESS) {
+    writer_->flush();  // TODO handle error
+  } else {
+    write_state(event, need_disconnect);
+    writer_->flush();
   }
-  writer_->flush();  // TODO handle error
   return rc;
 }
 

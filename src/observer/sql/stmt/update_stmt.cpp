@@ -73,12 +73,13 @@ RC UpdateStmt::create(Db *db, UpdateSqlNode &update, Stmt *&stmt) {
     if (update_sub_query) {
       RC rc = get_sub_query_value(db, *update_sub_query, update_value);
       if (rc != RC::SUCCESS) {
-        sql_debug("failed to get sub query value. rc=%d:%s", rc, strrc(rc));
-        LOG_WARN("failed to get sub query value. rc=%d:%s", rc, strrc(rc));
-        return rc;
-      }
-      if (Value::check_null(update_value)) {
-        update_value.set_null();
+        // Delay the error handling
+        update_value.set_type(field_meta->type());
+        update_value.trick_update();
+      } else {
+        if (Value::check_null(update_value)) {
+          update_value.set_null();
+        }
       }
     } else {
       update_value = update_value_node;
