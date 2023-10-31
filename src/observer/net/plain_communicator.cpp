@@ -372,6 +372,7 @@ RC PlainCommunicator::write_result_internal(SessionEvent *event, bool &need_disc
     }
     if(oper->view_name() != "") {
       table->set_view_flag(true);
+      current_db = session_->get_current_db();
       view_rebuild_map[oper->view_name()] = std::move(*sql_result->get_operator());
     }
     RC rc_close = sql_result->close();

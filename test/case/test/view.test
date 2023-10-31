@@ -13,3 +13,13 @@ select * from t3;
 create view t4(a int, b char) select a, b from t1;
 
 select * from t4;
+
+create view t5 as select max(a) from t1;
+
+insert into t1 values(5, 'ob');
+
+select * from t5;
+
+insert into t1 values(6, 'ob');
+
+select * from t5;

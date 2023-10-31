@@ -96,7 +96,9 @@ class Table {
   const TableMeta &table_meta() const;
 
   RC sync();
-
+  bool is_view() const {
+    return view_table_flag;
+  }
  private:
   RC insert_entry_of_indexes(const char *record, const RID &rid);
   RC delete_entry_of_indexes(const char *record, const RID &rid, bool error_on_not_exists);
