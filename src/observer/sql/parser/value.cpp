@@ -13,6 +13,7 @@ See the Mulan PSL v2 for more details. */
 //
 
 #include "sql/parser/value.h"
+#include <cmath>
 #include <cstring>
 #include <regex>
 #include <sstream>
@@ -532,7 +533,7 @@ bool Value::cast_to(const AttrType &target_type, Value &result) const {
   }
   // float --> int
   if (this->attr_type_ == FLOATS && target_type == INTS) {
-    result.set_int(this->num_value_.float_value_);
+    result.set_int(round(this->num_value_.float_value_));
     return true;
   }
   // float --> char
