@@ -234,6 +234,7 @@ RC PhysicalPlanGenerator::create_plan(ProjectLogicalOperator &project_oper, uniq
   project_operator->attrs_ = project_oper.attrs();
   project_operator->tables_ = project_oper.tables_;
   project_operator->set_name(project_oper.create_table_name());
+  project_operator->set_view_name(project_oper.create_view_name());
   const auto &project_fields = project_oper.fields();
   for (const auto &field : project_fields) {
     project_operator->add_projection(field.table(), field.meta());

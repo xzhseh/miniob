@@ -1,0 +1,15 @@
+
+create table t1(a int, b char);
+
+insert into t1 values(1, 'ob');
+insert into t1 values(2, 'ob');
+insert into t1 values(3, 'ob');
+insert into t1 values(4, 'ob');
+
+create view t3 as select * from t1;
+
+select * from t3;
+
+create view t4(a int, b char) select a, b from t1;
+
+select * from t4;

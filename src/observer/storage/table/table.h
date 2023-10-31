@@ -16,7 +16,9 @@ See the Mulan PSL v2 for more details. */
 
 #include <functional>
 #include "storage/table/table_meta.h"
-
+#include <unordered_map>
+#include <string>
+#include <memory>
 struct RID;
 class Record;
 class DiskBufferPool;
@@ -29,6 +31,8 @@ class IndexScanner;
 class RecordDeleter;
 class Trx;
 
+
+// 全局变量，view table与 create view physics oper
 /**
  * @brief 表
  *
@@ -84,7 +88,7 @@ class Table {
   RC get_record_scanner(RecordFileScanner &scanner, Trx *trx, bool readonly);
 
   RecordFileHandler *record_handler() const { return record_handler_; }
-
+  void set_view_flag(bool flag) {view_table_flag = flag; }
  public:
   int32_t table_id() const { return table_meta_.table_id(); }
   const char *name() const;
@@ -110,4 +114,5 @@ class Table {
   DiskBufferPool *data_buffer_pool_ = nullptr;   /// 数据文件关联的buffer pool
   RecordFileHandler *record_handler_ = nullptr;  /// 记录操作
   std::vector<Index *> indexes_;
+  bool view_table_flag{false};
 };

@@ -60,6 +60,7 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
         CREATE
         DROP
         TABLE
+        VIEW
         TABLES
         INDEX
         CALC
@@ -610,6 +611,26 @@ select_stmt:        /*  select 语句的语法解析树*/
     {
       $$ = $8;
       $$->selection.create_table_name = $3;
+
+      std::vector<AttrInfoSqlNode> *src_attrs = $6;
+
+      if (src_attrs != nullptr) {
+        $$->selection.attr_infos.swap(*src_attrs);
+      }
+      $$->selection.attr_infos.emplace_back(*$5);
+      std::reverse($$->selection.attr_infos.begin(), $$->selection.attr_infos.end());
+      delete $5;
+    }
+    |
+    CREATE VIEW ID AS select_stmt {
+      $$ = $5;
+      $$->selection.create_view_name = $3;
+    }
+    |
+    CREATE VIEW ID LBRACE attr_def attr_def_list RBRACE select_stmt 
+    {
+      $$ = $8;
+      $$->selection.create_view_name = $3;
 
       std::vector<AttrInfoSqlNode> *src_attrs = $6;
 

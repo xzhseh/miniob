@@ -29,6 +29,8 @@ See the Mulan PSL v2 for more details. */
 #include "storage/table/table.h"
 #include "storage/table/table_meta.h"
 #include "storage/trx/trx.h"
+#include "storage/table/table_meta.h"
+
 
 Table::~Table() {
   if (record_handler_ != nullptr) {

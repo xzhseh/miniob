@@ -21,8 +21,9 @@ See the Mulan PSL v2 for more details. */
 #include "sql/expr/tuple.h"
 #include "sql/operator/project_physical_operator.h"
 #include "sql/parser/value.h"
+#include "storage/table/table.h"
 #include "storage/db/db.h"
-
+#include "storage/table/table_view.h"
 PlainCommunicator::PlainCommunicator() {
   send_message_delimiter_.assign(1, '\0');
   debug_message_prefix_.resize(2);
@@ -328,7 +329,9 @@ RC PlainCommunicator::write_result_internal(SessionEvent *event, bool &need_disc
     } else {
       attrs = oper->attrs_;
     }
-    rc = session_->get_current_db()->create_table(oper->name().c_str(), cell_num, attrs.data());
+    std::string name = oper->name().c_str();
+    LOG_WARN("boring %s", name.c_str());
+    rc = session_->get_current_db()->create_table(name.c_str(), cell_num, attrs.data());
     if (OB_FAIL(rc)) {
       sql_result->close();
       sql_result->set_return_code(rc);
@@ -366,6 +369,10 @@ RC PlainCommunicator::write_result_internal(SessionEvent *event, bool &need_disc
         session_->get_current_db()->drop_table(oper->name().c_str());
         return write_state(event, need_disconnect);
       }
+    }
+    if(oper->view_name() != "") {
+      table->set_view_flag(true);
+      view_rebuild_map[oper->view_name()] = std::move(*sql_result->get_operator());
     }
     RC rc_close = sql_result->close();
     sql_result->set_return_code(RC::SUCCESS);

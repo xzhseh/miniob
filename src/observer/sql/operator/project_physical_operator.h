@@ -37,8 +37,10 @@ class ProjectPhysicalOperator : public PhysicalOperator {
   RC close() override;
 
   int cell_num() const { return tuple_.cell_num(); }
-  std::string name() const override { return create_table_name; }
+  std::string name() const override { return create_table_name != "" ? create_table_name : create_view_name; }
+  std::string view_name() const {return create_view_name;}
   Tuple *current_tuple() override;
+  void set_view_name(std::string name) {create_view_name = name;}
   void set_name(std::string name) { create_table_name = name; }
   const ProjectTuple &get_project_tuple() const { return tuple_; }
   // 为了方便
@@ -52,5 +54,6 @@ class ProjectPhysicalOperator : public PhysicalOperator {
   ProjectTuple tuple_;
   ValueListTuple expr_tuple_;
   std::string create_table_name{""};
+  std::string create_view_name{""};
   bool agg_flag_{false};
 };

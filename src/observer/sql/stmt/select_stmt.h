@@ -67,12 +67,14 @@ class SelectStmt : public Stmt {
   const std::vector<Expression *> & get_select_expr() const { return expressions_; }
   bool get_select_expr_flag() const { return select_expr_flag_; }
   const std::string create_table_name() const { return create_table_name_; }
+  const std::string create_view_name() const {return create_view_name_;}
   const std::vector<AttrInfoSqlNode> get_attrs() const { return attrs; }
 
  private:
   std::vector<Field> query_fields_;
   std::vector<Table *> tables_;
   std::string create_table_name_;
+  std::string create_view_name_;
   std::vector<AttrInfoSqlNode> attrs;
   std::vector<JoinStmt> join_stmts_;
   std::vector<OrderByStmt> order_by_;
