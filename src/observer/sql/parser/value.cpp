@@ -513,13 +513,17 @@ bool Value::cast_to(const AttrType &target_type, Value &result) const {
   }
   // Char --> int
   if (this->attr_type_ == CHARS && target_type == INTS) {
-    auto conv = NumberFromStr(this->str_value_.c_str());
-    if (conv.float_or_int) {
-      result.set_float(conv.float_);
-    } else {
-      result.set_int(conv.int_);
+    int int_val;
+    if (sscanf(this->str_value_.c_str(), "%d", &int_val) == 1) {
+      result.set_int(int_val);
+      return true;
     }
-    return true;
+    float float_val;
+    if (sscanf(this->str_value_.c_str(), "%f", &float_val) == 1) {
+      result.set_float(float_val);
+      return true;
+    }
+    return false;
   }
   // int --> float
   if (this->attr_type_ == INTS && target_type == FLOATS) {

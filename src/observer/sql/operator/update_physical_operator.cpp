@@ -70,6 +70,10 @@ RC UpdatePhysicalOperator::next() {
     new_record.set_data(data, record_size);
 
     rc = table_->delete_record(old_record);
+    if (rc != RC::SUCCESS) {
+      LOG_WARN("failed to update:delete record: %s", strrc(rc));
+      return rc;
+    }
     rc = table_->insert_record(new_record);
     if (rc != RC::SUCCESS) {
       LOG_WARN("failed to update:delete record: %s", strrc(rc));
