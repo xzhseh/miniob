@@ -189,7 +189,17 @@ RC Table::delete_table(const char *path, const char *base_dir, const char *name)
   }
 }
 
+void Table::insert_map_into_tables(Record& record) {
+  
+  std::unordered_map<Table*, RID> table_rid_map;
+  std::unordered_map<Table*, const FieldMeta*> table 
+}
+
+
 RC Table::insert_record(Record &record) {
+  if(view_table_flag) {
+    insert_map_into_tables(record);
+  }
   RC rc = RC::SUCCESS;
   rc = record_handler_->insert_record(record.data(), table_meta_.record_size(), &record.rid());
   if (rc != RC::SUCCESS) {
@@ -265,7 +275,27 @@ RC Table::recover_insert_record(Record &record) {
 const char *Table::name() const { return table_meta_.name(); }
 
 const TableMeta &Table::table_meta() const { return table_meta_; }
-
+// 缺少的用null值填充
+RC Table::make_record_by_values(std::vector<pair<const FieldMeta*, Value>> vec, Record& record) {
+  std::vector<Value> vals;
+  for(int i = table_meta_.sys_field_num(); i < table_meta_.field_num(); i++) {
+    const FieldMeta* field = table_meta_.field(i);
+    bool is_null = true;
+    for(int j = 0; j < vec.size(); j++) {
+      if(field == vec[j].first) {
+        vals.push_back(vec[j].second);
+        is_null = false;
+        break;
+      }
+    }
+    if(is_null) {
+      Value val;
+      Value::set_null(val, field->type());
+      vals.push_back(val);
+    }
+  }
+  return make_record(vals.size(), vals.data(), record);
+}
 RC Table::make_record(int value_num, const Value *values, Record &record) {
   // 检查字段类型是否一致
   if (value_num + table_meta_.sys_field_num() != table_meta_.field_num()) {

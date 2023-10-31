@@ -126,7 +126,8 @@ void view_rebuild_function(std::string view_name) {
 
       rc = oper->close();
     }
-
+    vector<Table*> tables;
+    vector<const FieldMeta*> fields;
     const auto &project_tuple = oper->get_project_tuple();
     const auto specs = project_tuple.get_specs();
     int cell_num = project_tuple.cell_num();
@@ -141,10 +142,12 @@ void view_rebuild_function(std::string view_name) {
         if (table == nullptr) {
           return;
         }
+        tables.push_back(table);
         const FieldMeta *field_meta = table->table_meta().field(filed_name);
         if (nullptr == field_meta) {
           // std::cout << "null field meta, name: " << filed_name;
         }
+        fields.push_back(field_meta);
         AttrInfoSqlNode attr;
         attr.type = field_meta->type();
         attr.name = field_meta->name();
@@ -175,6 +178,7 @@ void view_rebuild_function(std::string view_name) {
       assert(tuple != nullptr);
       // assert(cell_num == tuple->cell_num());
       std::vector<Value> vals;
+      std::vector<RID> rids;
       for (int i = 0; i < cell_num; i++) {
         Value value;
         rc = tuple->cell_at(i, value);
@@ -182,10 +186,18 @@ void view_rebuild_function(std::string view_name) {
           oper->close();
           return;
         }
+        RID rid;
+        rc = tuple->cell_rid(i, rid);
+        if (rc != RC::SUCCESS) {
+          oper->close();
+          return;
+        }        
         vals.push_back(value);
+        rids.push_back(rid);
       }
       Record record;
       rc = table->make_record(cell_num, vals.data(), record);
+      table->meta_.rid_map[record.rid()] = rids;
       if (rc != RC::SUCCESS) {
         oper->close();
         current_db->drop_table(oper->name().c_str());
@@ -197,6 +209,8 @@ void view_rebuild_function(std::string view_name) {
         current_db->drop_table(oper->name().c_str());
       }
     }
+    table->meta_.tables = tables;
+    table->meta_.fields = fields;   
     // if(oper->view_name() != "") {
     //   table->set_view_flag(true);
     //   view_rebuild_map[oper->view_name()] = std::move(*sql_result->get_operator());

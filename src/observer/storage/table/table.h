@@ -16,6 +16,7 @@ See the Mulan PSL v2 for more details. */
 
 #include <functional>
 #include "storage/table/table_meta.h"
+#include "storage/table/view_table_meta.h"
 #include <unordered_map>
 #include <string>
 #include <memory>
@@ -68,7 +69,6 @@ class Table {
    * @param record    生成的记录数据
    */
   RC make_record(int value_num, const Value *values, Record &record);
-
   /**
    * @brief 在当前的表中插入一条记录
    * @details 在表文件和索引中插入关联数据。这里只管在表中插入数据，不关心事务相关操作。
@@ -104,12 +104,14 @@ class Table {
   RC delete_entry_of_indexes(const char *record, const RID &rid, bool error_on_not_exists);
 
  private:
+  void insert_map_into_tables(Record& record);
   RC init_record_handler(const char *base_dir);
-
+  RC make_record_by_values(std::vector<pair<const FieldMeta*, Value>> vec, Record& record);
  public:
   Index *find_index(const char *index_name) const;
   Index *find_index_by_field(const char *field_name) const;
-
+ public:
+  ViewMeta meta_;
  private:
   std::string base_dir_;
   TableMeta table_meta_;
