@@ -90,10 +90,7 @@ RC UpdateStmt::create(Db *db, UpdateSqlNode &update, Stmt *&stmt) {
 
     if (update_value.is_null()) {
       if (!field_meta->is_null()) {
-        // If not null is either implicitly / explicitly enabled
-        // The null can not be inserted into the field
-        sql_debug("field is not null, but update value is null");
-        return RC::INVALID_ARGUMENT;
+        update_value.trick_update();
       }
 
       // Set the value to the hard-coded null value
