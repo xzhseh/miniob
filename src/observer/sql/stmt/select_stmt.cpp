@@ -13,8 +13,10 @@ See the Mulan PSL v2 for more details. */
 //
 
 #include "sql/stmt/select_stmt.h"
+#include <memory>
 #include "common/lang/string.h"
 #include "common/log/log.h"
+#include "sql/expr/expression.h"
 #include "sql/parser/parse_defs.h"
 #include "sql/stmt/agg_stmt.h"
 #include "sql/stmt/filter_stmt.h"
@@ -92,6 +94,7 @@ RC bind_order_by(Db *db, const std::vector<Table *> &tables, const std::vector<O
   return RC::SUCCESS;
 }
 
+/// Get the corresponding `Field` based on the parsed `RelAttrSqlNode`
 auto get_field(Db *db, const std::vector<Table *> &tables, std::unordered_map<std::string, Table *> *table_map,
                const RelAttrSqlNode &attribute, Field &field) -> RC {
   RC rc = RC::SUCCESS;
@@ -160,6 +163,11 @@ bool group_by_sanity_check(const std::vector<RelAttrSqlNode> &group_by_keys, con
   for (int i = 0; i < fields.size(); ++i) {
     const auto &field = fields[i];
 
+    if (field.meta() == nullptr && field.table() == nullptr && agg_stmt.get_agg_types()[i] == agg::AGG_COUNT) {
+      // This is COUNT(*), we just ignore this
+      continue;
+    }
+
     if (!agg_stmt.get_is_agg()[i]) {
       count += 1;
     }
@@ -199,6 +207,36 @@ bool group_by_sanity_check(const std::vector<RelAttrSqlNode> &group_by_keys, con
   return true;
 }
 
+RC get_agg_fields_from_expr(Db *db, const std::vector<Table *> &tables, Expression *expr,
+                            std::vector<Field> &fields, std::vector<bool> &is_agg,
+                            std::vector<FieldExpr *> &agg_exprs, std::vector<agg> &agg_types) {
+  RC rc = RC::SUCCESS;
+  if (expr == nullptr) {
+    return RC::INVALID_ARGUMENT;
+  }
+  if (expr->type() == ExprType::FIELD) {
+    std::cout << "[get_agg_fields_from_expr] field expr name: " << expr->name() << std::endl;
+    Field f;
+    FieldExpr *f_expr = dynamic_cast<FieldExpr *>(expr);
+    assert(f_expr != nullptr && "Expect `f_expr` not to be nullptr");
+
+    if (f_expr->get_rel_attr().aggregate_func != agg::NONE) {
+      fields.push_back(f_expr->field());
+      agg_exprs.push_back(f_expr);
+      is_agg.push_back(true);
+      agg_types.push_back(f_expr->get_rel_attr().aggregate_func);
+    }
+  }
+  // Recursively transformation the child expression, if exists any
+  if (expr->left() != nullptr) {
+    rc = get_agg_fields_from_expr(db, tables, expr->left(), fields, is_agg, agg_exprs, agg_types);
+  }
+  if (expr->right() != nullptr) {
+    rc = get_agg_fields_from_expr(db, tables, expr->right(), fields, is_agg, agg_exprs, agg_types);
+  }
+  return rc;
+}
+
 /// Find the corresponding fields and bind they to group by statements
 RC aggregation_builder(Db *db, const std::vector<Table *> &tables, std::unordered_map<std::string, Table *> *table_map,
                        const std::vector<RelAttrSqlNode> &attributes, AggStmt &agg_stmt) {
@@ -206,10 +244,20 @@ RC aggregation_builder(Db *db, const std::vector<Table *> &tables, std::unordere
   std::vector<Field> fields;
   std::vector<bool> is_agg;
   std::vector<agg> agg_types;
+  std::vector<FieldExpr *> agg_exprs;
 
   // Should in reverse order
   for (int i = attributes.size() - 1; i >= 0; --i) {
     const auto &attr = attributes[i];
+
+    if (attr.expression != nullptr) {
+      rc = get_agg_fields_from_expr(db, tables, attr.expression, fields, is_agg, agg_exprs, agg_types);
+      if (rc != RC::SUCCESS) {
+        LOG_WARN("[aggregation_builder] failed to get the agg fields from expression");
+        return rc;
+      }
+      continue;
+    }
 
     if (!attr.agg_valid_flag) {
       // Syntax error for the current aggregation
@@ -266,6 +314,7 @@ RC aggregation_builder(Db *db, const std::vector<Table *> &tables, std::unordere
   agg_stmt.set_is_agg(std::move(is_agg));
   agg_stmt.set_agg_types(std::move(agg_types));
   agg_stmt.set_fields(std::move(fields));
+  agg_stmt.set_agg_exprs(std::move(agg_exprs));
 
   return rc;
 }
@@ -307,8 +356,37 @@ RC SelectStmt::resolve_tables(Db *db, const SelectSqlNode &select_sql, std::vect
   return RC::SUCCESS;
 }
 
+/// Recursively transform the `RelAttrSqlNode` in `FieldExpr` to real field
+RC field_expr_transformation(Db *db, const std::vector<Table *> &tables, Expression *expr,
+                             std::unordered_map<std::string, Table *> *table_map) {
+  RC rc = RC::SUCCESS;
+  if (expr == nullptr) {
+    return RC::INVALID_ARGUMENT;
+  }
+  if (expr->type() == ExprType::FIELD) {
+    std::cout << "[field_expr_transformation] field expr name: " << expr->name() << std::endl;
+    Field f;
+    FieldExpr *f_expr = dynamic_cast<FieldExpr *>(expr);
+    assert(f_expr != nullptr && "Expect `f_expr` not to be nullptr");
+    rc = get_field(db, tables, table_map, f_expr->get_rel_attr(), f);
+    if (rc != RC::SUCCESS) {
+      LOG_WARN("[field_expr_transformation] failed to get field for expr: %s", f_expr->name().c_str());
+      return rc;
+    }
+    f_expr->set_field(f);
+  }
+  // Recursively transformation the child expression, if exists any
+  if (expr->left() != nullptr) {
+    rc = field_expr_transformation(db, tables, expr->left(), table_map);
+  }
+  if (expr->right() != nullptr) {
+    rc = field_expr_transformation(db, tables, expr->right(), table_map);
+  }
+  return rc;
+}
+
 /// TODO: We definitely need to refactor this part, the current implementation is so embarrassed 😅
-RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt) {
+RC SelectStmt::create(Db *db, SelectSqlNode &select_sql, Stmt *&stmt) {
   assert(stmt == nullptr && "`stmt` must be nullptr at the beginning");
   if (nullptr == db) {
     LOG_WARN("invalid argument. db is null");
@@ -325,12 +403,123 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt) {
     return rc;
   }
 
+  for (int i = select_sql.attributes.size() - 1; i >= 0; --i) {
+    if (select_sql.attributes[i].expression != nullptr) {
+      select_sql.select_expr_flag = true;
+      break;
+    }
+  }
+
+  // Construct the `expressions` in select clause
+  for (int i = select_sql.attributes.size() - 1; i >= 0; --i) {
+    if (select_sql.select_expr_flag) {
+      if (select_sql.attributes[i].expression != nullptr) {
+        // The current node is parsed as the expression
+        select_sql.expressions.push_back(select_sql.attributes[i].expression);
+      } else {
+        // If there is any expression exist, we should add the single field to it
+        std::cout << "[select stmt] current attr: " << select_sql.attributes[i].attribute_name << std::endl;
+        FieldExpr *f = new FieldExpr(select_sql.attributes[i]);
+
+        // Remember to set the field name
+        std::string f_name =
+            (select_sql.attributes[i].relation_name.empty()) ?
+            select_sql.attributes[i].attribute_name :
+            (select_sql.attributes[i].relation_name + "." + select_sql.attributes[i].attribute_name);
+
+        f->set_name(f_name);
+        select_sql.expressions.push_back(f);
+      }
+    }
+  }
+
+  // Construct the `expressions` in where clause
+  if (select_sql.conditions.size() == 1) {
+    auto &curr_condition = select_sql.conditions[0];
+    if (curr_condition.left_expr && curr_condition.right_expr) {
+      select_sql.where_expr_flag = true;
+      select_sql.where_expr = new ConditionSqlNode;
+      select_sql.where_expr->left_expr = curr_condition.left_expr;
+      select_sql.where_expr->right_expr = curr_condition.right_expr;
+      select_sql.where_expr->comp = curr_condition.comp;
+    } else if (curr_condition.left_expr) {
+      assert(curr_condition.right_expr == nullptr);
+      select_sql.where_expr_flag = true;
+      select_sql.where_expr = new ConditionSqlNode;
+      select_sql.where_expr->left_expr = curr_condition.left_expr;
+      select_sql.where_expr->comp = curr_condition.comp;
+      if (curr_condition.right_is_attr) {
+        // Expression comp Field
+        FieldExpr *f_expr = new FieldExpr(curr_condition.right_attr);
+        select_sql.where_expr->right_expr = f_expr;
+      } else {
+        // Expression comp Value
+        ValueExpr *v_expr = new ValueExpr(curr_condition.right_value);
+        select_sql.where_expr->right_expr = v_expr;
+      }
+    } else if (curr_condition.right_expr) {
+      assert(curr_condition.left_expr == nullptr);
+      select_sql.where_expr_flag = true;
+      select_sql.where_expr = new ConditionSqlNode;
+      select_sql.where_expr->right_expr = curr_condition.right_expr;
+      select_sql.where_expr->comp = curr_condition.comp;
+      if (curr_condition.left_is_attr) {
+        // Field comp Expression
+        FieldExpr *f_expr = new FieldExpr(curr_condition.left_attr);
+        select_sql.where_expr->left_expr = f_expr;
+      } else {
+        // Value comp Expression
+        ValueExpr *v_expr = new ValueExpr(curr_condition.left_value);
+        select_sql.where_expr->left_expr = v_expr;
+      }
+    }
+  }
+
+  // Make the expression transformation for select attribute, specifically for `FieldExpr`
+  if (select_sql.select_expr_flag) {
+    for (int i = 0; i < select_sql.expressions.size(); ++i) {
+      rc = field_expr_transformation(db, tables, select_sql.expressions[i], &table_map);
+      if (rc != RC::SUCCESS) {
+        LOG_WARN("[SelectStmt::create] failed to transform select expressions");
+        return rc;
+      }
+      std::cout << "[select stmt] select expr name: " << select_sql.expressions[i]->name() << std::endl;
+    }
+  }
+
+  // Make the same transformation for where conditions
+  if (select_sql.where_expr_flag) {
+    if (select_sql.where_expr->left_expr != nullptr && select_sql.where_expr->right_expr != nullptr) {
+      // We should evaluate the where clause based on pure expressions
+      // Do the transformation for the left expression and right expression
+      rc = field_expr_transformation(db, tables, select_sql.where_expr->left_expr, &table_map);
+      if (rc != RC::SUCCESS) {
+        LOG_WARN("[SelectStmt::create] failed to transform where left expressions");
+        return rc;
+      }
+      rc = field_expr_transformation(db, tables, select_sql.where_expr->right_expr, &table_map);
+      if (rc != RC::SUCCESS) {
+        LOG_WARN("[SelectStmt::create] failed to transform where right expressions");
+        return rc;
+      }
+      std::cout << "[select stmt] where left expr name: " << select_sql.where_expr->left_expr->name() << std::endl;
+      std::cout << "[select stmt] where right expr name: " << select_sql.where_expr->right_expr->name() << std::endl;
+    }
+  }
+
   // collect query fields in `select` statement
   std::vector<Field> query_fields;
 
   // Resolve the query fields
   for (int i = static_cast<int>(select_sql.attributes.size()) - 1; i >= 0; i--) {
     const RelAttrSqlNode &relation_attr = select_sql.attributes[i];
+
+    if (relation_attr.expression != nullptr) {
+      // This is an actual expression
+      // We just ignore this, since the field information has been resolved above
+      continue;
+    }
+
     if (!relation_attr.agg_valid_flag) {
       // Invalid syntax
       return RC::INVALID_ARGUMENT;
@@ -487,14 +676,14 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt) {
   }
 
   // i.e., select count(id), id from t1; is INVALID
-  if (!group_by_sanity_check(select_sql.group_bys, *agg_stmt)) {
+  if (agg_stmt->get_agg_exprs().size() == 0 && !group_by_sanity_check(select_sql.group_bys, *agg_stmt)) {
     LOG_WARN("invalid group by syntax.");
     return RC::INVALID_ARGUMENT;
   }
 
   bool agg_flag{false};
   for (const auto &a : agg_stmt->get_is_agg()) {
-    if (a == true) {
+    if (a) {
       agg_flag = true;
       break;
     }
@@ -510,6 +699,18 @@ RC SelectStmt::create(Db *db, const SelectSqlNode &select_sql, Stmt *&stmt) {
 
   // everything alright
   SelectStmt *select_stmt = new SelectStmt();
+
+  // Select expression
+  if (select_sql.select_expr_flag) {
+    select_stmt->select_expr_flag_ = true;
+    select_stmt->expressions_ = select_sql.expressions;
+  }
+
+  // Where expression
+  if (select_sql.where_expr_flag) {
+    assert(select_sql.where_expr != nullptr && "Expect `where_expr` not to be nullptr");
+    filter_stmt->set_where_expr(select_sql.where_expr);
+  }
 
   // TODO add expression copy
   select_stmt->tables_.swap(tables);

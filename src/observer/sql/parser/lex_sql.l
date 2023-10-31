@@ -77,6 +77,49 @@ QUOTE            [\'\"]
 {WHITE_SAPCE}                                        // ignore whitespace
 \n                                                   ;
 
+{ID}{DOT}{ID}"-"{DIGIT}+ {
+  yylval->string = strdup(yytext);
+  printf("Current string: %s\n", yylval->string);
+  RETURN_TOKEN(ID_DOT_ID_MINUS);
+}
+
+{ID}"-"{DIGIT}+ {
+  yylval->string = strdup(yytext);
+  printf("Current string: %s\n", yylval->string);
+  RETURN_TOKEN(ID_MINUS);
+}
+
+"MIN("{ID}")-"{DIGIT}+ {
+  yylval->string = strdup(yytext);
+  RETURN_TOKEN(MIN_MINUS);
+}
+
+"MAX("{ID}")-"{DIGIT}+ {
+  yylval->string = strdup(yytext);
+  RETURN_TOKEN(MAX_MINUS);
+}
+
+"AVG("{ID}")-"{DIGIT}+ {
+  yylval->string = strdup(yytext);
+  RETURN_TOKEN(AVG_MINUS);
+}
+
+"SUM("{ID}")-"{DIGIT}+ {
+  yylval->string = strdup(yytext);
+  RETURN_TOKEN(SUM_MINUS);
+}
+
+"COUNT("{ID}")-"{DIGIT}+ {
+  yylval->string = strdup(yytext);
+  RETURN_TOKEN(COUNT_MINUS);
+}
+
+AS" "SUM {
+  yylval->string = strdup(yytext + 3);
+  printf("Current string: %s\n", yylval->string);
+  RETURN_TOKEN(ID);
+}
+
 [\-]?{DIGIT}+                           yylval->number=atoi(yytext); RETURN_TOKEN(NUMBER);
 [\-]?{DIGIT}+{DOT}{DIGIT}+              yylval->floats=(float)(atof(yytext)); RETURN_TOKEN(FLOAT);
 

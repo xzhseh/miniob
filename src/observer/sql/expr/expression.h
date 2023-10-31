@@ -19,6 +19,7 @@ See the Mulan PSL v2 for more details. */
 #include <string>
 
 #include "common/log/log.h"
+#include "sql/parser/parse_defs.h"
 #include "sql/parser/value.h"
 #include "storage/field/field.h"
 
@@ -90,6 +91,9 @@ class Expression {
   virtual std::string name() const { return name_; }
   virtual void set_name(std::string name) { name_ = name; }
 
+  virtual Expression *left() const { return nullptr; }
+  virtual Expression *right() const { return nullptr; }
+
  private:
   std::string name_;
 };
@@ -103,6 +107,9 @@ class FieldExpr : public Expression {
   FieldExpr() = default;
   FieldExpr(const Table *table, const FieldMeta *field) : field_(table, field) {}
   FieldExpr(const Field &field) : field_(field) {}
+
+  /// For expression evaluation, will be transformed to `Field` in `select_stmt.cpp`
+  FieldExpr(const RelAttrSqlNode &rel_attr) : rel_attr_(rel_attr) {}
 
   virtual ~FieldExpr() = default;
 
@@ -119,8 +126,24 @@ class FieldExpr : public Expression {
 
   RC get_value(const Tuple &tuple, Value &value) override;
 
+  void set_agg_value(Value &v) {
+    agg_flag_ = true;
+    agg_value_ = v;
+  }
+
+  Expression *left() const override { return nullptr; }
+  Expression *right() const override { return nullptr; }
+
+  const RelAttrSqlNode &get_rel_attr() { return rel_attr_; }
+
+  void set_field(const Field &field) { field_ = field; }
+
  private:
   Field field_;
+  RelAttrSqlNode rel_attr_;
+  // To deal with agg in expression
+  Value agg_value_;
+  bool agg_flag_{false};
 };
 
 /**
@@ -148,6 +171,9 @@ class ValueExpr : public Expression {
 
   const Value &get_value() const { return value_; }
 
+  Expression *left() const override { return nullptr; }
+  Expression *right() const override { return nullptr; }
+
  private:
   Value value_;
 };
@@ -169,6 +195,10 @@ class CastExpr : public Expression {
   AttrType value_type() const override { return cast_type_; }
 
   std::unique_ptr<Expression> &child() { return child_; }
+
+  // FIXME: Ensure this
+  Expression *left() const override { return child_.get(); }
+  Expression *right() const override { return nullptr; }
 
  private:
   RC cast(const Value &value, Value &cast_value) const;
@@ -197,6 +227,9 @@ class ComparisonExpr : public Expression {
 
   std::unique_ptr<Expression> &left() { return left_; }
   std::unique_ptr<Expression> &right() { return right_; }
+
+  Expression *left() const override { return left_.get(); }
+  Expression *right() const override { return right_.get(); }
 
   /**
    * 尝试在没有tuple的情况下获取当前表达式的值
@@ -244,6 +277,10 @@ class ConjunctionExpr : public Expression {
 
   std::vector<std::unique_ptr<Expression>> &children() { return children_; }
 
+  // FIXME: Ensure this
+  Expression *left() const override { return nullptr; }
+  Expression *right() const override { return nullptr; }
+
  private:
   Type conjunction_type_;
   std::vector<std::unique_ptr<Expression>> children_;
@@ -279,6 +316,9 @@ class ArithmeticExpr : public Expression {
 
   std::unique_ptr<Expression> &left() { return left_; }
   std::unique_ptr<Expression> &right() { return right_; }
+
+  Expression *left() const override { return left_.get(); }
+  Expression *right() const override { return right_.get(); }
 
  private:
   RC calc_value(const Value &left_value, const Value &right_value, Value &value) const;

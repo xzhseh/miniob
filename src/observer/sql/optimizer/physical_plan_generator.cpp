@@ -12,6 +12,7 @@ See the Mulan PSL v2 for more details. */
 // Created by Wangyunlai on 2022/12/14.
 //
 
+#include <memory>
 #include <utility>
 
 #include "common/log/log.h"
@@ -192,8 +193,24 @@ RC PhysicalPlanGenerator::create_plan(PredicateLogicalOperator &pred_oper, uniqu
   vector<unique_ptr<Expression>> &expressions = pred_oper.expressions();
   ASSERT(expressions.size() == 1, "predicate logical operator's children should be 1");
 
-  unique_ptr<Expression> expression = std::move(expressions.front());
-  oper = unique_ptr<PhysicalOperator>(new PredicatePhysicalOperator(std::move(expression)));
+  std::unique_ptr<Expression> expression{nullptr};
+
+  if (!pred_oper.where_expr_flag_) {
+    expression = std::move(expressions.front());
+  }
+
+  std::unique_ptr<PredicatePhysicalOperator> predicate_phy_oper{nullptr};
+
+  if (pred_oper.where_expr_flag_) {
+    predicate_phy_oper = std::make_unique<PredicatePhysicalOperator>(std::move(expression), true);
+    predicate_phy_oper->where_expr_flag_ = true;
+    predicate_phy_oper->where_expr_ = pred_oper.where_expr_;
+  } else {
+    predicate_phy_oper = std::make_unique<PredicatePhysicalOperator>(std::move(expression));
+  }
+
+  // oper = unique_ptr<PhysicalOperator>(new PredicatePhysicalOperator(std::move(expression)));
+  oper = unique_ptr<PhysicalOperator>(std::move(predicate_phy_oper));
   oper->add_child(std::move(child_phy_oper));
   return rc;
 }
@@ -215,6 +232,7 @@ RC PhysicalPlanGenerator::create_plan(ProjectLogicalOperator &project_oper, uniq
 
   auto *project_operator = new ProjectPhysicalOperator;
   project_operator->attrs_ = project_oper.attrs();
+  project_operator->tables_ = project_oper.tables_;
   project_operator->set_name(project_oper.create_table_name());
   const auto &project_fields = project_oper.fields();
   for (const auto &field : project_fields) {
@@ -223,6 +241,11 @@ RC PhysicalPlanGenerator::create_plan(ProjectLogicalOperator &project_oper, uniq
 
   if (child_phy_oper) {
     project_operator->add_child(std::move(child_phy_oper));
+  }
+
+  if (project_oper.select_expr_flag_) {
+    project_operator->select_expr_flag_ = true;
+    project_operator->select_expr_ = project_oper.select_expr_;
   }
 
   oper = unique_ptr<PhysicalOperator>(project_operator);
@@ -366,6 +389,7 @@ RC PhysicalPlanGenerator::create_plan(AggLogicalOperator &logical_oper, std::uni
   auto is_agg = logical_oper.get_is_agg();
   auto fields = logical_oper.get_fields();
   auto having = logical_oper.get_having();
+  auto agg_exprs = logical_oper.get_agg_exprs();
 
   // Construct exprs for fields
   std::vector<FieldExpr> field_exprs;
@@ -375,7 +399,8 @@ RC PhysicalPlanGenerator::create_plan(AggLogicalOperator &logical_oper, std::uni
 
   // Construct the physical operator
   AggPhysicalOperator *agg_oper = new AggPhysicalOperator{
-      child_physical_oper.get(), std::move(having), std::move(field_exprs), std::move(is_agg), std::move(agg_types)};
+      child_physical_oper.get(), std::move(having), std::move(field_exprs), std::move(is_agg), std::move(agg_types), std::move(agg_exprs)
+  };
 
   agg_oper->add_child(std::move(child_physical_oper));
 

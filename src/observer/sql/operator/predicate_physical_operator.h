@@ -26,7 +26,7 @@ class FilterStmt;
  */
 class PredicatePhysicalOperator : public PhysicalOperator {
  public:
-  PredicatePhysicalOperator(std::unique_ptr<Expression> expr);
+  PredicatePhysicalOperator(std::unique_ptr<Expression> expr, bool is_where_flag = false);
 
   virtual ~PredicatePhysicalOperator() = default;
 
@@ -37,6 +37,9 @@ class PredicatePhysicalOperator : public PhysicalOperator {
   RC close() override;
 
   Tuple *current_tuple() override;
+
+  bool where_expr_flag_{false};
+  ConditionSqlNode *where_expr_{nullptr};
 
  private:
   std::unique_ptr<Expression> expression_;
