@@ -237,6 +237,14 @@ std::string Value::to_string() const {
 }
 
 int Value::compare(const Value &other) const {
+  if (Value::check_null(*this) && Value::check_null(other)) {
+    return 0;
+  } else if (Value::check_null(*this)) {
+    return -1;
+  } else if (Value::check_null(other)) {
+    return 1;
+  }
+
   if (this->attr_type_ == other.attr_type_) {
     switch (this->attr_type_) {
       case INTS: {
