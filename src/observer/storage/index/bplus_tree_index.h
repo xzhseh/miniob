@@ -42,7 +42,7 @@ class BplusTreeIndex : public Index {
   RC sync() override;
 
  private:
-  char *make_user_key(const char *record);
+  char *make_user_key(const char *record, bool &is_null);
   void free_user_key(char *user_key);
   int user_key_len();
 

@@ -1,20 +1,27 @@
 CREATE TABLE Update_select_t1(id int, t_name char(10), col1 int, col2 int);
 CREATE TABLE Update_select_t2(id int, t_name char(10), col1 int, col2 int);
 
-INSERT INTO Update_select_t1 VALUES(1, 't1', 1, 2);
-INSERT INTO Update_select_t1 VALUES(6, 't1', 3, 4);
-INSERT INTO Update_select_t1 VALUES(9, 't9', 3, 4);
+INSERT INTO Update_select_t1 VALUES(1, 't144', 1, 2);
+INSERT INTO Update_select_t1 VALUES(6, 't111', 3, 4);
+INSERT INTO Update_select_t1 VALUES(9, 't123', 3, 4);
+INSERT INTO Update_select_t1 VALUES(6, 't111', 3, 4);
 
 INSERT INTO Update_select_t2 VALUES(1, 't2', 5, 6);
 INSERT INTO Update_select_t2 VALUES(2, 't2', 7, 8);
 INSERT INTO Update_select_t2 VALUES(2, 't2', 8, 6);
 
-select * from Update_select_t1;
-UPDATE Update_select_t2 SET t_name=(select Update_select_t1.t_name from Update_select_t1 where Update_select_t1.id=14) WHERE col1=8 and col2=6;
+select * from Update_select_t2;
+UPDATE Update_select_t2 SET t_name=(select Update_select_t1.t_name from Update_select_t1 where Update_select_t1.id=999) WHERE col1=8 and col2=6;
+select * from Update_select_t2;
 UPDATE Update_select_t2 SET t_name=(select Update_select_t1.t_name from Update_select_t1 where Update_select_t1.id=9) WHERE col1=8 and col2=6;
-
-select * from Update_select_t1;
-
+select * from Update_select_t2;
+UPDATE Update_select_t2 SET t_name=(select Update_select_t1.t_name from Update_select_t1 where Update_select_t1.id=6) WHERE col1=8 and col2=6;
+select * from Update_select_t2;
+UPDATE Update_select_t2 SET t_name=(select Update_select_t1.t_name from Update_select_t1 where Update_select_t1.id=9) WHERE col1=8 and col2=677;
+select * from Update_select_t2;
+UPDATE Update_select_t2 SET t_name=(select Update_select_t1.t_name from Update_select_t1 where Update_select_t1.id=1) WHERE col1=2 and col2=2;
+select * from Update_select_t2;
 UPDATE Update_select_t1 SET col1=2, col2=(select Update_select_t2.col2 from Update_select_t2 where Update_select_t2.id=1) WHERE id=6;
-
-select * from Update_select_t1;
+select * from Update_select_t2;
+UPDATE Update_select_t2 SET t_name=(select Update_select_t1.t_name from Update_select_t1 where Update_select_t1.id=999) WHERE col1=999 and col2=999;
+select * from Update_select_t2;
