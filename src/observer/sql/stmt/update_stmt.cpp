@@ -91,10 +91,10 @@ RC UpdateStmt::create(Db *db, UpdateSqlNode &update, Stmt *&stmt) {
     if (update_value.is_null()) {
       if (!field_meta->is_null()) {
         update_value.trick_update();
+      } else {
+        // Set the value to the hard-coded null value
+        Value::set_null(update_value, field_type);
       }
-
-      // Set the value to the hard-coded null value
-      Value::set_null(update_value, field_type);
     }
 
     AttrType value_type = update_value.attr_type();
