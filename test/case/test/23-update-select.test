@@ -17,7 +17,7 @@ UPDATE Update_select_t2 SET t_name=(select Update_select_t1.t_name from Update_s
 select * from Update_select_t2;
 UPDATE Update_select_t2 SET t_name=(select Update_select_t1.t_name from Update_select_t1 where Update_select_t1.id=6) WHERE col1=8 and col2=6;
 select * from Update_select_t2;
-UPDATE Update_select_t2 SET t_name=(select Update_select_t1.t_name from Update_select_t1 where Update_select_t1.id=9) WHERE col1=8 and col2=677;
+UPDATE Update_select_t2 SET t_name=(select Update_select_t1.t_name from Update_select_t1 where Update_select_t1.id=9) WHERE col1=999 and col2=999;
 select * from Update_select_t2;
 UPDATE Update_select_t2 SET t_name=(select Update_select_t1.t_name from Update_select_t1 where Update_select_t1.id=1) WHERE col1=2 and col2=2;
 select * from Update_select_t2;

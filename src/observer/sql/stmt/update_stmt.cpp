@@ -14,6 +14,7 @@ See the Mulan PSL v2 for more details. */
 
 #include "sql/stmt/update_stmt.h"
 #include "common/log/log.h"
+#include "event/sql_debug.h"
 #include "sql/expr/sub_query_expr.h"
 #include "sql/stmt/filter_stmt.h"
 #include "storage/db/db.h"
@@ -72,6 +73,7 @@ RC UpdateStmt::create(Db *db, UpdateSqlNode &update, Stmt *&stmt) {
     if (update_sub_query) {
       RC rc = get_sub_query_value(db, *update_sub_query, update_value);
       if (rc != RC::SUCCESS) {
+        sql_debug("failed to get sub query value. rc=%d:%s", rc, strrc(rc));
         LOG_WARN("failed to get sub query value. rc=%d:%s", rc, strrc(rc));
         return rc;
       }
@@ -89,6 +91,7 @@ RC UpdateStmt::create(Db *db, UpdateSqlNode &update, Stmt *&stmt) {
       if (!field_meta->is_null()) {
         // If not null is either implicitly / explicitly enabled
         // The null can not be inserted into the field
+        sql_debug("field is not null, but update value is null");
         return RC::INVALID_ARGUMENT;
       }
 
@@ -106,6 +109,7 @@ RC UpdateStmt::create(Db *db, UpdateSqlNode &update, Stmt *&stmt) {
     if (field_type != value_type) {
       Value cast_result;
       if (!update_value.cast_to(field_type, cast_result)) {
+        sql_debug("failed to cast value. field_type=%d, value_type=%d", field_type, value_type);
         LOG_WARN("failed to cast value. field_type=%d, value_type=%d", field_type, value_type);
         return RC::SCHEMA_FIELD_TYPE_MISMATCH;
       }
@@ -133,11 +137,16 @@ RC UpdateStmt::create(Db *db, UpdateSqlNode &update, Stmt *&stmt) {
                              static_cast<int>(update.conditions.size()),
                              filter_stmt);
   if (rc != RC::SUCCESS) {
+    sql_debug("failed to create filter statement. rc=%d:%s", rc, strrc(rc));
     LOG_WARN("failed to create filter statement. rc=%d:%s", rc, strrc(rc));
     return rc;
   }
-
+  // debug the values
+  for (auto &value : values) {
+    sql_debug("final update value: %s", value.to_string().c_str());
+  }
   // Create new update stmt
   stmt = new UpdateStmt(table, values, field_metas, filter_stmt);
+  sql_debug("create update statement successfully");
   return RC::SUCCESS;
 }
