@@ -270,7 +270,10 @@ class FuncExpr: public Expression {
 
   const RelAttrSqlNode &get_rel_attr() { return rel_attr_; }
 
-  void set_field(const Field &field) { field_ = field; }
+  void set_field(const Field &field) {
+    field_ = field;
+    f_expr_ = FieldExpr(field_);
+  }
 
  private:
   FieldExpr f_expr_;
