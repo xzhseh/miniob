@@ -239,6 +239,9 @@ class FuncExpr: public Expression {
         if (param_expr_list_.size() == 1) {
           Value v;
           rc = param_expr_list_[0]->get_value(tuple, v);
+          if (v.attr_type() != AttrType::FLOATS) {
+            return RC::INVALID_ARGUMENT;
+          }
           assert(rc == RC::SUCCESS);
           value.set_int(round(v.get_float()));
           return rc;

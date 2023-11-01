@@ -204,7 +204,7 @@ RC PhysicalPlanGenerator::create_plan(PredicateLogicalOperator &pred_oper, uniqu
   if (pred_oper.where_expr_flag_) {
     predicate_phy_oper = std::make_unique<PredicatePhysicalOperator>(std::move(expression), true);
     predicate_phy_oper->where_expr_flag_ = true;
-    predicate_phy_oper->where_expr_ = pred_oper.where_expr_;
+    predicate_phy_oper->where_expr_vec_ = pred_oper.where_expr_vec_;
   } else {
     predicate_phy_oper = std::make_unique<PredicatePhysicalOperator>(std::move(expression));
   }

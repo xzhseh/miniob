@@ -287,7 +287,7 @@ RC LogicalPlanGenerator::create_plan(FilterStmt *filter_stmt, unique_ptr<Logical
   if (filter_stmt->is_where_expr()) {
     auto predicate_oper = std::make_unique<PredicateLogicalOperator>();
     predicate_oper->where_expr_flag_ = true;
-    predicate_oper->where_expr_ = filter_stmt->get_where_expr();
+    predicate_oper->where_expr_vec_ = filter_stmt->get_where_expr();
     logical_operator = std::move(predicate_oper);
     return RC::SUCCESS;
   }

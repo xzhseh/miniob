@@ -186,7 +186,7 @@ struct SelectSqlNode {
   std::vector<RelAttrSqlNode> group_bys;     ///< group by clause
   ConditionSqlNode having;                   ///< Currently treat it as a single condition node
   std::vector<Expression *> expressions;     ///< expressions in select clause
-  ConditionSqlNode *where_expr{nullptr};     ///< expression in where clause
+  std::vector<ConditionSqlNode *> where_expr_vec;///< expression in where clause, all needs to be evaluated for filtering
   bool select_expr_flag{false};
   bool where_expr_flag{false};
   // The void * is Tuple *

@@ -1396,6 +1396,7 @@ condition:
 
         $$->left_expr = $1;
         $$->right_expr = $3;
+        std::cout << "hilskdjflskdjflksd" << std::endl;
       } else {
         assert(false && "This path is impossible");
       }
