@@ -332,7 +332,7 @@ RC SelectStmt::resolve_tables(Db *db, const SelectSqlNode &select_sql, std::vect
         return RC::INVALID_ARGUMENT;
       }
 
-      Table *table = db->find_table(table_name, false);
+      Table *table = db->find_table(table_name);
       if (nullptr == table) {
         LOG_WARN("no such table. db=%s, table_name=%s", db->name(), table_name);
         return RC::SCHEMA_TABLE_NOT_EXIST;
@@ -350,7 +350,7 @@ RC SelectStmt::resolve_tables(Db *db, const SelectSqlNode &select_sql, std::vect
       }
     } else {
       std::string parent_relation_name = select_sql.relations[i].relation_name;
-      parent_table_map[parent_relation_name] = db->find_table(parent_relation_name.c_str(), false);
+      parent_table_map[parent_relation_name] = db->find_table(parent_relation_name.c_str());
     }
   }
   return RC::SUCCESS;
@@ -397,7 +397,9 @@ RC SelectStmt::create(Db *db, SelectSqlNode &select_sql, Stmt *&stmt) {
   std::vector<Table *> tables;
   std::unordered_map<std::string, Table *> table_map;
   std::unordered_map<std::string, Table *> parent_table_map;
+  
   RC rc = resolve_tables(db, select_sql, tables, table_map, parent_table_map);
+  
   if (rc != RC::SUCCESS) {
     LOG_WARN("failed to resolve tables");
     return rc;
