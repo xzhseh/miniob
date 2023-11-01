@@ -43,7 +43,8 @@ enum class ExprType {
   COMPARISON,   ///< 需要做比较的表达式
   CONJUNCTION,  ///< 多个表达式使用同一种关系(AND或OR)来联结
   ARITHMETIC,   ///< 算术运算
-  SUB_QUERY,  ///< 子查询，比如在IN子句中，子查询的结果是一个集合，需要和字段的值做比较
+  SUB_QUERY,    ///< 子查询，比如在IN子句中，子查询的结果是一个集合，需要和字段的值做比较
+  FUNC,         ///< 函数
 };
 
 /**
@@ -176,6 +177,109 @@ class ValueExpr : public Expression {
 
  private:
   Value value_;
+};
+
+class FuncExpr: public Expression {
+ public:
+  /// For expression evaluation, will be transformed to `Field` in `select_stmt.cpp`
+  FuncExpr(const RelAttrSqlNode &rel_attr, func func_type)
+      : rel_attr_(rel_attr), func_type_(func_type), is_value_(false) {}
+
+  FuncExpr(const Value &value, func func_type)
+      : v_expr_(value), func_type_(func_type), is_value_(true) {}
+
+  virtual ~FuncExpr() = default;
+
+  ExprType type() const override { return ExprType::FUNC; }
+
+  // FIXME: Ensure this, basically we need to return the return type of the stored function
+  AttrType value_type() const override {
+    return field_.attr_type();
+  }
+
+  bool is_value() { return is_value_; }
+
+  Field &field() { return field_; }
+
+  const Field &field() const { return field_; }
+
+  const char *table_name() const { return field_.table_name(); }
+
+  const char *field_name() const { return field_.field_name(); }
+
+  RC func_evaluate(Value &value) {
+    switch (func_type_) {
+      case func::FUNC_LENGTH: {
+        if (value.attr_type() != AttrType::CHARS) {
+          return RC::INVALID_ARGUMENT;
+        }
+        int length = value.get_string().size();
+        value.set_int(length);
+      } break;
+      case func::FUNC_ROUND: {
+        if (value.attr_type() != AttrType::FLOATS) {
+          return RC::INVALID_ARGUMENT;
+        }
+        // FIXME: Ensure this
+        int round = (int) value.get_float();
+        value.set_int(round);
+      } break;
+      case func::FUNC_DATE_FORMAT: {
+        if (value.attr_type() != AttrType::DATE) {
+          return RC::INVALID_ARGUMENT;
+        }
+        // FIXME: implement this function
+        int round = (int) value.get_float();
+        value.set_int(round);
+      } break;
+      default: {
+        return RC::INVALID_ARGUMENT;
+      }
+    }
+    return RC::SUCCESS;
+  }
+
+  RC get_value(const Tuple &tuple, Value &value) override {
+    RC rc = RC::SUCCESS;
+    if (is_value_) {
+      rc = v_expr_.get_value(tuple, value);
+    } else {
+      rc = f_expr_.get_value(tuple, value);
+    }
+    if (rc != RC::SUCCESS) {
+      LOG_WARN("[FuncExpr::get_value] failed to get the value from underlying expression");
+      return rc;
+    }
+    rc = func_evaluate(value);
+    if (rc != RC::SUCCESS) {
+      LOG_WARN("[FuncExpr::func_evaluate] invalid argument: %s.", value.to_string().c_str());
+      return rc;
+    }
+    return rc;
+  }
+
+  void set_agg_value(Value &v) {
+    agg_flag_ = true;
+    agg_value_ = v;
+  }
+
+  Expression *left() const override { return nullptr; }
+  Expression *right() const override { return nullptr; }
+
+  const RelAttrSqlNode &get_rel_attr() { return rel_attr_; }
+
+  void set_field(const Field &field) { field_ = field; }
+
+ private:
+  FieldExpr f_expr_;
+  ValueExpr v_expr_;
+  bool is_value_{false};
+  Field field_;
+  RelAttrSqlNode rel_attr_;
+  // To deal with agg in expression
+  Value agg_value_;
+  bool agg_flag_{false};
+  func func_type_;
 };
 
 /**

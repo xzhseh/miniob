@@ -300,7 +300,6 @@ RC PlainCommunicator::write_result_internal(SessionEvent *event, bool &need_disc
     const auto specs = project_tuple.get_specs();
     std::vector<AttrInfoSqlNode> attrs;
     if (oper->attrs_.size() == 0) {
-      std::cout << "hi!" << std::endl;
       for (int i = 0; i < cell_num; i++) {
         const TupleCellSpec &spec = *specs[i];
         const char *table_name = spec.table_name();
@@ -310,19 +309,11 @@ RC PlainCommunicator::write_result_internal(SessionEvent *event, bool &need_disc
           return RC::SCHEMA_TABLE_NOT_EXIST;
         }
         const FieldMeta *field_meta = table->table_meta().field(filed_name);
-        if (nullptr == field_meta) {
-          // std::cout << "null field meta, name: " << filed_name;
-        }
         AttrInfoSqlNode attr;
         attr.type = field_meta->type();
         attr.name = field_meta->name();
         attr.length = field_meta->len();
         attr.is_null = field_meta->is_null();
-        // alis
-//        const char *alias = schema.cell_at(i).alias();
-//        if (nullptr != alias || alias[0] != 0) {
-//          attr.name = alias;
-//        }
         attrs.push_back(attr);
       }
     } else {
@@ -408,6 +399,11 @@ RC PlainCommunicator::write_result_internal(SessionEvent *event, bool &need_disc
   rc = RC::SUCCESS;
   Tuple *tuple = nullptr;
   while (RC::SUCCESS == (rc = sql_result->next_tuple(tuple))) {
+    if (tuple == nullptr) {
+      // Projection get_value failed, specially for expression
+      rc = RC::INVALID_ARGUMENT;
+      break;
+    }
     assert(tuple != nullptr);
 
     int cell_num = tuple->cell_num();

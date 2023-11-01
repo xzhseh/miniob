@@ -46,6 +46,7 @@ RC ProjectPhysicalOperator::close() {
   }
   return RC::SUCCESS;
 }
+
 Tuple *ProjectPhysicalOperator::current_tuple() {
   if (dynamic_cast<ValueListTuple *>(children_[0]->current_tuple()) != nullptr && !select_expr_flag_) {
     // The child is of type aggregation, produce the value tuple

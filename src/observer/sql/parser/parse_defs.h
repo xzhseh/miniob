@@ -24,6 +24,27 @@ See the Mulan PSL v2 for more details. */
 
 class Expression;
 
+/// Built-in functions
+enum func { FUNC_NONE, FUNC_LENGTH, FUNC_ROUND, FUNC_DATE_FORMAT };
+
+inline std::string func_to_string(func f) {
+  std::string ret{""};
+  switch (f) {
+    case func::FUNC_LENGTH: {
+      ret = "length";
+    } break;
+    case func::FUNC_ROUND: {
+      ret = "round";
+    } break;
+    case func::FUNC_DATE_FORMAT: {
+      ret = "date_format";
+    } break;
+    default:
+      assert(false);  // This is impossible
+  }
+  return ret;
+}
+
 /// Aggregate functions
 enum agg { NONE, AGG_MIN, AGG_MAX, AGG_AVG, AGG_SUM, AGG_COUNT };
 

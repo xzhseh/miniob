@@ -374,6 +374,19 @@ RC field_expr_transformation(Db *db, const std::vector<Table *> &tables, Express
       return rc;
     }
     f_expr->set_field(f);
+  } else if (expr->type() == ExprType::FUNC) {
+    std::cout << "[field_expr_transformation] func field expr name: " << expr->name() << std::endl;
+    FuncExpr *func_expr = dynamic_cast<FuncExpr *>(expr);
+    assert(func_expr != nullptr && "Expect `func_expr` not to be nullptr");
+    if (!func_expr->is_value()) {
+      Field f;
+      rc = get_field(db, tables, table_map, func_expr->get_rel_attr(), f);
+      if (rc != RC::SUCCESS) {
+        LOG_WARN("[field_expr_transformation] failed to get field for expr: %s", func_expr->name().c_str());
+        return rc;
+      }
+      func_expr->set_field(f);
+    }
   }
   // Recursively transformation the child expression, if exists any
   if (expr->left() != nullptr) {

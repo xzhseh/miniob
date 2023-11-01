@@ -119,9 +119,12 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
         AS
         GROUP
         HAVING
-	IN
-	EXISTS
-	OR
+	    IN
+	    EXISTS
+	    OR
+	    LENGTH
+	    ROUND
+	    DATE_FORMAT
 
 /** union 中定义各种数据类型，真实生成的代码也是union类型，所以不能有非POD类型的数据 **/
 %union {
@@ -149,6 +152,7 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
   int                               number;
   float                             floats;
   enum agg                          agg;
+  enum func                         func;
   bool                              null;
 }
 
@@ -177,6 +181,7 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
 %type <index_attr_name_list>     index_attr_name_list 
 %type <attr_name_list>      attr_name_list           
 %type <agg>                 agg
+%type <func>                func
 %type <rel_attr>            rel_attr
 %type <attr_infos>          attr_def_list
 %type <attr_info>           attr_def
@@ -938,6 +943,21 @@ expression:
       $$ = new FieldExpr(*$1);
       $$->set_name(token_name(sql_string, &@$));
     }
+    | func LBRACE rel_attr RBRACE option_as {
+      if ($5 != nullptr) {
+        $3->alias_name = $5;
+      }
+      assert($3 != nullptr && "Expect `rel_attr` not to be nullptr");
+      $$ = new FuncExpr(*$3, $1);
+      $$->set_name(token_name(sql_string, &@$));
+    }
+    | func LBRACE value RBRACE option_as {
+      if ($5 != nullptr) {
+            // TODO
+      }
+      $$ = new FuncExpr(*$3, $1);
+      $$->set_name(token_name(sql_string, &@$));
+    }
     // Resolve cases like `id1-2 > 3`
     // FIXME: The below expressions have not been set name, we could set name if needed
     // i.e., f_expr->set_name(...)
@@ -1117,6 +1137,19 @@ agg:
     }
     | COUNT {
       $$ = agg::AGG_COUNT;
+    }
+    ;
+
+
+func:
+    LENGTH {
+      $$ = func::FUNC_LENGTH;
+    }
+    | ROUND {
+      $$ = func::FUNC_ROUND;
+    }
+    | DATE_FORMAT {
+      $$ = func::FUNC_DATE_FORMAT;
     }
     ;
 
