@@ -34,7 +34,18 @@ class Field;
 struct RID {
   PageNum page_num;  // record's page number
   SlotNum slot_num;  // record's slot number
-
+  struct HashFunction {
+    std::size_t operator()(const RID& obj) const {
+      std::size_t hash1 = std::hash<int>{}(obj.page_num);
+      std::size_t hash2 = std::hash<int>{}(obj.slot_num);
+      return hash1 ^ hash2;
+    }
+  };
+  struct EqualityFunction{
+    bool operator()(const RID& rid1, const RID& rid2) const {
+      return rid1 == rid2;
+    }
+  };
   RID() = default;
   RID(const PageNum _page_num, const SlotNum _slot_num) : page_num(_page_num), slot_num(_slot_num) {}
 

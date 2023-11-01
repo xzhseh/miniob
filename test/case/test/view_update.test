@@ -1,0 +1,9 @@
+CREATE TABLE t1 (id1 int,id2 char);
+insert into t1 values(1, 'ob');
+
+CREATE VIEW t2 as select id1 from t1;
+select * from t1;
+
+update t2 set id1 = 3 where id1 = 1;
+
+select * from t1;

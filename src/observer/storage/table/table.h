@@ -18,6 +18,7 @@ See the Mulan PSL v2 for more details. */
 #include "storage/table/table_meta.h"
 #include "storage/table/view_table_meta.h"
 #include <unordered_map>
+#include <vector>
 #include <string>
 #include <memory>
 struct RID;
@@ -81,7 +82,7 @@ class Table {
   RC get_record(const RID &rid, Record &record);
   RC delete_table(const char *path, const char *base_dir, const char *name);
   RC recover_insert_record(Record &record);
-
+  RC update_record_real_records(const Record &old_record, Record &new_record);
   // TODO refactor
   RC create_index(Trx *trx, std::vector<const FieldMeta *> field_meta, const char *index_name, bool unique);
 
@@ -106,7 +107,8 @@ class Table {
  private:
   void insert_map_into_tables(Record& record);
   RC init_record_handler(const char *base_dir);
-  RC make_record_by_values(std::vector<pair<const FieldMeta*, Value>> vec, Record& record);
+  RC make_record_by_values(std::vector<std::pair<const FieldMeta*, Value>> vec, Record& record);
+  RC make_record_update_new(std::vector<std::pair<const FieldMeta*, Value>> vec, Record& record, const RID& rid);
  public:
   Index *find_index(const char *index_name) const;
   Index *find_index_by_field(const char *field_name) const;

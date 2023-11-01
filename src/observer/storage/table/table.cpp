@@ -29,6 +29,7 @@ See the Mulan PSL v2 for more details. */
 #include "storage/table/table.h"
 #include "storage/table/table_meta.h"
 #include "storage/trx/trx.h"
+#include "sql/expr/tuple.h"
 #include "storage/table/table_meta.h"
 
 
@@ -191,10 +192,33 @@ RC Table::delete_table(const char *path, const char *base_dir, const char *name)
 
 void Table::insert_map_into_tables(Record& record) {
   
-  std::unordered_map<Table*, RID> table_rid_map;
-  std::unordered_map<Table*, const FieldMeta*> table 
+  // std::unordered_map<Table*, RID> table_rid_map;
+  // std::unordered_map<Table*, const FieldMeta*> table_field_map;
+  RC rc = RC::SUCCESS;
+  std::unordered_map<Table*, std::vector<pair<const FieldMeta*, Value>>> table_result_map;
+  RowTuple tuple;
+  tuple.set_record(&record);
+  tuple.set_schema(this, table_meta_.field_metas());
+  for(int i = 0; i < tuple.cell_num(); i++) {
+    Value val;
+    rc = tuple.cell_at(i, val);
+    if(OB_FAIL(rc)) {
+      LOG_ERROR("boring tuple cell at fail");
+    }
+    table_result_map[meta_.tables[i]].push_back({meta_.fields[i], val});
+  }
+  for(auto&[table, vec] : table_result_map) {
+    Record record;
+    rc = table->make_record_by_values(vec, record);
+    if(OB_FAIL(rc)) {
+      LOG_ERROR("boring make_record_by_values fail");
+    }
+    rc = table->insert_record(record);
+    if(OB_FAIL(rc)) {
+      LOG_ERROR("boring insert record tuple fail");
+    }
+  }
 }
-
 
 RC Table::insert_record(Record &record) {
   if(view_table_flag) {
@@ -275,6 +299,35 @@ RC Table::recover_insert_record(Record &record) {
 const char *Table::name() const { return table_meta_.name(); }
 
 const TableMeta &Table::table_meta() const { return table_meta_; }
+RC Table::make_record_update_new(std::vector<std::pair<const FieldMeta*, Value>> vec, Record& record, const RID& rid) {
+  std::vector<Value> vals;
+  Record old_record;
+  this->get_record(rid, old_record);
+  RowTuple old_tuple;
+  RC rc = RC::SUCCESS;
+  old_tuple.set_record(&old_record);
+  old_tuple.set_schema(this, table_meta_.field_metas());
+  for(int i = table_meta_.sys_field_num(); i < table_meta_.field_num(); i++) {
+    const FieldMeta* field = table_meta_.field(i);
+    bool is_null = true;
+    for(int j = 0; j < vec.size(); j++) {
+      if(field->type() == vec[j].first->type()) {
+        vals.push_back(vec[j].second);
+        is_null = false;
+        break;
+      }
+    }
+    if(is_null) {
+      Value val;
+      rc = old_tuple.cell_at(i - table_meta_.sys_field_num(), val);
+      vals.push_back(val);
+      if(OB_FAIL(rc)) {
+        return rc;
+      }
+    }
+  }
+  return make_record(vals.size(), vals.data(), record);  
+}
 // 缺少的用null值填充
 RC Table::make_record_by_values(std::vector<pair<const FieldMeta*, Value>> vec, Record& record) {
   std::vector<Value> vals;
@@ -282,7 +335,7 @@ RC Table::make_record_by_values(std::vector<pair<const FieldMeta*, Value>> vec, 
     const FieldMeta* field = table_meta_.field(i);
     bool is_null = true;
     for(int j = 0; j < vec.size(); j++) {
-      if(field == vec[j].first) {
+      if(field->type() == vec[j].first->type()) {
         vals.push_back(vec[j].second);
         is_null = false;
         break;
@@ -480,6 +533,26 @@ RC Table::create_index(Trx *trx, std::vector<const FieldMeta *> field_meta, cons
 
 RC Table::delete_record(const Record &record) {
   RC rc = RC::SUCCESS;
+  if(view_table_flag) {
+    std::unordered_set<Table*> table_deleted;
+    const auto& rid_vec = meta_.rid_map[record.rid()];
+    for(int i = 0; i < rid_vec.size(); i++) {
+      if(table_deleted.count(meta_.tables[i]) == 0) {
+        table_deleted.insert(meta_.tables[i]);
+        Record record;
+        rc =  meta_.tables[i]->get_record(rid_vec[i], record);
+        if(OB_FAIL(rc)) {
+          LOG_ERROR("boring get view record error");
+          return rc;
+        }
+        rc =  meta_.tables[i]->delete_record(record);
+        if(OB_FAIL(rc)) {
+          LOG_ERROR("boring delete view record error");
+          return rc;
+        }
+      }
+    }
+  }
   for (Index *index : indexes_) {
     rc = index->delete_entry(record.data(), &record.rid());
     ASSERT(RC::SUCCESS == rc,
@@ -552,10 +625,54 @@ RC Table::sync() {
   LOG_INFO("Sync table over. table=%s", name());
   return rc;
 }
+RC Table::update_record_real_records(const Record &old_record, Record &new_record) {
+  RC rc = RC::SUCCESS;
+  std::unordered_map<Table*, std::vector<pair<const FieldMeta*, Value>>> table_result_map;
+  std::unordered_map<Table*, RID> table_rid_map;
+  RowTuple new_tuple;
+  new_tuple.set_record(&new_record);
+  new_tuple.set_schema(this, table_meta_.field_metas());
+  LOG_TRACE("boring update enter");
+  for(int i = 0; i < new_tuple.cell_num(); i++) {
+    Value val;
+    rc = new_tuple.cell_at(i, val);
+    if(OB_FAIL(rc)) {
+      LOG_ERROR("boring tuple cell at fail");
+      return rc;
+    }
+    table_result_map[meta_.tables[i]].push_back({meta_.fields[i], val});
+    table_rid_map[meta_.tables[i]]  = meta_.rid_map[old_record.rid()][i];
+  }
+  for(auto&[table, vec] : table_result_map) {
+    Record the_new_record;
+    rc = table->make_record_update_new(vec, the_new_record, table_rid_map[table]);
+    if(OB_FAIL(rc)) {
+      LOG_ERROR("boring make_record_by_values fail");
+      return rc;
+    }
+    Record the_old_record;
+    rc = table->get_record(table_rid_map[table], the_old_record);
+    if(OB_FAIL(rc)) {
+      LOG_ERROR("boring insert record tuple fail");
+      return rc;
+    }    
+    the_new_record.set_rid(the_old_record.rid());
+    rc = table->update_record(the_old_record, the_new_record);
+    if(OB_FAIL(rc)) {
+      LOG_ERROR("boring insert record tuple fail");
+      return rc;
+    }
+  }
+  return RC::SUCCESS;
+}
 RC Table::update_record(const Record &old_record, Record &new_record) {
-  assert(old_record.rid() == new_record.rid());
 
   RC rc;
+  if(view_table_flag) {
+    rc = update_record_real_records(old_record, new_record);
+    return rc;
+  }
+  assert(old_record.rid() == new_record.rid());
   rc = delete_entry_of_indexes(old_record.data(), old_record.rid(), false /*error_on_not_exists*/);
   if (rc != RC::SUCCESS) {
     LOG_ERROR("Failed to delete entry of indexes. table=%s, rc=%d:%s", name(), rc, strrc(rc));
