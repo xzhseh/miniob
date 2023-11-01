@@ -461,7 +461,7 @@ attr_def:
 null:
     // Could be empty
   {
-    $$ = false;
+    $$ = true;
   }
   | OB_NULL {
     $$ = true;
@@ -577,6 +577,29 @@ update_stmt:      /*  update 语句的语法解析树*/
       free($2);
       free($4);
     }
+    | UPDATE ID SET ID EQ LBRACE select_stmt RBRACE update_value_list where
+    {
+        $$ = new ParsedSqlNode(SCF_UPDATE);
+        $$->update.relation_name = $2;
+
+        UpdateValueNode node;
+        node.attribute_name = $4;
+        node.sub_query = new SelectSqlNode($7->selection);
+
+        $$->update.update_values.emplace_back(node);
+
+        if ($9 != nullptr) {
+            $$->update.update_values.insert($$->update.update_values.end(), $9->begin(), $9->end());
+    	    delete $9;
+        }
+
+        if ($10!= nullptr) {
+            $$->update.conditions.swap(*$10);
+            delete $10;
+        }
+        free($2);
+        free($4);
+    }
     ;
 
 update_value_list:
@@ -596,6 +619,19 @@ update_value_list:
       $$->emplace_back(node);
       delete $2;
       delete $4;
+    }
+    | COMMA ID EQ LBRACE select_stmt RBRACE update_value_list  {
+      if ($7 != nullptr) {
+      	$$ = $7;
+      } else {
+      	$$ = new std::vector<UpdateValueNode>;
+      }
+      UpdateValueNode node;
+      node.attribute_name = $2;
+      node.sub_query = new SelectSqlNode($5->selection);
+      $$->emplace_back(node);
+      delete $2;
+      delete $5;
     }
 ;
 

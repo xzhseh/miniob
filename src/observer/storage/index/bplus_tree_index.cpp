@@ -79,7 +79,6 @@ RC BplusTreeIndex::open(const char *file_name, const IndexMeta &index_meta,
   return RC::SUCCESS;
 }
 void printBinary(char *number, int len) {
-  std::cout << "Binary representation of the number (in hexadecimal): ";
   for (int i = 0; i < len; ++i) {
     unsigned char byte = static_cast<unsigned char>(number[i]);
     std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(byte) << " ";
@@ -91,7 +90,7 @@ void printBinary(char *number, int len) {
   }
   std::cout << std::dec << std::endl;
 }
-char *BplusTreeIndex::make_user_key(const char *record) {
+char *BplusTreeIndex::make_user_key(const char *record, bool &is_null) {
   char *key = (char *)this->index_handler_.alloc();
   if (key == nullptr) {
     LOG_WARN("Failed to alloc memory for key.");
@@ -102,6 +101,15 @@ char *BplusTreeIndex::make_user_key(const char *record) {
     memcpy(key + attr_length, record + field_meta.offset(), field_meta.len());
     std::cout << "type: " << field_meta.type() << ", offset: " << field_meta.offset()
               << ", length: " << field_meta.len() << std::endl;
+    Value check_null_value;
+    check_null_value.set_type(field_meta.type());
+    check_null_value.set_data(key + attr_length, field_meta.len());
+    if (Value::check_null(check_null_value)) {
+      is_null = true;
+      std::cout << "make_user_key null" << std::endl;
+    } else {
+      std::cout << "make_user_key not null" << std::endl;
+    }
     attr_length += field_meta.len();
   }
   printBinary(key, attr_length);
@@ -129,9 +137,10 @@ RC BplusTreeIndex::close() {
 RC BplusTreeIndex::check_unique_constraint(const char *record) {
   RC rc = RC::SUCCESS;
   std::list<RID> rids{};
-  char *user_key = make_user_key(record);
+  bool is_null = false;
+  char *user_key = make_user_key(record, is_null);
   index_handler_.get_entry(user_key, user_key_len() + static_cast<int>(sizeof(RID)), rids);
-  if (!rids.empty() && index_meta_.unique()) {
+  if (!is_null && !rids.empty() && index_meta_.unique()) {
     rc = RC::CONSTRAINT_UNIQUE;
   }
   free_user_key(user_key);
@@ -142,14 +151,16 @@ RC BplusTreeIndex::insert_entry(const char *record, const RID *rid) {
   if (check_unique_constraint(record) != RC::SUCCESS) {
     return RC::CONSTRAINT_UNIQUE;
   }
-  char *user_key = make_user_key(record);
+  bool nothing;
+  char *user_key = make_user_key(record, nothing);
   RC rc = index_handler_.insert_entry(user_key, rid);
   free_user_key(user_key);
   return rc;
 }
 
 RC BplusTreeIndex::delete_entry(const char *record, const RID *rid) {
-  char *user_key = make_user_key(record);
+  bool nothing;
+  char *user_key = make_user_key(record, nothing);
   RC rc = index_handler_.delete_entry(user_key, rid);
   free_user_key(user_key);
   return rc;
