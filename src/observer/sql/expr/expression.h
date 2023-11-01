@@ -191,7 +191,20 @@ class FuncExpr: public Expression {
 
   // FIXME: Ensure this, basically we need to return the return type of the stored function
   AttrType value_type() const override {
-    return AttrType::UNDEFINED;
+    switch (func_type_) {
+      case func::FUNC_LENGTH:
+      case func::FUNC_DATE_FORMAT:
+        return AttrType::INTS;
+      case func::FUNC_ROUND:
+        if (param_expr_list_.size() == 2) {
+          return AttrType::FLOATS;
+        } else {
+          return AttrType::INTS;
+        }
+      default:
+          assert(false);
+    }
+    assert(false);
   }
 
   std::string alias_name() const { return alias_; }
