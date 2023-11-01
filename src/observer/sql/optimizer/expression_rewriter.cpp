@@ -24,6 +24,9 @@ ExpressionRewriter::ExpressionRewriter() {
 
 RC ExpressionRewriter::rewrite(std::unique_ptr<LogicalOperator> &oper, bool &change_made) {
   RC rc = RC::SUCCESS;
+  if (oper == nullptr) {
+    return rc;
+  }
 
   bool sub_change_made = false;
   std::vector<std::unique_ptr<Expression>> &expressions = oper->expressions();

@@ -734,6 +734,7 @@ RC SelectStmt::create(Db *db, SelectSqlNode &select_sql, Stmt *&stmt) {
   select_stmt->order_by_ = order_by_stmts;
   select_stmt->create_table_name_ = select_sql.create_table_name;
   select_stmt->attrs = select_sql.attr_infos;
+  select_stmt->func_fast_path_ = select_sql.func_fast_path;
   stmt = select_stmt;
   return RC::SUCCESS;
 }

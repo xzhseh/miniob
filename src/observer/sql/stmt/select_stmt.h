@@ -66,6 +66,7 @@ class SelectStmt : public Stmt {
   AggStmt *agg_stmt() const { return agg_stmt_; }
   const std::vector<Expression *> & get_select_expr() const { return expressions_; }
   bool get_select_expr_flag() const { return select_expr_flag_; }
+  bool is_fun_fast_path() const { return func_fast_path_; }
   const std::string create_table_name() const { return create_table_name_; }
   const std::vector<AttrInfoSqlNode> get_attrs() const { return attrs; }
 
@@ -81,4 +82,5 @@ class SelectStmt : public Stmt {
   // This will be propagated to projection operator
   std::vector<Expression *> expressions_;
   bool select_expr_flag_{false};
+  bool func_fast_path_{false};
 };

@@ -661,6 +661,14 @@ select_stmt:        /*  select 语句的语法解析树*/
       std::reverse($$->selection.attr_infos.begin(), $$->selection.attr_infos.end());
       delete $5;
     }
+    // For minimal function cases
+    | SELECT select_attr {
+      $$ = new ParsedSqlNode(SCF_SELECT);
+      $$->selection.func_fast_path = true;
+      assert($2 != nullptr && "Expect `select_attr` not to be nullptr");
+      $$->selection.attributes.swap(*$2);
+      delete $2;
+    }
     |
     SELECT select_attr FROM ID option_as rel_list where order_by_clause group_by_clause having
     {
@@ -944,18 +952,20 @@ expression:
       $$->set_name(token_name(sql_string, &@$));
     }
     | func LBRACE rel_attr RBRACE option_as {
+      std::string alias{""};
       if ($5 != nullptr) {
-        $3->alias_name = $5;
+        alias = $5;
       }
       assert($3 != nullptr && "Expect `rel_attr` not to be nullptr");
-      $$ = new FuncExpr(*$3, $1);
+      $$ = new FuncExpr(*$3, $1, alias);
       $$->set_name(token_name(sql_string, &@$));
     }
     | func LBRACE value RBRACE option_as {
+      std::string alias{""};
       if ($5 != nullptr) {
-            // TODO
+        alias = $5;
       }
-      $$ = new FuncExpr(*$3, $1);
+      $$ = new FuncExpr(*$3, $1, alias);
       $$->set_name(token_name(sql_string, &@$));
     }
     // Resolve cases like `id1-2 > 3`

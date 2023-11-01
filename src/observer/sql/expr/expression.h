@@ -182,11 +182,11 @@ class ValueExpr : public Expression {
 class FuncExpr: public Expression {
  public:
   /// For expression evaluation, will be transformed to `Field` in `select_stmt.cpp`
-  FuncExpr(const RelAttrSqlNode &rel_attr, func func_type)
-      : rel_attr_(rel_attr), func_type_(func_type), is_value_(false) {}
+  FuncExpr(const RelAttrSqlNode &rel_attr, func func_type, std::string &alias)
+      : rel_attr_(rel_attr), func_type_(func_type), is_value_(false), alias_(alias) {}
 
-  FuncExpr(const Value &value, func func_type)
-      : v_expr_(value), func_type_(func_type), is_value_(true) {}
+  FuncExpr(const Value &value, func func_type, std::string &alias)
+      : v_expr_(value), func_type_(func_type), is_value_(true), alias_(alias) {}
 
   virtual ~FuncExpr() = default;
 
@@ -206,6 +206,8 @@ class FuncExpr: public Expression {
   const char *table_name() const { return field_.table_name(); }
 
   const char *field_name() const { return field_.field_name(); }
+
+  std::string alias_name() const { return alias_; }
 
   RC func_evaluate(Value &value) {
     switch (func_type_) {
@@ -280,6 +282,7 @@ class FuncExpr: public Expression {
   Value agg_value_;
   bool agg_flag_{false};
   func func_type_;
+  std::string alias_{""};
 };
 
 /**

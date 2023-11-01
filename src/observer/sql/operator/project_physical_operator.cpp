@@ -34,7 +34,10 @@ RC ProjectPhysicalOperator::open(Trx *trx) {
 }
 
 RC ProjectPhysicalOperator::next() {
-  if (children_.empty()) {
+  if (func_fast_path_ && !fun_fast_path_flag_) {
+    return RC::SUCCESS;
+  }
+  if (children_.empty() || fun_fast_path_flag_) {
     return RC::RECORD_EOF;
   }
   return children_[0]->next();
@@ -48,6 +51,25 @@ RC ProjectPhysicalOperator::close() {
 }
 
 Tuple *ProjectPhysicalOperator::current_tuple() {
+  if (func_fast_path_) {
+    assert(select_expr_flag_ && "[ProjectPhysicalOperator::current_tuple] expect `select_expr_flag_` to be true");
+    fun_fast_path_flag_ = true;
+    std::vector<Value> cells;
+    for (auto *expr: select_expr_) {
+      Value v;
+      std::cout << "[ProjectPhysicalOperator::current_tuple::func_fast_path] current expr: " << expr->name() << std::endl;
+      ValueListTuple t; // Just a placeholder
+      RC rc = expr->get_value(t, v);
+      if (rc != RC::SUCCESS) {
+        LOG_WARN("[ProjectPhysicalOperator::current_tuple::func_fast_path] failed to get the value of expression");
+        return nullptr;
+      }
+      cells.push_back(v);
+    }
+    expr_tuple_.set_cells(cells);
+    return &expr_tuple_;
+  }
+
   if (dynamic_cast<ValueListTuple *>(children_[0]->current_tuple()) != nullptr && !select_expr_flag_) {
     // The child is of type aggregation, produce the value tuple
     return children_[0]->current_tuple();

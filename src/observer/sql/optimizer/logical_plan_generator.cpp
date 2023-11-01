@@ -226,6 +226,10 @@ RC LogicalPlanGenerator::create_plan(SelectStmt *select_stmt, unique_ptr<Logical
     project_op->select_expr_ = select_stmt->get_select_expr();
   }
 
+  if (select_stmt->is_fun_fast_path()) {
+    project_op->func_fast_path_ = true;
+  }
+
   // FIXME: Is this enough to identify create table select statement?
   if (select_stmt->create_table_name() != "") {
     project_op->tables_ = select_stmt->tables();

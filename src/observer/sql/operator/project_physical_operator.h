@@ -48,9 +48,12 @@ class ProjectPhysicalOperator : public PhysicalOperator {
   std::vector<Expression *> select_expr_;
   bool select_expr_flag_{false};
 
+  bool func_fast_path_{false};
+
  private:
   ProjectTuple tuple_;
   ValueListTuple expr_tuple_;
   std::string create_table_name{""};
   bool agg_flag_{false};
+  bool fun_fast_path_flag_{false};
 };
