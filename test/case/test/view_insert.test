@@ -2,7 +2,7 @@
 create table create_view_t1(id int, age int, name char(10));
 
 create view create_view_v1 as select * from create_view_t1;
-
+create view create_view_v2(id, age) as select id, age from create_view_t1;
 insert into create_view_v1 values(12, 12, 'QLZFU8P');
 insert into create_view_v1 values(25, 25, 'NYDTNZ1Y');
 insert into create_view_v1 values(49, 49, '8CI');

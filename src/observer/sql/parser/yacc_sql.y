@@ -627,6 +627,11 @@ select_stmt:        /*  select 语句的语法解析树*/
       $$->selection.create_view_name = $3;
     }
     |
+    CREATE VIEW ID LBRACE select_attr RBRACE AS select_stmt {
+      $$ = $8;
+      $$->selection.create_view_name = $3;
+    }
+    |
     CREATE VIEW ID LBRACE attr_def attr_def_list RBRACE select_stmt 
     {
       $$ = $8;
