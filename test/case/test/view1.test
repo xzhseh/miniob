@@ -52,4 +52,5 @@ insert into create_view_v1 values(25, 25, 'NYDTNZ1Y');
 insert into create_view_v1 values(49, 49, '8CI');
 insert into create_view_v1 values(140, 140, 'YE');
 delete from create_view_v1 where age = 140;
+
 select count(*) from create_view_v1;

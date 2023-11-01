@@ -57,6 +57,7 @@ void view_rebuild_function(std::string view_name) {
     ProjectPhysicalOperator *oper = dynamic_cast<ProjectPhysicalOperator *>(ptr.get());
     if (oper != nullptr && oper->name() != "") {
     current_db->drop_table(oper->name().c_str());
+    oper->close();
     oper->open(trx);
     if (oper->select_expr_flag_) {
       std::vector<AttrInfoSqlNode> expr_table_attrs;

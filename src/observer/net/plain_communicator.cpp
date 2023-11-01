@@ -291,7 +291,11 @@ RC PlainCommunicator::write_result_internal(SessionEvent *event, bool &need_disc
           return write_state(event, need_disconnect);
         }
       }
-
+      if(oper->view_name() != "") {
+        expr_table->set_view_flag(true);
+        current_db = session_->get_current_db();
+        view_rebuild_map[oper->view_name()] = std::move(*sql_result->get_operator());
+      }
       rc = sql_result->close();
       sql_result->set_return_code(RC::SUCCESS);
       return write_state(event, need_disconnect);
