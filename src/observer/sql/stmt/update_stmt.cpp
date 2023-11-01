@@ -14,6 +14,8 @@ See the Mulan PSL v2 for more details. */
 
 #include "sql/stmt/update_stmt.h"
 #include "common/log/log.h"
+#include "event/sql_debug.h"
+#include "sql/expr/sub_query_expr.h"
 #include "sql/stmt/filter_stmt.h"
 #include "storage/db/db.h"
 #include "storage/table/table.h"
@@ -21,6 +23,24 @@ See the Mulan PSL v2 for more details. */
 UpdateStmt::UpdateStmt(Table *table, std::vector<Value> values, std::vector<FieldMeta> field_meta,
                        FilterStmt *filter_stmt)
     : table_(table), values_(values), field_metas_(field_meta), filter_stmt_(filter_stmt) {}
+
+RC get_sub_query_value(Db *db, const SelectSqlNode &sub_query, Value &value) {
+  std::unordered_map<std::string, Table *> table_map;
+  //  std::unordered_map<std::string, Table *> parent_table_map;
+  //  std::vector<Table *> tables;
+  //  RC rc = SelectStmt::resolve_tables(db, sub_query, tables, table_map, parent_table_map);
+  //  if (rc != RC::SUCCESS) {
+  //    LOG_WARN("failed to resolve tables. rc=%d:%s", rc, strrc(rc));
+  //    return rc;
+  //  }
+  std::shared_ptr<ParsedSqlNode> sub_query_node(new ParsedSqlNode);
+  sub_query_node->flag = SCF_SELECT;
+  sub_query_node->selection = sub_query;
+  SubQueryExpr sub_query_expr(sub_query_node, table_map);
+  // Should return value
+  sub_query_expr.set_return_value(true);
+  return sub_query_expr.get_const_value(value);
+}
 
 RC UpdateStmt::create(Db *db, UpdateSqlNode &update, Stmt *&stmt) {
   const char *table_name = update.relation_name.c_str();
@@ -43,11 +63,26 @@ RC UpdateStmt::create(Db *db, UpdateSqlNode &update, Stmt *&stmt) {
   std::vector<Value> values;
   std::vector<FieldMeta> field_metas;
 
-  for (auto &[update_attr, update_value] : update.update_values) {
+  for (auto &[update_attr, update_value_node, update_sub_query] : update.update_values) {
     const FieldMeta *field_meta = table_meta.field(update_attr.c_str());
     if (nullptr == field_meta) {
       LOG_WARN("field not exist");
       return RC::SCHEMA_FIELD_NOT_EXIST;
+    }
+    Value update_value;
+    if (update_sub_query) {
+      RC rc = get_sub_query_value(db, *update_sub_query, update_value);
+      if (rc != RC::SUCCESS) {
+        // Delay the error handling
+        update_value.set_type(field_meta->type());
+        update_value.trick_update();
+      } else {
+        if (Value::check_null(update_value)) {
+          update_value.set_null();
+        }
+      }
+    } else {
+      update_value = update_value_node;
     }
 
     // Check if update_attr and update_value are of the same type
@@ -55,16 +90,11 @@ RC UpdateStmt::create(Db *db, UpdateSqlNode &update, Stmt *&stmt) {
 
     if (update_value.is_null()) {
       if (!field_meta->is_null()) {
-        // If not null is either implicitly / explicitly enabled
-        // The null can not be inserted into the field
-        return RC::INVALID_ARGUMENT;
+        update_value.trick_update();
+      } else {
+        // Set the value to the hard-coded null value
+        Value::set_null(update_value, field_type);
       }
-
-      // Set the value to the hard-coded null value
-      Value::set_null(update_value, field_type);
-
-      assert(update_value.is_null() && "`values[i]` should persist the `is_null_` property");
-      assert(update_value.attr_type() == field_type && "The type should be the same");
     }
 
     AttrType value_type = update_value.attr_type();
@@ -75,9 +105,14 @@ RC UpdateStmt::create(Db *db, UpdateSqlNode &update, Stmt *&stmt) {
     }
 
     if (field_type != value_type) {
-      LOG_ERROR("field type mismatch. table=%s, field=%s, field type=%d, value_type=%d",
-          table_name, field_meta->name(), field_type, value_type);
-      return RC::SCHEMA_FIELD_TYPE_MISMATCH;
+      Value cast_result;
+      if (!update_value.cast_to(field_type, cast_result)) {
+        sql_debug("failed to cast value. field_type=%d, value_type=%d", field_type, value_type);
+        LOG_WARN("failed to cast value. field_type=%d, value_type=%d", field_type, value_type);
+        return RC::SCHEMA_FIELD_TYPE_MISMATCH;
+      }
+      // Cast successfully
+      update_value = cast_result;
     }
     values.push_back(update_value);
     field_metas.push_back(*field_meta);
@@ -100,11 +135,16 @@ RC UpdateStmt::create(Db *db, UpdateSqlNode &update, Stmt *&stmt) {
                              static_cast<int>(update.conditions.size()),
                              filter_stmt);
   if (rc != RC::SUCCESS) {
+    sql_debug("failed to create filter statement. rc=%d:%s", rc, strrc(rc));
     LOG_WARN("failed to create filter statement. rc=%d:%s", rc, strrc(rc));
     return rc;
   }
-
+  // debug the values
+  for (auto &value : values) {
+    sql_debug("final update value: %s", value.to_string().c_str());
+  }
   // Create new update stmt
   stmt = new UpdateStmt(table, values, field_metas, filter_stmt);
+  sql_debug("create update statement successfully");
   return RC::SUCCESS;
 }

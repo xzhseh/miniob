@@ -216,6 +216,7 @@ struct DeleteSqlNode {
 struct UpdateValueNode {
   std::string attribute_name;  ///< 更新的字段
   Value value;                 ///< 更新的值
+  SelectSqlNode *sub_query{nullptr};
 };
 
 ;
@@ -240,7 +241,8 @@ struct AttrInfoSqlNode {
   AttrType type;     ///< Type of attribute
   std::string name;  ///< Attribute name
   size_t length;     ///< Length of attribute
-  bool is_null{false};
+  // Mysql default the new field is null
+  bool is_null;
 };
 
 /**

@@ -1,0 +1,7 @@
+CREATE TABLE Update_select_t1(id int, t_name char(10), col1 int, col2 int);
+CREATE TABLE Update_select_t2(id int, t_name char(10), col1 int, col2 int);
+insert into Update_select_t1 VALUES (1, 'F', 6, 1);
+insert into Update_select_t1 VALUES (4, '5QJDUQHQ', 9, 1);
+insert into Update_select_t1 VALUES (4, 'NRHDC', 9, 1);
+insert into Update_select_t1 VALUES (4, '5QJDUQHQ', null, 1);
+select max(col1) from Update_select_t1;

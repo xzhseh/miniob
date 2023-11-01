@@ -112,6 +112,8 @@ class Value {
 
   bool is_null() const { return is_null_; }
 
+  void trick_update() { this->length_ = INT32_MAX; }
+
   void set_data(char *data, int length);
   void set_int(int val);
   void set_float(float val);
@@ -126,6 +128,7 @@ class Value {
 
   int compare(const Value &other) const;
   RC like(const Value &other, bool &result) const;
+  bool cast_to(const AttrType &target_type, Value &result) const;
 
   const char *data() const;
 

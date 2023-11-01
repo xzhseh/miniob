@@ -13,6 +13,7 @@ See the Mulan PSL v2 for more details. */
 //
 
 #include "sql/parser/value.h"
+#include <cmath>
 #include <cstring>
 #include <regex>
 #include <sstream>
@@ -236,6 +237,14 @@ std::string Value::to_string() const {
 }
 
 int Value::compare(const Value &other) const {
+  if (Value::check_null(*this) && Value::check_null(other)) {
+    return 0;
+  } else if (Value::check_null(*this)) {
+    return -1;
+  } else if (Value::check_null(other)) {
+    return 1;
+  }
+
   if (this->attr_type_ == other.attr_type_) {
     switch (this->attr_type_) {
       case INTS: {
@@ -460,8 +469,90 @@ bool Value::get_boolean() const {
   }
   return false;
 }
+struct NumberFromStr {
+  bool float_or_int;
+  float float_ = 0;
+  int int_ = 0;
+  float to_float() {
+    if (float_or_int) {
+      return float_;
+    }
+    return int_;
+  }
+  explicit NumberFromStr(const char *str);
+};
+
+NumberFromStr::NumberFromStr(const char *str) {
+  int state = 0;  // 0 整数 1小数
+  char *c = (char *)str;
+  int float_jw = 10;
+  while (*c) {
+    if (*c >= '0' && *c <= '9') {
+      if (state == 0) {
+        int_ *= 10;
+        int_ += *c - '0';
+      } else {
+        float_ += 1.0 * (*c - '0') / float_jw;
+        float_jw *= 10;
+      }
+    } else if (*c == '.') {
+      state = 1;
+      float_ = int_;
+    } else {
+      break;
+    }
+    c++;
+  }
+  float_or_int = state;
+}
 
 int Value::get_date() const {
   assert(attr_type_ == DATE && "Currently expect `attr_type_` to be of type `DATE`");
   return num_value_.date_value_;
+}
+bool Value::cast_to(const AttrType &target_type, Value &result) const {
+  // Null value cast
+  if (Value::check_null(*this)) {
+    return false;
+  }
+  // Same type cast
+  if (this->attr_type_ == target_type) {
+    result = *this;
+    return true;
+  }
+  // Char --> int
+  if (this->attr_type_ == CHARS && target_type == INTS) {
+    int int_val;
+    if (sscanf(this->str_value_.c_str(), "%d", &int_val) == 1) {
+      result.set_int(int_val);
+      return true;
+    }
+    float float_val;
+    if (sscanf(this->str_value_.c_str(), "%f", &float_val) == 1) {
+      result.set_float(float_val);
+      return true;
+    }
+    return false;
+  }
+  // int --> float
+  if (this->attr_type_ == INTS && target_type == FLOATS) {
+    result.set_float(this->num_value_.int_value_);
+    return true;
+  }
+  // float --> int
+  if (this->attr_type_ == FLOATS && target_type == INTS) {
+    result.set_int(round(this->num_value_.float_value_));
+    return true;
+  }
+  // float --> char
+  if (this->attr_type_ == FLOATS && target_type == CHARS) {
+    result.set_string(common::double_to_str(this->num_value_.float_value_).c_str());
+    return true;
+  }
+  // int --> char
+  if (this->attr_type_ == INTS && target_type == CHARS) {
+    result.set_string(std::to_string(this->num_value_.int_value_).c_str());
+    return true;
+  }
+  return false;
 }
