@@ -197,13 +197,13 @@ void view_rebuild_function(std::string view_name) {
       }
       Record record;
       rc = table->make_record(cell_num, vals.data(), record);
+      rc = table->insert_record(record);
       table->meta_.rid_map[record.rid()] = rids;
       if (rc != RC::SUCCESS) {
         oper->close();
         current_db->drop_table(oper->name().c_str());
         return;
       }
-      rc = table->insert_record(record);
       if (rc != RC::SUCCESS) {
         oper->close();
         current_db->drop_table(oper->name().c_str());

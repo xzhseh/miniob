@@ -311,7 +311,7 @@ RC Table::make_record_update_new(std::vector<std::pair<const FieldMeta*, Value>>
     const FieldMeta* field = table_meta_.field(i);
     bool is_null = true;
     for(int j = 0; j < vec.size(); j++) {
-      if(field->type() == vec[j].first->type()) {
+      if(field == vec[j].first) {
         vals.push_back(vec[j].second);
         is_null = false;
         break;
@@ -335,7 +335,7 @@ RC Table::make_record_by_values(std::vector<pair<const FieldMeta*, Value>> vec, 
     const FieldMeta* field = table_meta_.field(i);
     bool is_null = true;
     for(int j = 0; j < vec.size(); j++) {
-      if(field->type() == vec[j].first->type()) {
+      if(field == vec[j].first) {
         vals.push_back(vec[j].second);
         is_null = false;
         break;
@@ -657,6 +657,8 @@ RC Table::update_record_real_records(const Record &old_record, Record &new_recor
       return rc;
     }    
     the_new_record.set_rid(the_old_record.rid());
+    LOG_ERROR("boring %d  %d %d", the_old_record.rid().page_num, the_new_record.rid().page_num, table_rid_map[table].page_num);
+    LOG_ERROR("boring %d  %d %d", the_old_record.rid().slot_num, the_new_record.rid().slot_num, table_rid_map[table].slot_num);
     rc = table->update_record(the_old_record, the_new_record);
     if(OB_FAIL(rc)) {
       LOG_ERROR("boring insert record tuple fail");
@@ -670,7 +672,6 @@ RC Table::update_record(const Record &old_record, Record &new_record) {
   RC rc;
   if(view_table_flag) {
     rc = update_record_real_records(old_record, new_record);
-    return rc;
   }
   assert(old_record.rid() == new_record.rid());
   rc = delete_entry_of_indexes(old_record.data(), old_record.rid(), false /*error_on_not_exists*/);
