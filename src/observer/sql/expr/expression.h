@@ -17,6 +17,7 @@ See the Mulan PSL v2 for more details. */
 #include <cstring>
 #include <memory>
 #include <string>
+#include <math.h>
 
 #include "common/log/log.h"
 #include "sql/parser/parse_defs.h"
@@ -181,12 +182,8 @@ class ValueExpr : public Expression {
 
 class FuncExpr: public Expression {
  public:
-  /// For expression evaluation, will be transformed to `Field` in `select_stmt.cpp`
-  FuncExpr(const RelAttrSqlNode &rel_attr, func func_type, std::string &alias)
-      : rel_attr_(rel_attr), func_type_(func_type), is_value_(false), alias_(alias) {}
-
-  FuncExpr(const Value &value, func func_type, std::string &alias)
-      : v_expr_(value), func_type_(func_type), is_value_(true), alias_(alias) {}
+  explicit FuncExpr(std::vector<Expression *> &&param_expr_list, func func_type, std::string &alias)
+      : param_expr_list_(std::move(param_expr_list)), func_type_(func_type), alias_(alias) {}
 
   virtual ~FuncExpr() = default;
 
@@ -194,37 +191,57 @@ class FuncExpr: public Expression {
 
   // FIXME: Ensure this, basically we need to return the return type of the stored function
   AttrType value_type() const override {
-    return field_.attr_type();
+    return AttrType::UNDEFINED;
   }
-
-  bool is_value() { return is_value_; }
-
-  Field &field() { return field_; }
-
-  const Field &field() const { return field_; }
-
-  const char *table_name() const { return field_.table_name(); }
-
-  const char *field_name() const { return field_.field_name(); }
 
   std::string alias_name() const { return alias_; }
 
-  RC func_evaluate(Value &value) {
+  std::vector<Expression *> &get_param_expr_list() { return param_expr_list_; }
+
+  RC func_evaluate(const Tuple &tuple, Value &value) {
+    RC rc = RC::SUCCESS;
     switch (func_type_) {
       case func::FUNC_LENGTH: {
-        if (value.attr_type() != AttrType::CHARS) {
+        if (param_expr_list_.size() != 1) {
           return RC::INVALID_ARGUMENT;
         }
-        int length = value.get_string().size();
+
+        Value v;
+        rc = param_expr_list_[0]->get_value(tuple, v);
+        if (rc != RC::SUCCESS) {
+          LOG_WARN("[FuncExpr::func_evaluate::func_length] failed to get the value from param_expr_list");
+          return rc;
+        }
+        if (v.attr_type() != AttrType::CHARS) {
+          return RC::INVALID_ARGUMENT;
+        }
+        int length = v.get_string().size();
         value.set_int(length);
       } break;
       case func::FUNC_ROUND: {
-        if (value.attr_type() != AttrType::FLOATS) {
+        if (param_expr_list_.size() != 2) {
           return RC::INVALID_ARGUMENT;
         }
-        // FIXME: Ensure this
-        int round = (int) value.get_float();
-        value.set_int(round);
+
+        Value num;
+        Value precision;
+        // Note, in reverse order
+        rc = param_expr_list_[1]->get_value(tuple, num);
+        if (rc != RC::SUCCESS) {
+          LOG_WARN("[FuncExpr::func_evaluate::func_round] failed to get the value from param_expr_list");
+          return rc;
+        }
+        rc = param_expr_list_[0]->get_value(tuple, precision);
+        if (rc != RC::SUCCESS) {
+          LOG_WARN("[FuncExpr::func_evaluate::func_round] failed to get the value from param_expr_list");
+          return rc;
+        }
+        if (num.attr_type() != AttrType::FLOATS || precision.attr_type() != AttrType::INTS) {
+          return RC::INVALID_ARGUMENT;
+        }
+        double mul = pow(10.0, precision.get_int());
+        double res = round(num.get_float() * mul) / mul;
+        value.set_float(res);
       } break;
       case func::FUNC_DATE_FORMAT: {
         if (value.attr_type() != AttrType::DATE) {
@@ -238,52 +255,23 @@ class FuncExpr: public Expression {
         return RC::INVALID_ARGUMENT;
       }
     }
-    return RC::SUCCESS;
+    return rc;
   }
 
   RC get_value(const Tuple &tuple, Value &value) override {
-    RC rc = RC::SUCCESS;
-    if (is_value_) {
-      rc = v_expr_.get_value(tuple, value);
-    } else {
-      rc = f_expr_.get_value(tuple, value);
-    }
-    if (rc != RC::SUCCESS) {
-      LOG_WARN("[FuncExpr::get_value] failed to get the value from underlying expression");
-      return rc;
-    }
-    rc = func_evaluate(value);
+    RC rc = func_evaluate(tuple, value);
     if (rc != RC::SUCCESS) {
       LOG_WARN("[FuncExpr::func_evaluate] invalid argument: %s.", value.to_string().c_str());
       return rc;
     }
-    return rc;
-  }
-
-  void set_agg_value(Value &v) {
-    agg_flag_ = true;
-    agg_value_ = v;
+    return RC::SUCCESS;
   }
 
   Expression *left() const override { return nullptr; }
   Expression *right() const override { return nullptr; }
 
-  const RelAttrSqlNode &get_rel_attr() { return rel_attr_; }
-
-  void set_field(const Field &field) {
-    field_ = field;
-    f_expr_ = FieldExpr(field_);
-  }
-
  private:
-  FieldExpr f_expr_;
-  ValueExpr v_expr_;
-  bool is_value_{false};
-  Field field_;
-  RelAttrSqlNode rel_attr_;
-  // To deal with agg in expression
-  Value agg_value_;
-  bool agg_flag_{false};
+  std::vector<Expression *> param_expr_list_;
   func func_type_;
   std::string alias_{""};
 };

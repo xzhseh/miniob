@@ -356,7 +356,7 @@ RC SelectStmt::resolve_tables(Db *db, const SelectSqlNode &select_sql, std::vect
   return RC::SUCCESS;
 }
 
-/// Recursively transform the `RelAttrSqlNode` in `FieldExpr` & `FuncExpr` to real field
+/// Recursively transform the `RelAttrSqlNode` in `FieldExpr` to real field
 RC field_expr_transformation(Db *db, const std::vector<Table *> &tables, Expression *expr,
                              std::unordered_map<std::string, Table *> *table_map) {
   RC rc = RC::SUCCESS;
@@ -378,15 +378,13 @@ RC field_expr_transformation(Db *db, const std::vector<Table *> &tables, Express
     std::cout << "[field_expr_transformation] func field expr name: " << expr->name() << std::endl;
     FuncExpr *func_expr = dynamic_cast<FuncExpr *>(expr);
     assert(func_expr != nullptr && "Expect `func_expr` not to be nullptr");
-    if (!func_expr->is_value()) {
-      Field f;
-      rc = get_field(db, tables, table_map, func_expr->get_rel_attr(), f);
-      std::cout << "[field_expr_transformation] current field: " << f.field_name() << " table name: " << f.table_name() << std::endl;
+    for (auto *param_expr : func_expr->get_param_expr_list()) {
+      // Recursively parse parameters' expressions
+      rc = field_expr_transformation(db, tables, param_expr, table_map);
       if (rc != RC::SUCCESS) {
-        LOG_WARN("[field_expr_transformation] failed to get field for expr: %s", func_expr->name().c_str());
+        LOG_WARN("[field_expr_transformation] param_expr transformation failed to get the corresponding field");
         return rc;
       }
-      func_expr->set_field(f);
     }
   }
   // Recursively transformation the child expression, if exists any

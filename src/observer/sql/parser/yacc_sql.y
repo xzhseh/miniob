@@ -951,21 +951,12 @@ expression:
       $$ = new FieldExpr(*$1);
       $$->set_name(token_name(sql_string, &@$));
     }
-    | func LBRACE rel_attr RBRACE option_as {
+    | func LBRACE expression_list RBRACE option_as {
       std::string alias{""};
       if ($5 != nullptr) {
         alias = $5;
       }
-      assert($3 != nullptr && "Expect `rel_attr` not to be nullptr");
-      $$ = new FuncExpr(*$3, $1, alias);
-      $$->set_name(token_name(sql_string, &@$));
-    }
-    | func LBRACE value RBRACE option_as {
-      std::string alias{""};
-      if ($5 != nullptr) {
-        alias = $5;
-      }
-      $$ = new FuncExpr(*$3, $1, alias);
+      $$ = new FuncExpr(std::move(*$3), $1, alias);
       $$->set_name(token_name(sql_string, &@$));
     }
     // Resolve cases like `id1-2 > 3`
