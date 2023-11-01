@@ -332,7 +332,7 @@ RC SelectStmt::resolve_tables(Db *db, const SelectSqlNode &select_sql, std::vect
         return RC::INVALID_ARGUMENT;
       }
 
-      Table *table = db->find_table(table_name);
+      Table *table = db->find_table(table_name, false);
       if (nullptr == table) {
         LOG_WARN("no such table. db=%s, table_name=%s", db->name(), table_name);
         return RC::SCHEMA_TABLE_NOT_EXIST;
@@ -350,7 +350,7 @@ RC SelectStmt::resolve_tables(Db *db, const SelectSqlNode &select_sql, std::vect
       }
     } else {
       std::string parent_relation_name = select_sql.relations[i].relation_name;
-      parent_table_map[parent_relation_name] = db->find_table(parent_relation_name.c_str());
+      parent_table_map[parent_relation_name] = db->find_table(parent_relation_name.c_str(), false);
     }
   }
   return RC::SUCCESS;
