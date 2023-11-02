@@ -95,7 +95,16 @@ RC PredicatePhysicalOperator::next() {
 
     if (where_expr_flag_) {
       // Should be expression filter
-      if (filter(where_expr_, *tuple)) {
+      bool filter_flag{false};
+
+      for (auto *where_expr_ : where_expr_vec_) {
+        if (!filter(where_expr_, *tuple)) {
+          filter_flag = true;
+          break;
+        }
+      }
+
+      if (!filter_flag) {
         return RC::SUCCESS;
       } else {
         // Keep filtering out tuples until

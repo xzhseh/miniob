@@ -31,5 +31,5 @@ class PredicateLogicalOperator : public LogicalOperator {
   LogicalOperatorType type() const override { return LogicalOperatorType::PREDICATE; }
 
   bool where_expr_flag_{false};
-  ConditionSqlNode *where_expr_{nullptr};
+  std::vector<ConditionSqlNode *> where_expr_vec_;
 };

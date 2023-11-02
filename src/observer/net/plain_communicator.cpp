@@ -399,6 +399,11 @@ RC PlainCommunicator::write_result_internal(SessionEvent *event, bool &need_disc
   rc = RC::SUCCESS;
   Tuple *tuple = nullptr;
   while (RC::SUCCESS == (rc = sql_result->next_tuple(tuple))) {
+    if (tuple == nullptr) {
+      // Projection get_value failed, specially for expression
+      rc = RC::INVALID_ARGUMENT;
+      break;
+    }
     assert(tuple != nullptr);
 
     int cell_num = tuple->cell_num();

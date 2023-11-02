@@ -26,6 +26,7 @@ See the Mulan PSL v2 for more details. */
 #include "sql/executor/sql_result.h"
 #include "sql/expr/expression.h"
 #include "sql/operator/logical_operator.h"
+#include "sql/operator/project_logical_operator.h"
 #include "sql/stmt/stmt.h"
 
 using namespace std;
@@ -41,10 +42,14 @@ RC OptimizeStage::handle_request(SQLStageEvent *sql_event) {
     return rc;
   }
 
-  rc = rewrite(logical_operator);
-  if (rc != RC::SUCCESS) {
-    LOG_WARN("failed to rewrite plan. rc=%s", strrc(rc));
-    return rc;
+  auto *res = dynamic_cast<ProjectLogicalOperator *>(logical_operator.get());
+
+  if (!res || (res && !res->func_fast_path_)) {
+    rc = rewrite(logical_operator);
+    if (rc != RC::SUCCESS) {
+      LOG_WARN("failed to rewrite plan. rc=%s", strrc(rc));
+      return rc;
+    }
   }
 
   rc = optimize(logical_operator);

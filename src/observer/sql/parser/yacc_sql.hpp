@@ -115,19 +115,22 @@ extern int yydebug;
     IN = 321,                      /* IN  */
     EXISTS = 322,                  /* EXISTS  */
     OR = 323,                      /* OR  */
-    NUMBER = 324,                  /* NUMBER  */
-    FLOAT = 325,                   /* FLOAT  */
-    ID = 326,                      /* ID  */
-    SSS = 327,                     /* SSS  */
-    DATE_STR = 328,                /* DATE_STR  */
-    ID_MINUS = 329,                /* ID_MINUS  */
-    ID_DOT_ID_MINUS = 330,         /* ID_DOT_ID_MINUS  */
-    MIN_MINUS = 331,               /* MIN_MINUS  */
-    MAX_MINUS = 332,               /* MAX_MINUS  */
-    AVG_MINUS = 333,               /* AVG_MINUS  */
-    SUM_MINUS = 334,               /* SUM_MINUS  */
-    COUNT_MINUS = 335,             /* COUNT_MINUS  */
-    UMINUS = 336                   /* UMINUS  */
+    LENGTH = 324,                  /* LENGTH  */
+    ROUND = 325,                   /* ROUND  */
+    DATE_FORMAT = 326,             /* DATE_FORMAT  */
+    NUMBER = 327,                  /* NUMBER  */
+    FLOAT = 328,                   /* FLOAT  */
+    ID = 329,                      /* ID  */
+    SSS = 330,                     /* SSS  */
+    DATE_STR = 331,                /* DATE_STR  */
+    ID_MINUS = 332,                /* ID_MINUS  */
+    ID_DOT_ID_MINUS = 333,         /* ID_DOT_ID_MINUS  */
+    MIN_MINUS = 334,               /* MIN_MINUS  */
+    MAX_MINUS = 335,               /* MAX_MINUS  */
+    AVG_MINUS = 336,               /* AVG_MINUS  */
+    SUM_MINUS = 337,               /* SUM_MINUS  */
+    COUNT_MINUS = 338,             /* COUNT_MINUS  */
+    UMINUS = 339                   /* UMINUS  */
   };
   typedef enum yytokentype yytoken_kind_t;
 #endif
@@ -136,7 +139,7 @@ extern int yydebug;
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
 union YYSTYPE
 {
-#line 127 "yacc_sql.y"
+#line 130 "yacc_sql.y"
 
   ParsedSqlNode *                   sql_node;
   ConditionSqlNode *                condition;
@@ -162,9 +165,10 @@ union YYSTYPE
   int                               number;
   float                             floats;
   enum agg                          agg;
+  enum func                         func;
   bool                              null;
 
-#line 168 "yacc_sql.hpp"
+#line 172 "yacc_sql.hpp"
 
 };
 typedef union YYSTYPE YYSTYPE;

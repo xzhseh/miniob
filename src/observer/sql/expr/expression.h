@@ -17,6 +17,10 @@ See the Mulan PSL v2 for more details. */
 #include <cstring>
 #include <memory>
 #include <string>
+#include <math.h>
+#include <iostream>
+#include <sstream>
+#include <iomanip>
 
 #include "common/log/log.h"
 #include "sql/parser/parse_defs.h"
@@ -43,7 +47,8 @@ enum class ExprType {
   COMPARISON,   ///< 需要做比较的表达式
   CONJUNCTION,  ///< 多个表达式使用同一种关系(AND或OR)来联结
   ARITHMETIC,   ///< 算术运算
-  SUB_QUERY,  ///< 子查询，比如在IN子句中，子查询的结果是一个集合，需要和字段的值做比较
+  SUB_QUERY,    ///< 子查询，比如在IN子句中，子查询的结果是一个集合，需要和字段的值做比较
+  FUNC,         ///< 函数
 };
 
 /**
@@ -176,6 +181,222 @@ class ValueExpr : public Expression {
 
  private:
   Value value_;
+};
+
+class FuncExpr: public Expression {
+ public:
+  explicit FuncExpr(std::vector<Expression *> &&param_expr_list, func func_type, std::string &alias)
+      : param_expr_list_(std::move(param_expr_list)), func_type_(func_type), alias_(alias) {}
+
+  virtual ~FuncExpr() = default;
+
+  ExprType type() const override { return ExprType::FUNC; }
+
+  // FIXME: Ensure this, basically we need to return the return type of the stored function
+  AttrType value_type() const override {
+    switch (func_type_) {
+      case func::FUNC_DATE_FORMAT:
+        return AttrType::CHARS;
+      case func::FUNC_LENGTH:
+        return AttrType::INTS;
+      case func::FUNC_ROUND:
+        if (param_expr_list_.size() == 2) {
+          return AttrType::FLOATS;
+        } else {
+          return AttrType::INTS;
+        }
+      default:
+          assert(false);
+    }
+    assert(false);
+  }
+
+  std::string getEnglishSuffix(int day) {
+    if (day >= 11 && day <= 13) {
+      return "th";
+    }
+
+    switch (day % 10) {
+      case 1: return "st";
+      case 2: return "nd";
+      case 3: return "rd";
+      default: return "th";
+    }
+  }
+
+  std::string getMonthName(int month) {
+    static const std::vector<std::string> months = {
+        "", "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"
+    };
+
+    if (month > 0 && month <= 12) {
+      return months[month];
+    } else {
+      return "Invalid";
+    }
+  }
+
+  std::string mysql_date_format(const std::string &date, const std::string &format) {
+    int year, month, day;
+    char dash1, dash2;
+
+    std::istringstream dateStream(date);
+    dateStream >> year >> dash1 >> month >> dash2 >> day;
+
+    // Check if the date was in the correct format
+    if (!dateStream || dash1 != '-' || dash2 != '-') {
+      return "Invalid date format";
+    }
+
+    std::ostringstream result;
+    for (size_t i = 0; i < format.size(); ++i) {
+      if (format[i] == '%') {
+          if (++i < format.size()) {
+          switch (format[i]) {
+            case 'Y': // Year with century
+              result << std::setw(4) << std::setfill('0') << year;
+              break;
+            case 'y': // Year without century
+              result << std::setw(2) << std::setfill('0') << (year % 100);
+              break;
+            case 'm': // Month, numeric (00..12)
+              result << std::setw(2) << std::setfill('0') << month;
+              break;
+            case 'd': // Day of the month, numeric (00..31)
+              result << std::setw(2) << std::setfill('0') << day;
+              break;
+            case 'D': // Day of the month with English suffix
+              result << day << getEnglishSuffix(day);
+              break;
+            case 'M': // Full month name
+              result << getMonthName(month);
+              break;
+            // Add more cases for other specifiers as needed.
+            default:
+              // If the specifier is not recognized, just return it as is.
+//              result << '%' << format[i];
+              break;
+          }
+          }
+      } else {
+          result << format[i];
+      }
+    }
+    return result.str();
+  }
+
+  std::string alias_name() const { return alias_; }
+
+  std::vector<Expression *> &get_param_expr_list() { return param_expr_list_; }
+
+  RC func_evaluate(const Tuple &tuple, Value &value) {
+    RC rc = RC::SUCCESS;
+    switch (func_type_) {
+      case func::FUNC_LENGTH: {
+        if (param_expr_list_.size() != 1) {
+          return RC::INVALID_ARGUMENT;
+        }
+
+        Value v;
+        rc = param_expr_list_[0]->get_value(tuple, v);
+        if (rc != RC::SUCCESS) {
+          LOG_WARN("[FuncExpr::func_evaluate::func_length] failed to get the value from param_expr_list");
+          return rc;
+        }
+        if (v.attr_type() != AttrType::CHARS) {
+          return RC::INVALID_ARGUMENT;
+        }
+        int length = v.get_string().size();
+        value.set_int(length);
+      } break;
+      case func::FUNC_ROUND: {
+        if (param_expr_list_.size() > 2) {
+          return RC::INVALID_ARGUMENT;
+        }
+
+        if (param_expr_list_.size() == 1) {
+          Value v;
+          rc = param_expr_list_[0]->get_value(tuple, v);
+          if (v.attr_type() != AttrType::FLOATS) {
+            return RC::INVALID_ARGUMENT;
+          }
+          assert(rc == RC::SUCCESS);
+          value.set_int(round(v.get_float()));
+          return rc;
+        }
+
+        Value num;
+        Value precision;
+        // Note, in reverse order
+        rc = param_expr_list_[1]->get_value(tuple, num);
+        if (rc != RC::SUCCESS) {
+          LOG_WARN("[FuncExpr::func_evaluate::func_round] failed to get the value from param_expr_list");
+          return rc;
+        }
+        rc = param_expr_list_[0]->get_value(tuple, precision);
+        if (rc != RC::SUCCESS) {
+          LOG_WARN("[FuncExpr::func_evaluate::func_round] failed to get the value from param_expr_list");
+          return rc;
+        }
+        if (num.attr_type() != AttrType::FLOATS || precision.attr_type() != AttrType::INTS) {
+          return RC::INVALID_ARGUMENT;
+        }
+        double mul = pow(10.0, precision.get_int());
+        double res = round(num.get_float() * mul) / mul;
+        value.set_float(res);
+      } break;
+      case func::FUNC_DATE_FORMAT: {
+        /// i.e., `SELECT DATE_FORMAT("2017-06-15", "%Y")`
+        if (param_expr_list_.size() != 2) {
+          return RC::INVALID_ARGUMENT;
+        }
+
+        Value date_str;
+        Value format;
+
+        rc = param_expr_list_[1]->get_value(tuple, date_str);
+        if (rc != RC::SUCCESS) {
+          LOG_WARN("[FuncExpr::func_evaluate::func_date_format] failed to get the value from param_expr_list");
+          return rc;
+        }
+
+        rc = param_expr_list_[0]->get_value(tuple, format);
+        if (rc != RC::SUCCESS) {
+          LOG_WARN("[FuncExpr::func_evaluate::func_date_format] failed to get the value from param_expr_list");
+          return rc;
+        }
+
+        // Type sanity check
+        if (date_str.attr_type() != AttrType::DATE || format.attr_type() != AttrType::CHARS) {
+          return rc;
+        }
+
+        value.set_string(mysql_date_format(date_str.get_string(), format.get_string()).c_str());
+      } break;
+      default: {
+        return RC::INVALID_ARGUMENT;
+      }
+    }
+    return rc;
+  }
+
+  RC get_value(const Tuple &tuple, Value &value) override {
+    RC rc = func_evaluate(tuple, value);
+    if (rc != RC::SUCCESS) {
+      LOG_WARN("[FuncExpr::func_evaluate] invalid argument: %s.", value.to_string().c_str());
+      return rc;
+    }
+    return RC::SUCCESS;
+  }
+
+  Expression *left() const override { return nullptr; }
+  Expression *right() const override { return nullptr; }
+
+ private:
+  std::vector<Expression *> param_expr_list_;
+  func func_type_;
+  std::string alias_{""};
 };
 
 /**

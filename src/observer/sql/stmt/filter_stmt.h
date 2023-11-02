@@ -112,16 +112,16 @@ class FilterStmt {
 
   bool is_where_expr() { return where_expr_flag_; }
 
-  ConditionSqlNode *get_where_expr() { return where_expr_; }
+  std::vector<ConditionSqlNode *> &get_where_expr() { return where_expr_vec_; }
 
-  void set_where_expr(ConditionSqlNode *where_expr) {
-    where_expr_ = where_expr;
+  void set_where_expr(std::vector<ConditionSqlNode *> where_expr_vec) {
+    where_expr_vec_ = where_expr_vec;
     where_expr_flag_ = true;
   }
 
  private:
   std::vector<FilterUnit *> filter_units_;  // 默认当前都是AND关系
-  ConditionSqlNode *where_expr_{nullptr};
+  std::vector<ConditionSqlNode *> where_expr_vec_;
   bool where_expr_flag_{false};
 };
 

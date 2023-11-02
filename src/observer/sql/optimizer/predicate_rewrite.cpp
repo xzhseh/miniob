@@ -16,6 +16,9 @@ See the Mulan PSL v2 for more details. */
 #include "sql/operator/logical_operator.h"
 
 RC PredicateRewriteRule::rewrite(std::unique_ptr<LogicalOperator> &oper, bool &change_made) {
+  if (oper == nullptr) {
+    return RC::SUCCESS;
+  }
   std::vector<std::unique_ptr<LogicalOperator>> &child_opers = oper->children();
   return RC::SUCCESS;
   if (child_opers.size() != 1) {

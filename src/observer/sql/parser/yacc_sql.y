@@ -119,9 +119,12 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
         AS
         GROUP
         HAVING
-	IN
-	EXISTS
-	OR
+	    IN
+	    EXISTS
+	    OR
+	    LENGTH
+	    ROUND
+	    DATE_FORMAT
 
 /** union 中定义各种数据类型，真实生成的代码也是union类型，所以不能有非POD类型的数据 **/
 %union {
@@ -149,6 +152,7 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
   int                               number;
   float                             floats;
   enum agg                          agg;
+  enum func                         func;
   bool                              null;
 }
 
@@ -177,6 +181,7 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
 %type <index_attr_name_list>     index_attr_name_list 
 %type <attr_name_list>      attr_name_list           
 %type <agg>                 agg
+%type <func>                func
 %type <rel_attr>            rel_attr
 %type <attr_infos>          attr_def_list
 %type <attr_info>           attr_def
@@ -656,6 +661,14 @@ select_stmt:        /*  select 语句的语法解析树*/
       std::reverse($$->selection.attr_infos.begin(), $$->selection.attr_infos.end());
       delete $5;
     }
+    // For minimal function cases
+    | SELECT select_attr {
+      $$ = new ParsedSqlNode(SCF_SELECT);
+      $$->selection.func_fast_path = true;
+      assert($2 != nullptr && "Expect `select_attr` not to be nullptr");
+      $$->selection.attributes.swap(*$2);
+      delete $2;
+    }
     |
     SELECT select_attr FROM ID option_as rel_list where order_by_clause group_by_clause having
     {
@@ -938,6 +951,14 @@ expression:
       $$ = new FieldExpr(*$1);
       $$->set_name(token_name(sql_string, &@$));
     }
+    | func LBRACE expression_list RBRACE option_as {
+      std::string alias{""};
+      if ($5 != nullptr) {
+        alias = $5;
+      }
+      $$ = new FuncExpr(std::move(*$3), $1, alias);
+      $$->set_name(token_name(sql_string, &@$));
+    }
     // Resolve cases like `id1-2 > 3`
     // FIXME: The below expressions have not been set name, we could set name if needed
     // i.e., f_expr->set_name(...)
@@ -1120,6 +1141,19 @@ agg:
     }
     ;
 
+
+func:
+    LENGTH {
+      $$ = func::FUNC_LENGTH;
+    }
+    | ROUND {
+      $$ = func::FUNC_ROUND;
+    }
+    | DATE_FORMAT {
+      $$ = func::FUNC_DATE_FORMAT;
+    }
+    ;
+
 rel_attr:
     ID option_as {
       $$ = new RelAttrSqlNode;
@@ -1261,6 +1295,9 @@ condition:
 
       $$ = new ConditionSqlNode;
 
+      $$->left_func_expr = $1;
+      $$->right_func_expr = $3;
+
       if (f_lhs && f_rhs) {
         // Field comp Field
         $$->left_is_attr = 1;
@@ -1270,9 +1307,6 @@ condition:
 
         $$->left_attr = f_lhs->get_rel_attr();
         $$->right_attr = f_rhs->get_rel_attr();
-
-        delete $1;
-        delete $3;
       } else if (f_lhs && v_rhs) {
         // Field comp Value
         $$->left_is_attr = 1;
@@ -1282,9 +1316,6 @@ condition:
 
         $$->left_attr = f_lhs->get_rel_attr();
         $$->right_value = v_rhs->get_value();
-
-        delete $1;
-        delete $3;
       } else if (v_lhs && f_rhs) {
         // Value comp Field
         $$->left_is_attr = 0;
@@ -1294,9 +1325,6 @@ condition:
 
         $$->left_value = v_lhs->get_value();
         $$->right_attr = f_rhs->get_rel_attr();
-
-        delete $1;
-        delete $3;
       } else if (v_lhs && v_rhs) {
         // Value comp Value
         $$->left_is_attr = 0;
@@ -1306,9 +1334,6 @@ condition:
 
         $$->left_value = v_lhs->get_value();
         $$->right_value = v_rhs->get_value();
-
-        delete $1;
-        delete $3;
       } else if (f_lhs && (!f_rhs && !v_rhs)) {
         // Field comp Expression
         $$->left_is_attr = 1;
@@ -1318,8 +1343,6 @@ condition:
 
         $$->left_attr = f_lhs->get_rel_attr();
         $$->right_expr = $3;
-
-        delete $1;
       } else if (v_lhs && (!f_rhs && !v_rhs)) {
         // Value comp Expression
         $$->left_is_attr = 0;
@@ -1329,8 +1352,6 @@ condition:
 
         $$->left_value = v_lhs->get_value();
         $$->right_expr = $3;
-
-        delete $1;
       } else if ((!f_lhs && !v_lhs) && f_rhs) {
         // Expression comp Field
         $$->left_is_attr = 0;
@@ -1340,8 +1361,6 @@ condition:
 
         $$->left_expr = $1;
         $$->right_attr = f_rhs->get_rel_attr();
-
-        delete $3;
       } else if ((!f_lhs && !v_lhs) && v_rhs) {
         // Expression comp Value
         $$->left_is_attr = 0;
@@ -1351,8 +1370,6 @@ condition:
 
         $$->left_expr = $1;
         $$->right_value = v_rhs->get_value();
-
-        delete $3;
       } else if (!f_lhs && !v_lhs && !f_rhs && !v_rhs) {
         // Expression comp Expression
         $$->left_is_attr = 0;

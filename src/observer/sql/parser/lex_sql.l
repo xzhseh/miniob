@@ -116,7 +116,6 @@ QUOTE            [\'\"]
 
 AS" "SUM {
   yylval->string = strdup(yytext + 3);
-  printf("Current string: %s\n", yylval->string);
   RETURN_TOKEN(ID);
 }
 
@@ -180,6 +179,9 @@ AS                                      RETURN_TOKEN(AS);
 GROUP                                   RETURN_TOKEN(GROUP);
 OR                                      RETURN_TOKEN(OR);
 HAVING                                  RETURN_TOKEN(HAVING);
+LENGTH                                  RETURN_TOKEN(LENGTH);
+ROUND                                   RETURN_TOKEN(ROUND);
+DATE_FORMAT                             RETURN_TOKEN(DATE_FORMAT);
 {ID}                                    yylval->string=strdup(yytext); RETURN_TOKEN(ID);
 "("                                     RETURN_TOKEN(LBRACE);
 ")"                                     RETURN_TOKEN(RBRACE);
