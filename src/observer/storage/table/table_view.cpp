@@ -51,13 +51,10 @@ RC next_tuple(Tuple*& tuple, ProjectPhysicalOperator* oper) {
 void view_rebuild_function(std::string view_name) {
     // FIXME: reopen may be bug
     RC rc;
-    Trx* trx = GCTX.trx_kit_->create_trx(current_db->clog_manager());
-    trx->start_if_need();
     std::unique_ptr<PhysicalOperator>& ptr = view_rebuild_map[view_name];
     ProjectPhysicalOperator *oper = dynamic_cast<ProjectPhysicalOperator *>(ptr.get());
     if (oper != nullptr && oper->name() != "") {
     if (oper->select_expr_flag_) {
-      oper->close();
       return;
       std::vector<AttrInfoSqlNode> expr_table_attrs;
       // The select statement contains expression
@@ -131,6 +128,8 @@ void view_rebuild_function(std::string view_name) {
       rc = oper->close();
       return;
     }
+    Trx* trx = GCTX.trx_kit_->create_trx(current_db->clog_manager());
+    trx->start_if_need();
     current_db->drop_table(oper->name().c_str());
     oper->close();
     oper->open(trx);
