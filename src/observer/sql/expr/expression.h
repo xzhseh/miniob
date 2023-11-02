@@ -275,7 +275,7 @@ class FuncExpr: public Expression {
             // Add more cases for other specifiers as needed.
             default:
               // If the specifier is not recognized, just return it as is.
-              result << '%' << format[i];
+//              result << '%' << format[i];
               break;
           }
           }
