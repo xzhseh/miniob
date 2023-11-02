@@ -374,6 +374,18 @@ RC field_expr_transformation(Db *db, const std::vector<Table *> &tables, Express
       return rc;
     }
     f_expr->set_field(f);
+  } else if (expr->type() == ExprType::FUNC) {
+    std::cout << "[field_expr_transformation] func field expr name: " << expr->name() << std::endl;
+    FuncExpr *func_expr = dynamic_cast<FuncExpr *>(expr);
+    assert(func_expr != nullptr && "Expect `func_expr` not to be nullptr");
+    for (auto *param_expr : func_expr->get_param_expr_list()) {
+      // Recursively parse parameters' expressions
+      rc = field_expr_transformation(db, tables, param_expr, table_map);
+      if (rc != RC::SUCCESS) {
+        LOG_WARN("[field_expr_transformation] param_expr transformation failed to get the corresponding field");
+        return rc;
+      }
+    }
   }
   // Recursively transformation the child expression, if exists any
   if (expr->left() != nullptr) {
@@ -435,46 +447,71 @@ RC SelectStmt::create(Db *db, SelectSqlNode &select_sql, Stmt *&stmt) {
     }
   }
 
+
+  // See if the where expression contains functions
+  bool where_func_flag{false};
+  for (const auto &condition : select_sql.conditions) {
+    if ((condition.left_expr && dynamic_cast<FuncExpr *>(condition.left_expr)) ||
+        (condition.right_expr && dynamic_cast<FuncExpr *>(condition.right_expr))) {
+      where_func_flag = true;
+      break;
+    }
+  }
+
   // Construct the `expressions` in where clause
-  if (select_sql.conditions.size() == 1) {
-    auto &curr_condition = select_sql.conditions[0];
+  for (int i = 0; i < select_sql.conditions.size(); ++i) {
+    auto &curr_condition = select_sql.conditions[i];
+    ConditionSqlNode *where_expr = new ConditionSqlNode;
+
+    if (where_func_flag) {
+      select_sql.where_expr_flag = true;
+      where_expr->left_expr = curr_condition.left_func_expr;
+      where_expr->right_expr = curr_condition.right_func_expr;
+      where_expr->comp = curr_condition.comp;
+      select_sql.where_expr_vec.push_back(where_expr);
+      continue;
+    }
+
     if (curr_condition.left_expr && curr_condition.right_expr) {
       select_sql.where_expr_flag = true;
-      select_sql.where_expr = new ConditionSqlNode;
-      select_sql.where_expr->left_expr = curr_condition.left_expr;
-      select_sql.where_expr->right_expr = curr_condition.right_expr;
-      select_sql.where_expr->comp = curr_condition.comp;
+      where_expr->left_expr = curr_condition.left_expr;
+      where_expr->right_expr = curr_condition.right_expr;
+      where_expr->comp = curr_condition.comp;
+      select_sql.where_expr_vec.push_back(where_expr);
     } else if (curr_condition.left_expr) {
       assert(curr_condition.right_expr == nullptr);
       select_sql.where_expr_flag = true;
-      select_sql.where_expr = new ConditionSqlNode;
-      select_sql.where_expr->left_expr = curr_condition.left_expr;
-      select_sql.where_expr->comp = curr_condition.comp;
+      where_expr = new ConditionSqlNode;
+      where_expr->left_expr = curr_condition.left_expr;
+      where_expr->comp = curr_condition.comp;
       if (curr_condition.right_is_attr) {
         // Expression comp Field
         FieldExpr *f_expr = new FieldExpr(curr_condition.right_attr);
-        select_sql.where_expr->right_expr = f_expr;
+        where_expr->right_expr = f_expr;
       } else {
         // Expression comp Value
         ValueExpr *v_expr = new ValueExpr(curr_condition.right_value);
-        select_sql.where_expr->right_expr = v_expr;
+        where_expr->right_expr = v_expr;
       }
+      select_sql.where_expr_vec.push_back(where_expr);
     } else if (curr_condition.right_expr) {
       assert(curr_condition.left_expr == nullptr);
       select_sql.where_expr_flag = true;
-      select_sql.where_expr = new ConditionSqlNode;
-      select_sql.where_expr->right_expr = curr_condition.right_expr;
-      select_sql.where_expr->comp = curr_condition.comp;
+      where_expr = new ConditionSqlNode;
+      where_expr->right_expr = curr_condition.right_expr;
+      where_expr->comp = curr_condition.comp;
       if (curr_condition.left_is_attr) {
         // Field comp Expression
         FieldExpr *f_expr = new FieldExpr(curr_condition.left_attr);
-        select_sql.where_expr->left_expr = f_expr;
+        where_expr->left_expr = f_expr;
       } else {
         // Value comp Expression
         ValueExpr *v_expr = new ValueExpr(curr_condition.left_value);
-        select_sql.where_expr->left_expr = v_expr;
+        where_expr->left_expr = v_expr;
       }
+      select_sql.where_expr_vec.push_back(where_expr);
     }
+    assert(where_expr != nullptr);
   }
 
   // Make the expression transformation for select attribute, specifically for `FieldExpr`
@@ -491,21 +528,23 @@ RC SelectStmt::create(Db *db, SelectSqlNode &select_sql, Stmt *&stmt) {
 
   // Make the same transformation for where conditions
   if (select_sql.where_expr_flag) {
-    if (select_sql.where_expr->left_expr != nullptr && select_sql.where_expr->right_expr != nullptr) {
-      // We should evaluate the where clause based on pure expressions
-      // Do the transformation for the left expression and right expression
-      rc = field_expr_transformation(db, tables, select_sql.where_expr->left_expr, &table_map);
-      if (rc != RC::SUCCESS) {
-        LOG_WARN("[SelectStmt::create] failed to transform where left expressions");
-        return rc;
+    for (auto *where_expr : select_sql.where_expr_vec) {
+      if (where_expr->left_expr != nullptr && where_expr->right_expr != nullptr) {
+        // We should evaluate the where clause based on pure expressions
+        // Do the transformation for the left expression and right expression
+        rc = field_expr_transformation(db, tables, where_expr->left_expr, &table_map);
+        if (rc != RC::SUCCESS) {
+          LOG_WARN("[SelectStmt::create] failed to transform where left expressions");
+          return rc;
+        }
+        rc = field_expr_transformation(db, tables, where_expr->right_expr, &table_map);
+        if (rc != RC::SUCCESS) {
+          LOG_WARN("[SelectStmt::create] failed to transform where right expressions");
+          return rc;
+        }
+        std::cout << "[select stmt] where left expr name: " << where_expr->left_expr->name() << std::endl;
+        std::cout << "[select stmt] where right expr name: " << where_expr->right_expr->name() << std::endl;
       }
-      rc = field_expr_transformation(db, tables, select_sql.where_expr->right_expr, &table_map);
-      if (rc != RC::SUCCESS) {
-        LOG_WARN("[SelectStmt::create] failed to transform where right expressions");
-        return rc;
-      }
-      std::cout << "[select stmt] where left expr name: " << select_sql.where_expr->left_expr->name() << std::endl;
-      std::cout << "[select stmt] where right expr name: " << select_sql.where_expr->right_expr->name() << std::endl;
     }
   }
 
@@ -710,8 +749,7 @@ RC SelectStmt::create(Db *db, SelectSqlNode &select_sql, Stmt *&stmt) {
 
   // Where expression
   if (select_sql.where_expr_flag) {
-    assert(select_sql.where_expr != nullptr && "Expect `where_expr` not to be nullptr");
-    filter_stmt->set_where_expr(select_sql.where_expr);
+    filter_stmt->set_where_expr(select_sql.where_expr_vec);
   }
 
   // TODO add expression copy
@@ -724,6 +762,7 @@ RC SelectStmt::create(Db *db, SelectSqlNode &select_sql, Stmt *&stmt) {
   select_stmt->create_table_name_ = select_sql.create_table_name;
   select_stmt->create_view_name_ = select_sql.create_view_name;
   select_stmt->attrs = select_sql.attr_infos;
+  select_stmt->func_fast_path_ = select_sql.func_fast_path;
   stmt = select_stmt;
   return RC::SUCCESS;
 }

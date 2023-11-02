@@ -39,7 +39,7 @@ class PredicatePhysicalOperator : public PhysicalOperator {
   Tuple *current_tuple() override;
 
   bool where_expr_flag_{false};
-  ConditionSqlNode *where_expr_{nullptr};
+  std::vector<ConditionSqlNode *> where_expr_vec_;
 
  private:
   std::unique_ptr<Expression> expression_;

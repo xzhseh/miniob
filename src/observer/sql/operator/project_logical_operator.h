@@ -46,6 +46,8 @@ class ProjectLogicalOperator : public LogicalOperator {
   std::vector<Expression *> select_expr_;
   bool select_expr_flag_{false};
 
+  bool func_fast_path_{false};
+
  private:
   //! 投影映射的字段名称
   //! 并不是所有的select都会查看表字段，也可能是常量数字、字符串，

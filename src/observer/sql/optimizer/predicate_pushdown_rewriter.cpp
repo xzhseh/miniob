@@ -19,6 +19,11 @@ See the Mulan PSL v2 for more details. */
 
 RC PredicatePushdownRewriter::rewrite(std::unique_ptr<LogicalOperator> &oper, bool &change_made) {
   RC rc = RC::SUCCESS;
+
+  if (oper == nullptr) {
+    return rc;
+  }
+
   if (oper->type() != LogicalOperatorType::PREDICATE) {
     return rc;
   }

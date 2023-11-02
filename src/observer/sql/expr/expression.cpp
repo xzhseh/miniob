@@ -116,6 +116,10 @@ RC ComparisonExpr::compare_value(const Value &left, const Value &right, bool &re
 
   // std::cout << "[expression] left: " << left.to_string() << " right: " << right.to_string() << std::endl;
 
+  if (left.attr_type() == AttrType::UNDEFINED || right.attr_type() == AttrType::UNDEFINED) {
+    return RC::INTERNAL;
+  }
+
   auto left_check_null = Value::check_null(left);
   auto right_check_null = Value::check_null(right);
 

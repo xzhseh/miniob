@@ -204,7 +204,7 @@ RC PhysicalPlanGenerator::create_plan(PredicateLogicalOperator &pred_oper, uniqu
   if (pred_oper.where_expr_flag_) {
     predicate_phy_oper = std::make_unique<PredicatePhysicalOperator>(std::move(expression), true);
     predicate_phy_oper->where_expr_flag_ = true;
-    predicate_phy_oper->where_expr_ = pred_oper.where_expr_;
+    predicate_phy_oper->where_expr_vec_ = pred_oper.where_expr_vec_;
   } else {
     predicate_phy_oper = std::make_unique<PredicatePhysicalOperator>(std::move(expression));
   }
@@ -221,7 +221,7 @@ RC PhysicalPlanGenerator::create_plan(ProjectLogicalOperator &project_oper, uniq
   unique_ptr<PhysicalOperator> child_phy_oper;
 
   RC rc = RC::SUCCESS;
-  if (!child_opers.empty()) {
+  if (!child_opers.empty() && !project_oper.func_fast_path_) {
     LogicalOperator *child_oper = child_opers.front().get();
     rc = create(*child_oper, child_phy_oper);
     if (rc != RC::SUCCESS) {
@@ -247,6 +247,10 @@ RC PhysicalPlanGenerator::create_plan(ProjectLogicalOperator &project_oper, uniq
   if (project_oper.select_expr_flag_) {
     project_operator->select_expr_flag_ = true;
     project_operator->select_expr_ = project_oper.select_expr_;
+  }
+
+  if (project_oper.func_fast_path_) {
+    project_operator->func_fast_path_ = true;
   }
 
   oper = unique_ptr<PhysicalOperator>(project_operator);

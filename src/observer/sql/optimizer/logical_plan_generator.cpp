@@ -226,6 +226,10 @@ RC LogicalPlanGenerator::create_plan(SelectStmt *select_stmt, unique_ptr<Logical
     project_op->select_expr_ = select_stmt->get_select_expr();
   }
 
+  if (select_stmt->is_fun_fast_path()) {
+    project_op->func_fast_path_ = true;
+  }
+
   // FIXME: Is this enough to identify create table select statement?
   if (select_stmt->create_table_name() != "" || select_stmt->create_view_name() != "") {
     project_op->tables_ = select_stmt->tables();
@@ -283,7 +287,7 @@ RC LogicalPlanGenerator::create_plan(FilterStmt *filter_stmt, unique_ptr<Logical
   if (filter_stmt->is_where_expr()) {
     auto predicate_oper = std::make_unique<PredicateLogicalOperator>();
     predicate_oper->where_expr_flag_ = true;
-    predicate_oper->where_expr_ = filter_stmt->get_where_expr();
+    predicate_oper->where_expr_vec_ = filter_stmt->get_where_expr();
     logical_operator = std::move(predicate_oper);
     return RC::SUCCESS;
   }

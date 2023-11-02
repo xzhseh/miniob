@@ -24,6 +24,27 @@ See the Mulan PSL v2 for more details. */
 
 class Expression;
 
+/// Built-in functions
+enum func { FUNC_NONE, FUNC_LENGTH, FUNC_ROUND, FUNC_DATE_FORMAT };
+
+inline std::string func_to_string(func f) {
+  std::string ret{""};
+  switch (f) {
+    case func::FUNC_LENGTH: {
+      ret = "length";
+    } break;
+    case func::FUNC_ROUND: {
+      ret = "round";
+    } break;
+    case func::FUNC_DATE_FORMAT: {
+      ret = "date_format";
+    } break;
+    default:
+      assert(false);  // This is impossible
+  }
+  return ret;
+}
+
 /// Aggregate functions
 enum agg { NONE, AGG_MIN, AGG_MAX, AGG_AVG, AGG_SUM, AGG_COUNT };
 
@@ -139,6 +160,9 @@ struct ConditionSqlNode {
   // Specifically by `get_value`
   Expression *left_expr{nullptr};
   Expression *right_expr{nullptr};
+
+  Expression *left_func_expr{nullptr};
+  Expression *right_func_expr{nullptr};
 };
 
 struct OrderBySqlNode {
@@ -165,7 +189,7 @@ struct SelectSqlNode {
   std::vector<RelAttrSqlNode> group_bys;     ///< group by clause
   ConditionSqlNode having;                   ///< Currently treat it as a single condition node
   std::vector<Expression *> expressions;     ///< expressions in select clause
-  ConditionSqlNode *where_expr{nullptr};     ///< expression in where clause
+  std::vector<ConditionSqlNode *> where_expr_vec;///< expression in where clause, all needs to be evaluated for filtering
   bool select_expr_flag{false};
   bool where_expr_flag{false};
   // The void * is Tuple *
@@ -173,6 +197,8 @@ struct SelectSqlNode {
   std::string create_table_name = "";
   std::string create_view_name = "";
   std::vector<AttrInfoSqlNode> attr_infos;
+  bool func_fast_path{false};
+
   SelectSqlNode() = default;
   SelectSqlNode(const SelectSqlNode &other) = default;
 };
