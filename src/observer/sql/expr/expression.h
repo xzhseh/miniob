@@ -211,6 +211,32 @@ class FuncExpr: public Expression {
     assert(false);
   }
 
+  std::string getEnglishSuffix(int day) {
+    if (day >= 11 && day <= 13) {
+      return "th";
+    }
+
+    switch (day % 10) {
+      case 1: return "st";
+      case 2: return "nd";
+      case 3: return "rd";
+      default: return "th";
+    }
+  }
+
+  std::string getMonthName(int month) {
+    static const std::vector<std::string> months = {
+        "", "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"
+    };
+
+    if (month > 0 && month <= 12) {
+      return months[month];
+    } else {
+      return "Invalid";
+    }
+  }
+
   std::string mysql_date_format(const std::string &date, const std::string &format) {
     int year, month, day;
     char dash1, dash2;
@@ -239,6 +265,12 @@ class FuncExpr: public Expression {
               break;
             case 'd': // Day of the month, numeric (00..31)
               result << std::setw(2) << std::setfill('0') << day;
+              break;
+            case 'D': // Day of the month with English suffix
+              result << day << getEnglishSuffix(day);
+              break;
+            case 'M': // Full month name
+              result << getMonthName(month);
               break;
             // Add more cases for other specifiers as needed.
             default:
