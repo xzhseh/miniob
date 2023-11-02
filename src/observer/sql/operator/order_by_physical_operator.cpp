@@ -70,6 +70,7 @@ RC OrderByPhysicalOperator::next() {
   }
 
   std::sort(std::execution::par_unseq,
+//std::sort(
             result_tuples.begin(),
             result_tuples.end(),
             [this](const SortItem &left, SortItem &right) {
