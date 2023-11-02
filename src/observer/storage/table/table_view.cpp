@@ -56,10 +56,9 @@ void view_rebuild_function(std::string view_name) {
     std::unique_ptr<PhysicalOperator>& ptr = view_rebuild_map[view_name];
     ProjectPhysicalOperator *oper = dynamic_cast<ProjectPhysicalOperator *>(ptr.get());
     if (oper != nullptr && oper->name() != "") {
-    current_db->drop_table(oper->name().c_str());
-    oper->close();
-    oper->open(trx);
     if (oper->select_expr_flag_) {
+      oper->close();
+      return;
       std::vector<AttrInfoSqlNode> expr_table_attrs;
       // The select statement contains expression
       assert(oper->select_expr_.size() > 0);
@@ -132,6 +131,9 @@ void view_rebuild_function(std::string view_name) {
       rc = oper->close();
       return;
     }
+    current_db->drop_table(oper->name().c_str());
+    oper->close();
+    oper->open(trx);
     vector<Table*> tables;
     vector<const FieldMeta*> fields;
     const auto &project_tuple = oper->get_project_tuple();

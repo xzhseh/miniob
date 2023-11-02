@@ -28,6 +28,8 @@ See the Mulan PSL v2 for more details. */
 #include "storage/record/record_manager.h"
 #include "storage/table/table.h"
 #include "storage/table/table_meta.h"
+#include "table_view.h"
+#include "sql/operator/project_physical_operator.h"
 #include "storage/trx/trx.h"
 #include "sql/expr/tuple.h"
 #include "storage/table/table_meta.h"
@@ -222,6 +224,11 @@ void Table::insert_map_into_tables(Record& record) {
 
 RC Table::insert_record(Record &record) {
   if(view_table_flag) {
+    ProjectPhysicalOperator* project_oper = dynamic_cast<ProjectPhysicalOperator*>(view_rebuild_map[this->name()].get());
+    assert(project_oper != nullptr);
+    if(project_oper->select_expr_flag_) {
+      return RC::FILE_NOT_EXIST;
+    }
     insert_map_into_tables(record);
   }
   RC rc = RC::SUCCESS;
@@ -534,6 +541,9 @@ RC Table::create_index(Trx *trx, std::vector<const FieldMeta *> field_meta, cons
 RC Table::delete_record(const Record &record) {
   RC rc = RC::SUCCESS;
   if(view_table_flag) {
+    ProjectPhysicalOperator* project_oper = dynamic_cast<ProjectPhysicalOperator*>(view_rebuild_map[this->name()].get());
+    assert(project_oper != nullptr);
+    if(!project_oper->select_expr_flag_) {
     std::unordered_set<Table*> table_deleted;
     const auto& rid_vec = meta_.rid_map[record.rid()];
     for(int i = 0; i < rid_vec.size(); i++) {
@@ -551,6 +561,7 @@ RC Table::delete_record(const Record &record) {
           return rc;
         }
       }
+    }
     }
   }
   for (Index *index : indexes_) {
@@ -671,7 +682,11 @@ RC Table::update_record(const Record &old_record, Record &new_record) {
 
   RC rc;
   if(view_table_flag) {
-    rc = update_record_real_records(old_record, new_record);
+    ProjectPhysicalOperator* project_oper = dynamic_cast<ProjectPhysicalOperator*>(view_rebuild_map[this->name()].get());
+    assert(project_oper != nullptr);
+    if(!project_oper->select_expr_flag_) {
+      rc = update_record_real_records(old_record, new_record);
+    }
   }
   assert(old_record.rid() == new_record.rid());
   rc = delete_entry_of_indexes(old_record.data(), old_record.rid(), false /*error_on_not_exists*/);
