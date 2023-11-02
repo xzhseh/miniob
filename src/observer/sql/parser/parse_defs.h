@@ -160,6 +160,9 @@ struct ConditionSqlNode {
   // Specifically by `get_value`
   Expression *left_expr{nullptr};
   Expression *right_expr{nullptr};
+
+  Expression *left_func_expr{nullptr};
+  Expression *right_func_expr{nullptr};
 };
 
 struct OrderBySqlNode {

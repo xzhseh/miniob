@@ -445,10 +445,31 @@ RC SelectStmt::create(Db *db, SelectSqlNode &select_sql, Stmt *&stmt) {
     }
   }
 
+
+  // See if the where expression contains functions
+  bool where_func_flag{false};
+  for (const auto &condition : select_sql.conditions) {
+    if ((condition.left_expr && dynamic_cast<FuncExpr *>(condition.left_expr)) ||
+        (condition.right_expr && dynamic_cast<FuncExpr *>(condition.right_expr))) {
+      where_func_flag = true;
+      break;
+    }
+  }
+
   // Construct the `expressions` in where clause
   for (int i = 0; i < select_sql.conditions.size(); ++i) {
     auto &curr_condition = select_sql.conditions[i];
     ConditionSqlNode *where_expr = new ConditionSqlNode;
+
+    if (where_func_flag) {
+      select_sql.where_expr_flag = true;
+      where_expr->left_expr = curr_condition.left_func_expr;
+      where_expr->right_expr = curr_condition.right_func_expr;
+      where_expr->comp = curr_condition.comp;
+      select_sql.where_expr_vec.push_back(where_expr);
+      continue;
+    }
+
     if (curr_condition.left_expr && curr_condition.right_expr) {
       select_sql.where_expr_flag = true;
       where_expr->left_expr = curr_condition.left_expr;
