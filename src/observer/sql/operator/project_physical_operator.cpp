@@ -57,8 +57,8 @@ Tuple *ProjectPhysicalOperator::current_tuple() {
     std::vector<Value> cells;
     for (auto *expr: select_expr_) {
       Value v;
-      std::cout << "[ProjectPhysicalOperator::current_tuple] current expr: " << expr->name() << std::endl;
       RC rc = expr->get_value(*children_[0]->current_tuple(), v);
+      std::cout << "[ProjectPhysicalOperator::current_tuple] current expr: " << expr->name() << " value: " << v.to_string() << std::endl;
       if (rc != RC::SUCCESS) {
         LOG_WARN("[ProjectPhysicalOperator::current_tuple] failed to get the value of expression");
         return nullptr;
