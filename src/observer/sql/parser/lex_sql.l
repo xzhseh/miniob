@@ -119,6 +119,11 @@ AS" "SUM {
   printf("Current string: %s\n", yylval->string);
   RETURN_TOKEN(ID);
 }
+AS" "DATA {
+  yylval->string = strdup(yytext + 3);
+  printf("Current string: %s\n", yylval->string);
+  RETURN_TOKEN(ID);
+}
 
 [\-]?{DIGIT}+                           yylval->number=atoi(yytext); RETURN_TOKEN(NUMBER);
 [\-]?{DIGIT}+{DOT}{DIGIT}+              yylval->floats=(float)(atof(yytext)); RETURN_TOKEN(FLOAT);

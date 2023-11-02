@@ -64,6 +64,8 @@ void view_rebuild_function(std::string view_name) {
       // The select statement contains expression
       assert(oper->select_expr_.size() > 0);
       assert(oper->tables_.size() > 0);
+      vector<Table*> tables;
+      vector<const FieldMeta*> fields;
 
       for (auto *expr : oper->select_expr_) {
         // Each expression will correspond to a specific tuple cell
@@ -124,8 +126,11 @@ void view_rebuild_function(std::string view_name) {
           current_db->drop_table(oper->name().c_str());
         }
       }
-
+      expr_table->meta_.tables = tables;
+      expr_table->meta_.fields = fields;  
+      expr_table->set_view_flag(true);
       rc = oper->close();
+      return;
     }
     vector<Table*> tables;
     vector<const FieldMeta*> fields;
@@ -212,10 +217,6 @@ void view_rebuild_function(std::string view_name) {
     }
     table->meta_.tables = tables;
     table->meta_.fields = fields;   
-    // if(oper->view_name() != "") {
-    //   table->set_view_flag(true);
-    //   view_rebuild_map[oper->view_name()] = std::move(*sql_result->get_operator());
-    // }
     table->set_view_flag(true);
     RC rc_close = oper->close();
     trx->commit();
