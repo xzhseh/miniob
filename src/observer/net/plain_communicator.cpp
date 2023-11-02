@@ -247,7 +247,7 @@ RC PlainCommunicator::write_result_internal(SessionEvent *event, bool &need_disc
 
         // Note that this should be the same for single col / multi col expression
         for (const auto &t : oper->tables_) {
-          expr_field_meta = (FieldMeta*) t->table_meta().field(expr_vec[0].c_str());
+          expr_field_meta = (FieldMeta *)t->table_meta().field(expr_vec[0].c_str());
           if (expr_field_meta == nullptr) {
             continue;
           }
@@ -264,7 +264,8 @@ RC PlainCommunicator::write_result_internal(SessionEvent *event, bool &need_disc
         expr_table_attrs.push_back(expr_attr);
       }
 
-      rc = session_->get_current_db()->create_table(oper->name().c_str(), oper->select_expr_.size(), expr_table_attrs.data());
+      rc = session_->get_current_db()->create_table(
+          oper->name().c_str(), oper->select_expr_.size(), expr_table_attrs.data());
       if (rc != RC::SUCCESS) {
         LOG_WARN("[PlainCommunicator::write_result_internal] failed to create table %s.", oper->name().c_str());
         return rc;

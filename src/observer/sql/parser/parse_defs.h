@@ -84,13 +84,13 @@ inline std::string agg_to_string(agg a) {
  * Attr -> Attribute
  */
 struct RelAttrSqlNode {
-  std::string relation_name;       ///< relation / table name (may be NULL/EMPTY)
-  std::string attribute_name;      ///< attribute / column name
-  enum agg aggregate_func;         ///< aggregate function (may be NULL/EMPTY)
-  bool agg_valid_flag{true};       ///< Whether the parsed aggregate syntax is valid, i.e., COUNT(c1, c2) will be invalid
-  std::string alias_name;          ///< alias name (may be NULL/EMPTY)
-  bool expr_flag{false};           ///< Whether this rel_attr should be seen / parsed as expression, i.e., arithmetic expression
-  Expression *expression{nullptr}; ///< store the possible parsed expression
+  std::string relation_name;   ///< relation / table name (may be NULL/EMPTY)
+  std::string attribute_name;  ///< attribute / column name
+  enum agg aggregate_func;     ///< aggregate function (may be NULL/EMPTY)
+  bool agg_valid_flag{true};   ///< Whether the parsed aggregate syntax is valid, i.e., COUNT(c1, c2) will be invalid
+  std::string alias_name;      ///< alias name (may be NULL/EMPTY)
+  bool expr_flag{false};  ///< Whether this rel_attr should be seen / parsed as expression, i.e., arithmetic expression
+  Expression *expression{nullptr};  ///< store the possible parsed expression
 };
 
 struct RelationSqlNode {
@@ -189,7 +189,8 @@ struct SelectSqlNode {
   std::vector<RelAttrSqlNode> group_bys;     ///< group by clause
   ConditionSqlNode having;                   ///< Currently treat it as a single condition node
   std::vector<Expression *> expressions;     ///< expressions in select clause
-  std::vector<ConditionSqlNode *> where_expr_vec;///< expression in where clause, all needs to be evaluated for filtering
+  std::vector<ConditionSqlNode *>
+      where_expr_vec;  ///< expression in where clause, all needs to be evaluated for filtering
   bool select_expr_flag{false};
   bool where_expr_flag{false};
   // The void * is Tuple *

@@ -23,7 +23,7 @@ See the Mulan PSL v2 for more details. */
 using namespace std;
 
 RC FieldExpr::get_value(const Tuple &tuple, Value &value) {
-  if (agg_flag_)  {
+  if (agg_flag_) {
     value = agg_value_;
     return RC::SUCCESS;
   }

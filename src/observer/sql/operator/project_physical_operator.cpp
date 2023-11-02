@@ -55,10 +55,11 @@ Tuple *ProjectPhysicalOperator::current_tuple() {
     assert(select_expr_flag_ && "[ProjectPhysicalOperator::current_tuple] expect `select_expr_flag_` to be true");
     fun_fast_path_flag_ = true;
     std::vector<Value> cells;
-    for (auto *expr: select_expr_) {
+    for (auto *expr : select_expr_) {
       Value v;
-      std::cout << "[ProjectPhysicalOperator::current_tuple::func_fast_path] current expr: " << expr->name() << std::endl;
-      ValueListTuple t; // Just a placeholder
+      std::cout << "[ProjectPhysicalOperator::current_tuple::func_fast_path] current expr: " << expr->name()
+                << std::endl;
+      ValueListTuple t;  // Just a placeholder
       RC rc = expr->get_value(t, v);
       if (rc != RC::SUCCESS) {
         LOG_WARN("[ProjectPhysicalOperator::current_tuple::func_fast_path] failed to get the value of expression");
@@ -78,10 +79,11 @@ Tuple *ProjectPhysicalOperator::current_tuple() {
   if (select_expr_flag_) {
     // Construct the `expr_tuple_`
     std::vector<Value> cells;
-    for (auto *expr: select_expr_) {
+    for (auto *expr : select_expr_) {
       Value v;
       RC rc = expr->get_value(*children_[0]->current_tuple(), v);
-      std::cout << "[ProjectPhysicalOperator::current_tuple] current expr: " << expr->name() << " value: " << v.to_string() << std::endl;
+      std::cout << "[ProjectPhysicalOperator::current_tuple] current expr: " << expr->name()
+                << " value: " << v.to_string() << std::endl;
       if (rc != RC::SUCCESS) {
         LOG_WARN("[ProjectPhysicalOperator::current_tuple] failed to get the value of expression");
         return nullptr;

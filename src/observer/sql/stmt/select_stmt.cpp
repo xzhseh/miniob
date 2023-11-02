@@ -207,9 +207,9 @@ bool group_by_sanity_check(const std::vector<RelAttrSqlNode> &group_by_keys, con
   return true;
 }
 
-RC get_agg_fields_from_expr(Db *db, const std::vector<Table *> &tables, Expression *expr,
-                            std::vector<Field> &fields, std::vector<bool> &is_agg,
-                            std::vector<FieldExpr *> &agg_exprs, std::vector<agg> &agg_types) {
+RC get_agg_fields_from_expr(Db *db, const std::vector<Table *> &tables, Expression *expr, std::vector<Field> &fields,
+                            std::vector<bool> &is_agg, std::vector<FieldExpr *> &agg_exprs,
+                            std::vector<agg> &agg_types) {
   RC rc = RC::SUCCESS;
   if (expr == nullptr) {
     return RC::INVALID_ARGUMENT;
@@ -435,16 +435,15 @@ RC SelectStmt::create(Db *db, SelectSqlNode &select_sql, Stmt *&stmt) {
 
         // Remember to set the field name
         std::string f_name =
-            (select_sql.attributes[i].relation_name.empty()) ?
-            select_sql.attributes[i].attribute_name :
-            (select_sql.attributes[i].relation_name + "." + select_sql.attributes[i].attribute_name);
+            (select_sql.attributes[i].relation_name.empty())
+                ? select_sql.attributes[i].attribute_name
+                : (select_sql.attributes[i].relation_name + "." + select_sql.attributes[i].attribute_name);
 
         f->set_name(f_name);
         select_sql.expressions.push_back(f);
       }
     }
   }
-
 
   // See if the where expression contains functions
   bool where_func_flag{false};

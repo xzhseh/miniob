@@ -219,7 +219,8 @@ RC LogicalPlanGenerator::create_plan(SelectStmt *select_stmt, unique_ptr<Logical
     }
   }
 
-  auto project_op = std::make_unique<ProjectLogicalOperator>(select_stmt->query_fields(), select_stmt->create_table_name(), select_stmt->get_attrs());
+  auto project_op = std::make_unique<ProjectLogicalOperator>(
+      select_stmt->query_fields(), select_stmt->create_table_name(), select_stmt->get_attrs());
 
   if (select_stmt->get_select_expr_flag()) {
     project_op->select_expr_flag_ = true;
