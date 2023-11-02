@@ -78,7 +78,7 @@ void view_rebuild_function(std::string view_name) {
         if (expr_vec.size() > 1) {
           // There must be an alias for identification purpose
           assert(expr_alias_vec[expr_alias_vec.size() - 2] == "as");
-          expr_attr.name = expr_vec.back();
+          expr_attr.name = expr_alias_vec.back();
         } else {
           assert(expr_vec.size() == 1);
           expr_attr.name = expr_vec[0];
