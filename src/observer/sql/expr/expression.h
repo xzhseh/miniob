@@ -18,6 +18,9 @@ See the Mulan PSL v2 for more details. */
 #include <memory>
 #include <string>
 #include <math.h>
+#include <iostream>
+#include <sstream>
+#include <iomanip>
 
 #include "common/log/log.h"
 #include "sql/parser/parse_defs.h"
@@ -192,8 +195,9 @@ class FuncExpr: public Expression {
   // FIXME: Ensure this, basically we need to return the return type of the stored function
   AttrType value_type() const override {
     switch (func_type_) {
-      case func::FUNC_LENGTH:
       case func::FUNC_DATE_FORMAT:
+        return AttrType::CHARS;
+      case func::FUNC_LENGTH:
         return AttrType::INTS;
       case func::FUNC_ROUND:
         if (param_expr_list_.size() == 2) {
@@ -205,6 +209,49 @@ class FuncExpr: public Expression {
           assert(false);
     }
     assert(false);
+  }
+
+  std::string mysql_date_format(const std::string &date, const std::string &format) {
+    int year, month, day;
+    char dash1, dash2;
+
+    std::istringstream dateStream(date);
+    dateStream >> year >> dash1 >> month >> dash2 >> day;
+
+    // Check if the date was in the correct format
+    if (!dateStream || dash1 != '-' || dash2 != '-') {
+      return "Invalid date format";
+    }
+
+    std::ostringstream result;
+    for (size_t i = 0; i < format.size(); ++i) {
+      if (format[i] == '%') {
+          if (++i < format.size()) {
+          switch (format[i]) {
+            case 'Y': // Year with century
+              result << std::setw(4) << std::setfill('0') << year;
+              break;
+            case 'y': // Year without century
+              result << std::setw(2) << std::setfill('0') << (year % 100);
+              break;
+            case 'm': // Month, numeric (00..12)
+              result << std::setw(2) << std::setfill('0') << month;
+              break;
+            case 'd': // Day of the month, numeric (00..31)
+              result << std::setw(2) << std::setfill('0') << day;
+              break;
+            // Add more cases for other specifiers as needed.
+            default:
+              // If the specifier is not recognized, just return it as is.
+              result << '%' << format[i];
+              break;
+          }
+          }
+      } else {
+          result << format[i];
+      }
+    }
+    return result.str();
   }
 
   std::string alias_name() const { return alias_; }
@@ -268,12 +315,32 @@ class FuncExpr: public Expression {
         value.set_float(res);
       } break;
       case func::FUNC_DATE_FORMAT: {
-        if (value.attr_type() != AttrType::DATE) {
+        /// i.e., `SELECT DATE_FORMAT("2017-06-15", "%Y")`
+        if (param_expr_list_.size() != 2) {
           return RC::INVALID_ARGUMENT;
         }
-        // FIXME: implement this function
-        int round = (int) value.get_float();
-        value.set_int(round);
+
+        Value date_str;
+        Value format;
+
+        rc = param_expr_list_[1]->get_value(tuple, date_str);
+        if (rc != RC::SUCCESS) {
+          LOG_WARN("[FuncExpr::func_evaluate::func_date_format] failed to get the value from param_expr_list");
+          return rc;
+        }
+
+        rc = param_expr_list_[0]->get_value(tuple, format);
+        if (rc != RC::SUCCESS) {
+          LOG_WARN("[FuncExpr::func_evaluate::func_date_format] failed to get the value from param_expr_list");
+          return rc;
+        }
+
+        // Type sanity check
+        if (date_str.attr_type() != AttrType::DATE || format.attr_type() != AttrType::CHARS) {
+          return rc;
+        }
+
+        value.set_string(mysql_date_format(date_str.get_string(), format.get_string()).c_str());
       } break;
       default: {
         return RC::INVALID_ARGUMENT;
