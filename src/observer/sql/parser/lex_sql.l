@@ -116,7 +116,6 @@ QUOTE            [\'\"]
 
 AS" "SUM {
   yylval->string = strdup(yytext + 3);
-  printf("Current string: %s\n", yylval->string);
   RETURN_TOKEN(ID);
 }
 
