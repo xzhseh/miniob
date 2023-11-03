@@ -357,8 +357,8 @@ class ValueListTuple : public Tuple {
   ValueListTuple() = default;
   virtual ~ValueListTuple() = default;
 
-  void set_cells(const std::vector<Value> &cells) { cells_ = cells; }
-
+  void set_cells(const std::vector<Value> &cells) { cells_ = cells;}
+  void set_rids(const std::vector<RID>& rids) {rids_ = rids;}
   virtual int cell_num() const override { return static_cast<int>(cells_.size()); }
 
   virtual RC cell_at(int index, Value &cell) const override {
@@ -391,6 +391,7 @@ class ValueListTuple : public Tuple {
 
  private:
   std::vector<Value> cells_;
+  std::vector<RID> rids_;
 };
 
 /**
