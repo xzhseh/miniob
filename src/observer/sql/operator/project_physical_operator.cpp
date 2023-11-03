@@ -94,7 +94,7 @@ Tuple *ProjectPhysicalOperator::current_tuple() {
       for (int i = 0; i < children_[0]->current_tuple()->cell_num(); ++i) {
         Value t_v;
         children_[0]->current_tuple()->cell_at(i, t_v);
-        if (t_v.compare(v) == 0) {
+        if (v.is_null() || t_v.compare(v) == 0) {
           // This is the correct column for the current value
           rc = children_[0]->current_tuple()->cell_rid(i, rid);
           if (rc != RC::SUCCESS) {
