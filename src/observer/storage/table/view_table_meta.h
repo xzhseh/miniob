@@ -11,4 +11,5 @@ class ViewMeta {
     std::unordered_map<RID, std::vector<RID>, RID::HashFunction, RID::EqualityFunction> rid_map;
     std::vector<Table*> tables;
     std::vector<const FieldMeta*> fields; 
+    bool updatable{true};
 };

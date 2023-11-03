@@ -54,15 +54,22 @@ void view_rebuild_function(std::string view_name) {
     std::unique_ptr<PhysicalOperator>& ptr = view_rebuild_map[view_name];
     ProjectPhysicalOperator *oper = dynamic_cast<ProjectPhysicalOperator *>(ptr.get());
     if (oper != nullptr && oper->name() != "") {
+    Trx* trx = GCTX.trx_kit_->create_trx(current_db->clog_manager());
+    trx->start_if_need();
+    current_db->drop_table(oper->name().c_str());
+    oper->close();
+    oper->open(trx);
     if (oper->select_expr_flag_) {
-      return;
       std::vector<AttrInfoSqlNode> expr_table_attrs;
       // The select statement contains expression
       assert(oper->select_expr_.size() > 0);
       assert(oper->tables_.size() > 0);
       vector<Table*> tables;
       vector<const FieldMeta*> fields;
-
+      const auto &project_tuple = oper->get_project_tuple();
+      const auto specs = project_tuple.get_specs();
+      int cell_num = project_tuple.cell_num();
+      std::vector<AttrInfoSqlNode> attrs;
       for (auto *expr : oper->select_expr_) {
         // Each expression will correspond to a specific tuple cell
         std::cout << "[PlainCommunicator::write_result_internal] current expr: " << expr->name() << std::endl;
@@ -92,7 +99,9 @@ void view_rebuild_function(std::string view_name) {
         if (expr_field_meta == nullptr) {
           LOG_WARN("[PlainCommunicator::write_result_internal] failed to retrieve field meta for col: %s.", expr_vec[0].c_str());
         }
-
+        assert(oper->tables_.size() == 1);
+        tables.push_back(oper->tables_[0]);
+        fields.push_back(expr_field_meta);
         expr_attr.type = expr_field_meta->type();
         expr_attr.length = expr_field_meta->len();
         expr_attr.is_null = expr_field_meta->is_null();
@@ -110,17 +119,39 @@ void view_rebuild_function(std::string view_name) {
       while ((rc = oper->next()) == RC::SUCCESS) {
         ValueListTuple *expr_tuple = dynamic_cast<ValueListTuple *>(oper->current_tuple());
         assert(expr_tuple != nullptr);
+        std::vector<Value> vals;
+        expr_table->meta_.updatable = expr_tuple->get_updatable();
+        std::vector<RID> rids;
+        for (int i = 0; i < cell_num; i++) {
+           Value value;
+           rc = expr_tuple->cell_at(i, value);
+          if (rc != RC::SUCCESS) {
+          oper->close();
+          return;
+        }
+        RID rid;
+        rc = expr_tuple->cell_rid(i, rid);
+        if (rc != RC::SUCCESS) {
+          oper->close();
+          return;
+        }        
+        vals.push_back(value);
+        rids.push_back(rid);
+      }
         Record record;
+        
         rc = expr_table->make_record(oper->select_expr_.size(), expr_tuple->get_cells().data(), record);
         if (rc != RC::SUCCESS) {
           LOG_WARN("[PlainCommunicator::write_result_internal] failed to make record");
         }
         rc = expr_table->insert_record(record);
+        expr_table->meta_.rid_map[record.rid()] = rids;
         if (rc != RC::SUCCESS) {
           LOG_WARN("[PlainCommunicator::write_result_internal] failed to insert record");
           oper->close();
           current_db->drop_table(oper->name().c_str());
         }
+    
       }
       expr_table->meta_.tables = tables;
       expr_table->meta_.fields = fields;  
@@ -128,11 +159,6 @@ void view_rebuild_function(std::string view_name) {
       rc = oper->close();
       return;
     }
-    Trx* trx = GCTX.trx_kit_->create_trx(current_db->clog_manager());
-    trx->start_if_need();
-    current_db->drop_table(oper->name().c_str());
-    oper->close();
-    oper->open(trx);
     vector<Table*> tables;
     vector<const FieldMeta*> fields;
     const auto &project_tuple = oper->get_project_tuple();

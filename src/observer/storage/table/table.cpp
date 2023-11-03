@@ -227,6 +227,7 @@ RC Table::insert_record(Record &record) {
     ProjectPhysicalOperator* project_oper = dynamic_cast<ProjectPhysicalOperator*>(view_rebuild_map[this->name()].get());
     assert(project_oper != nullptr);
     if(project_oper->select_expr_flag_) {
+      //目前更新对于有表达式都是不允许的
       return RC::FILE_NOT_EXIST;
     }
     insert_map_into_tables(record);
@@ -541,9 +542,11 @@ RC Table::create_index(Trx *trx, std::vector<const FieldMeta *> field_meta, cons
 RC Table::delete_record(const Record &record) {
   RC rc = RC::SUCCESS;
   if(view_table_flag) {
+    if(!meta_.updatable) {
+      return RC::UNIMPLENMENT;
+    }
     ProjectPhysicalOperator* project_oper = dynamic_cast<ProjectPhysicalOperator*>(view_rebuild_map[this->name()].get());
     assert(project_oper != nullptr);
-    if(!project_oper->select_expr_flag_) {
     std::unordered_set<Table*> table_deleted;
     const auto& rid_vec = meta_.rid_map[record.rid()];
     for(int i = 0; i < rid_vec.size(); i++) {
@@ -561,7 +564,6 @@ RC Table::delete_record(const Record &record) {
           return rc;
         }
       }
-    }
     }
   }
   for (Index *index : indexes_) {
@@ -652,7 +654,9 @@ RC Table::update_record_real_records(const Record &old_record, Record &new_recor
       return rc;
     }
     table_result_map[meta_.tables[i]].push_back({meta_.fields[i], val});
-    table_rid_map[meta_.tables[i]]  = meta_.rid_map[old_record.rid()][i];
+    if(table_rid_map.count(meta_.tables[i]) == 0) {
+      table_rid_map[meta_.tables[i]]  = meta_.rid_map[old_record.rid()][i];
+    }
   }
   for(auto&[table, vec] : table_result_map) {
     Record the_new_record;
@@ -684,9 +688,10 @@ RC Table::update_record(const Record &old_record, Record &new_record) {
   if(view_table_flag) {
     ProjectPhysicalOperator* project_oper = dynamic_cast<ProjectPhysicalOperator*>(view_rebuild_map[this->name()].get());
     assert(project_oper != nullptr);
-    if(!project_oper->select_expr_flag_) {
-      rc = update_record_real_records(old_record, new_record);
+    if(!meta_.updatable) {
+      return RC::UNIMPLENMENT;
     }
+    rc = update_record_real_records(old_record, new_record);
   }
   assert(old_record.rid() == new_record.rid());
   rc = delete_entry_of_indexes(old_record.data(), old_record.rid(), false /*error_on_not_exists*/);

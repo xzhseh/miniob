@@ -369,11 +369,17 @@ class ValueListTuple : public Tuple {
     cell = cells_[index];
     return RC::SUCCESS;
   }
+  void set_updatable(bool flag) {
+    updatable_ = flag;
+  }
+  
+  bool get_updatable() const {
+    return updatable_;
+  }
 
   virtual RC find_cell(const TupleCellSpec &spec, Value &cell) const override { return RC::INTERNAL; }
   RC cell_rid(int index, RID& rid) const override {
-    rid.page_num = -1;
-    rid.slot_num = -1;
+    rid = rids_[index];
     return RC::SUCCESS;
   }
   RC find_rid(const TupleCellSpec&spec, RID& rid) const override {
@@ -383,7 +389,6 @@ class ValueListTuple : public Tuple {
   }
   std::vector<Value> get_cells() { return cells_; }
 
-  void set_rids(const std::vector<RID> &rids) { rids_ = rids; }
 
   [[nodiscard]] std::unique_ptr<Tuple> copy() const override {
     std::unique_ptr<ValueListTuple> tuple(new ValueListTuple());
@@ -394,6 +399,7 @@ class ValueListTuple : public Tuple {
  private:
   std::vector<Value> cells_;
   std::vector<RID> rids_;
+  bool updatable_;
 };
 
 /**

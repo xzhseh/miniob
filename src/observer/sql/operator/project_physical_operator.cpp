@@ -108,6 +108,15 @@ Tuple *ProjectPhysicalOperator::current_tuple() {
       rids.push_back(rid);
     }
     expr_tuple_.set_cells(cells);
+    bool updatable = false;
+    RID rid_not_exist{-1, -1};
+    for(int i = 0; i < rids.size(); i++) {
+       if(rid_not_exist != rids[i]) {
+        updatable = true;
+        break;
+       }
+    } 
+    expr_tuple_.set_updatable(updatable);
     expr_tuple_.set_rids(rids);
     return &expr_tuple_;
   }
