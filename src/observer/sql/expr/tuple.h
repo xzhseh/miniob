@@ -383,6 +383,8 @@ class ValueListTuple : public Tuple {
   }
   std::vector<Value> get_cells() { return cells_; }
 
+  void set_rids(const std::vector<RID> &rids) { rids_ = rids; }
+
   [[nodiscard]] std::unique_ptr<Tuple> copy() const override {
     std::unique_ptr<ValueListTuple> tuple(new ValueListTuple());
     tuple->cells_ = cells_;

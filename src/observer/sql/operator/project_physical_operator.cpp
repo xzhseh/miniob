@@ -78,17 +78,37 @@ Tuple *ProjectPhysicalOperator::current_tuple() {
   if (select_expr_flag_) {
     // Construct the `expr_tuple_`
     std::vector<Value> cells;
-    for (auto *expr: select_expr_) {
+    std::vector<RID> rids;
+    for (auto *expr : select_expr_) {
       Value v;
+      // We do NOT support expr like id + age
+      RID rid{-1, -1};
       RC rc = expr->get_value(*children_[0]->current_tuple(), v);
       std::cout << "[ProjectPhysicalOperator::current_tuple] current expr: " << expr->name() << " value: " << v.to_string() << std::endl;
       if (rc != RC::SUCCESS) {
         LOG_WARN("[ProjectPhysicalOperator::current_tuple] failed to get the value of expression");
         return nullptr;
       }
+      // Try to find the correct rid
+      // Note that value may be repetitive and is not unique, so this is currently a sample
+      for (int i = 0; i < children_[0]->current_tuple()->cell_num(); ++i) {
+        Value t_v;
+        children_[0]->current_tuple()->cell_at(i, t_v);
+        if (t_v.compare(v) == 0) {
+          // This is the correct column for the current value
+          rc = children_[0]->current_tuple()->cell_rid(i, rid);
+          if (rc != RC::SUCCESS) {
+            LOG_WARN("[ProjectPhysicalOperator::current_tuple] failed to get the rid of value: %s.", t_v.to_string().c_str());
+            return nullptr;
+          }
+          break;
+        }
+      }
       cells.push_back(v);
+      rids.push_back(rid);
     }
     expr_tuple_.set_cells(cells);
+    expr_tuple_.set_rids(rids);
     return &expr_tuple_;
   }
 
