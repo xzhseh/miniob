@@ -80,7 +80,8 @@ Tuple *ProjectPhysicalOperator::current_tuple() {
     // Construct the `expr_tuple_`
     std::vector<Value> cells;
     std::vector<RID> rids;
-    for (auto *expr : select_expr_) {
+    for (int i = 0; i < select_expr_.size(); ++i) {
+      auto *expr = select_expr_[i];
       Value v;
       // We do NOT support expr like id + age
       RID rid{-1, -1};
@@ -88,7 +89,13 @@ Tuple *ProjectPhysicalOperator::current_tuple() {
       std::cout << "[ProjectPhysicalOperator::current_tuple] current expr: " << expr->name()
                 << " value: " << v.to_string() << std::endl;
       if (rc != RC::SUCCESS) {
-        LOG_WARN("[ProjectPhysicalOperator::current_tuple] failed to get the value of expression");
+        // Try to get the value from underlying tuple
+        // Just a current workaround
+        LOG_WARN("[ProjectPhysicalOperator::current_tuple] failed to get the value of expression, try to get the value from underlying tuple");
+        rc = children_[0]->current_tuple()->cell_at(i, v);
+      }
+      if (rc != RC::SUCCESS) {
+        LOG_WARN("[ProjectPhysicalOperator::current_tuple] eventually failed to get the value of expression");
         return nullptr;
       }
       // Try to find the correct rid
