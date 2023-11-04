@@ -207,9 +207,9 @@ bool group_by_sanity_check(const std::vector<RelAttrSqlNode> &group_by_keys, con
   return true;
 }
 
-RC get_agg_fields_from_expr(Db *db, const std::vector<Table *> &tables, Expression *expr,
-                            std::vector<Field> &fields, std::vector<bool> &is_agg,
-                            std::vector<FieldExpr *> &agg_exprs, std::vector<agg> &agg_types) {
+RC get_agg_fields_from_expr(Db *db, const std::vector<Table *> &tables, Expression *expr, std::vector<Field> &fields,
+                            std::vector<bool> &is_agg, std::vector<FieldExpr *> &agg_exprs,
+                            std::vector<agg> &agg_types) {
   RC rc = RC::SUCCESS;
   if (expr == nullptr) {
     return RC::INVALID_ARGUMENT;
@@ -338,7 +338,10 @@ RC SelectStmt::resolve_tables(Db *db, const SelectSqlNode &select_sql, std::vect
         return RC::SCHEMA_TABLE_NOT_EXIST;
       }
 
-      tables.push_back(table);
+      // Check if the table is already in table_map
+      if (table_map.find(table->name()) == table_map.end()) {
+        tables.emplace_back(table);
+      }
       table_map.insert(std::pair<std::string, Table *>(table_name, table));
       if (!alias.empty()) {
         // check if the alias is conflict with the table name
@@ -409,9 +412,9 @@ RC SelectStmt::create(Db *db, SelectSqlNode &select_sql, Stmt *&stmt) {
   std::vector<Table *> tables;
   std::unordered_map<std::string, Table *> table_map;
   std::unordered_map<std::string, Table *> parent_table_map;
-  
+
   RC rc = resolve_tables(db, select_sql, tables, table_map, parent_table_map);
-  
+
   if (rc != RC::SUCCESS) {
     LOG_WARN("failed to resolve tables");
     return rc;
@@ -437,9 +440,9 @@ RC SelectStmt::create(Db *db, SelectSqlNode &select_sql, Stmt *&stmt) {
 
         // Remember to set the field name
         std::string f_name =
-            (select_sql.attributes[i].relation_name.empty()) ?
-            select_sql.attributes[i].attribute_name :
-            (select_sql.attributes[i].relation_name + "." + select_sql.attributes[i].attribute_name);
+            (select_sql.attributes[i].relation_name.empty())
+                ? select_sql.attributes[i].attribute_name
+                : (select_sql.attributes[i].relation_name + "." + select_sql.attributes[i].attribute_name);
 
         if (select_sql.attributes[i].aggregate_func != agg::NONE) {
           f_name = agg_to_string(select_sql.attributes[i].aggregate_func) + "(" + f_name + ")";
@@ -454,7 +457,6 @@ RC SelectStmt::create(Db *db, SelectSqlNode &select_sql, Stmt *&stmt) {
       }
     }
   }
-
 
   // See if the where expression contains functions
   bool where_func_flag{false};
