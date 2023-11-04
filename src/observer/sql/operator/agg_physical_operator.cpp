@@ -221,6 +221,12 @@ RC AggPhysicalOperator::open(Trx *trx) {
 RC AggPhysicalOperator::close() {
   RC rc = RC::SUCCESS;
   if (child_ != nullptr) {
+    // Clean the status of this operator
+    agg_ht_.clear();
+    output_keys_.clear();
+    count_ = 0;
+
+    // Close the child operator
     rc = child_->close();
   }
   return rc;
