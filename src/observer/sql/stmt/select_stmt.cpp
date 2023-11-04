@@ -445,6 +445,10 @@ RC SelectStmt::create(Db *db, SelectSqlNode &select_sql, Stmt *&stmt) {
           f_name = agg_to_string(select_sql.attributes[i].aggregate_func) + "(" + f_name + ")";
         }
 
+        if (!select_sql.attributes[i].alias_name.empty()) {
+          f_name = f_name + " as " + select_sql.attributes[i].alias_name;
+        }
+
         f->set_name(f_name);
         select_sql.expressions.push_back(f);
       }

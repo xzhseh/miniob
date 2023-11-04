@@ -78,7 +78,14 @@ void view_rebuild_function(std::string view_name) {
         std::vector<std::string> expr_alias_vec = split_string(expr->name());
         AttrInfoSqlNode expr_attr;
 
-        if (expr_vec.size() > 1) {
+        if (expr_alias_vec.size() >= 3) {
+          if (expr_alias_vec[expr_alias_vec.size() - 2] == "as") {
+            expr_attr.name = expr_alias_vec.back();
+          } else {
+            // rare case
+            expr_attr.name = expr_vec[0];
+          }
+        } else if (expr_vec.size() > 1) {
           // There must be an alias for identification purpose
           assert(expr_alias_vec[expr_alias_vec.size() - 2] == "as");
           expr_attr.name = expr_alias_vec.back();
@@ -99,7 +106,7 @@ void view_rebuild_function(std::string view_name) {
         if (expr_field_meta == nullptr) {
           LOG_WARN("[PlainCommunicator::write_result_internal] failed to retrieve field meta for col: %s.", expr_vec[0].c_str());
         }
-        assert(oper->tables_.size() >= 1);
+//        assert(oper->tables_.size() == 1);
         tables.push_back(oper->tables_[0]);
         fields.push_back(expr_field_meta);
         expr_attr.type = expr_field_meta->type();
