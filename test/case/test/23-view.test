@@ -1,0 +1,10 @@
+create table create_view_t1(id int, age int, name char(10));
+insert into create_view_t1 values(1, 1, 'ob');
+insert into create_view_t1 values(3, 1, 'ob');
+insert into create_view_t1 values(4, 1, 'ob');
+insert into create_view_t1 values(4, 1, 'ob');
+insert into create_view_t1 values(4, 1, 'ob');
+insert into create_view_t1 values(4, 1, 'ob');
+insert into create_view_t1 values(2, 1, 'ob');
+insert into create_view_t1 values(2, 1, 'ob');
+select * from create_view_t1 t1, create_view_t1 t2 where t1.id=t2.id;

@@ -73,14 +73,8 @@ RC UpdatePhysicalOperator::next() {
     Record new_record;
     new_record.set_rid(old_record.rid());
     new_record.set_data(data, record_size);
-
-    rc = table_->delete_record(old_record);
-    if (rc != RC::SUCCESS) {
-      sql_debug("update: failed to delete record: %s", strrc(rc));
-      LOG_WARN("failed to update:delete record: %s", strrc(rc));
-      return rc;
-    }
-    rc = table_->insert_record(new_record);
+    
+    rc = table_->update_record(old_record, new_record);
     if (rc != RC::SUCCESS) {
       sql_debug("update: failed to insert record: %s", strrc(rc));
       LOG_WARN("failed to update:delete record: %s", strrc(rc));

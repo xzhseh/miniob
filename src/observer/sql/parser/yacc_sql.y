@@ -60,6 +60,7 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
         CREATE
         DROP
         TABLE
+        VIEW
         TABLES
         INDEX
         CALC
@@ -93,7 +94,6 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
         UNIQUE
         ON
         LOAD
-        DATA
         INFILE
         EXPLAIN
         EQ
@@ -216,7 +216,6 @@ ArithmeticExpr *create_arithmetic_expression(ArithmeticExpr::Type type,
 %type <sql_node>            begin_stmt
 %type <sql_node>            commit_stmt
 %type <sql_node>            rollback_stmt
-%type <sql_node>            load_data_stmt
 %type <sql_node>            explain_stmt
 %type <sql_node>            set_variable_stmt
 %type <sql_node>            help_stmt
@@ -260,7 +259,6 @@ command_wrapper:
   | begin_stmt
   | commit_stmt
   | rollback_stmt
-  | load_data_stmt
   | explain_stmt
   | set_variable_stmt
   | help_stmt
@@ -500,6 +498,19 @@ insert_stmt:        /*insert   语句的语法解析树*/
       delete $6;
       free($3);
     }
+    |
+    INSERT INTO ID LBRACE select_attr RBRACE VALUES LBRACE value value_list RBRACE 
+    {
+      $$ = new ParsedSqlNode(SCF_INSERT);
+      $$->insertion.relation_name = $3;
+      if ($10 != nullptr) {
+        $$->insertion.values.swap(*$10);
+      }
+      $$->insertion.values.emplace_back(*$9);
+      std::reverse($$->insertion.values.begin(), $$->insertion.values.end());
+      delete $9;
+      free($3);
+    }
     ;
 
 value_list:
@@ -668,6 +679,31 @@ select_stmt:        /*  select 语句的语法解析树*/
       assert($2 != nullptr && "Expect `select_attr` not to be nullptr");
       $$->selection.attributes.swap(*$2);
       delete $2;
+    }
+    |
+    CREATE VIEW ID AS select_stmt {
+      $$ = $5;
+      $$->selection.create_view_name = $3;
+    }
+    |
+    CREATE VIEW ID LBRACE select_attr RBRACE AS select_stmt {
+      $$ = $8;
+      $$->selection.create_view_name = $3;
+    }
+    |
+    CREATE VIEW ID LBRACE attr_def attr_def_list RBRACE select_stmt 
+    {
+      $$ = $8;
+      $$->selection.create_view_name = $3;
+
+      std::vector<AttrInfoSqlNode> *src_attrs = $6;
+
+      if (src_attrs != nullptr) {
+        $$->selection.attr_infos.swap(*src_attrs);
+      }
+      $$->selection.attr_infos.emplace_back(*$5);
+      std::reverse($$->selection.attr_infos.begin(), $$->selection.attr_infos.end());
+      delete $5;
     }
     |
     SELECT select_attr FROM ID option_as rel_list where order_by_clause group_by_clause having
@@ -1488,18 +1524,6 @@ comp_op:
     | NULL_IS NOT { $$ = IS_NOT; }
     ;
 
-load_data_stmt:
-    LOAD DATA INFILE SSS INTO TABLE ID 
-    {
-      char *tmp_file_name = common::substr($4, 1, strlen($4) - 2);
-      
-      $$ = new ParsedSqlNode(SCF_LOAD_DATA);
-      $$->load_data.relation_name = $7;
-      $$->load_data.file_name = tmp_file_name;
-      free($7);
-      free(tmp_file_name);
-    }
-    ;
 
 explain_stmt:
     EXPLAIN command_wrapper

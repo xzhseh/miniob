@@ -219,8 +219,7 @@ RC LogicalPlanGenerator::create_plan(SelectStmt *select_stmt, unique_ptr<Logical
     }
   }
 
-  auto project_op = std::make_unique<ProjectLogicalOperator>(
-      select_stmt->query_fields(), select_stmt->create_table_name(), select_stmt->get_attrs());
+  auto project_op = std::make_unique<ProjectLogicalOperator>(select_stmt->query_fields(), select_stmt->create_table_name(), select_stmt->create_view_name(), select_stmt->get_attrs());
 
   if (select_stmt->get_select_expr_flag()) {
     project_op->select_expr_flag_ = true;
@@ -232,7 +231,7 @@ RC LogicalPlanGenerator::create_plan(SelectStmt *select_stmt, unique_ptr<Logical
   }
 
   // FIXME: Is this enough to identify create table select statement?
-  if (select_stmt->create_table_name() != "") {
+  if (select_stmt->create_table_name() != "" || select_stmt->create_view_name() != "") {
     project_op->tables_ = select_stmt->tables();
   }
 

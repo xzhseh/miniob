@@ -16,7 +16,11 @@ See the Mulan PSL v2 for more details. */
 
 #include <functional>
 #include "storage/table/table_meta.h"
-
+#include "storage/table/view_table_meta.h"
+#include <unordered_map>
+#include <vector>
+#include <string>
+#include <memory>
 struct RID;
 class Record;
 class DiskBufferPool;
@@ -29,6 +33,8 @@ class IndexScanner;
 class RecordDeleter;
 class Trx;
 
+
+// 全局变量，view table与 create view physics oper
 /**
  * @brief 表
  *
@@ -64,7 +70,6 @@ class Table {
    * @param record    生成的记录数据
    */
   RC make_record(int value_num, const Value *values, Record &record);
-
   /**
    * @brief 在当前的表中插入一条记录
    * @details 在表文件和索引中插入关联数据。这里只管在表中插入数据，不关心事务相关操作。
@@ -77,14 +82,14 @@ class Table {
   RC get_record(const RID &rid, Record &record);
   RC delete_table(const char *path, const char *base_dir, const char *name);
   RC recover_insert_record(Record &record);
-
+  RC update_record_real_records(const Record &old_record, Record &new_record);
   // TODO refactor
   RC create_index(Trx *trx, std::vector<const FieldMeta *> field_meta, const char *index_name, bool unique);
 
   RC get_record_scanner(RecordFileScanner &scanner, Trx *trx, bool readonly);
 
   RecordFileHandler *record_handler() const { return record_handler_; }
-
+  void set_view_flag(bool flag) {view_table_flag = flag; }
  public:
   int32_t table_id() const { return table_meta_.table_id(); }
   const char *name() const;
@@ -92,22 +97,28 @@ class Table {
   const TableMeta &table_meta() const;
 
   RC sync();
-
+  bool is_view() const {
+    return view_table_flag;
+  }
  private:
   RC insert_entry_of_indexes(const char *record, const RID &rid);
   RC delete_entry_of_indexes(const char *record, const RID &rid, bool error_on_not_exists);
 
  private:
+  void insert_map_into_tables(Record& record);
   RC init_record_handler(const char *base_dir);
-
+  RC make_record_by_values(std::vector<std::pair<const FieldMeta*, Value>> vec, Record& record);
+  RC make_record_update_new(std::vector<std::pair<const FieldMeta*, Value>> vec, Record& record, const RID& rid);
  public:
   Index *find_index(const char *index_name) const;
   Index *find_index_by_field(const char *field_name) const;
-
+ public:
+  ViewMeta meta_;
  private:
   std::string base_dir_;
   TableMeta table_meta_;
   DiskBufferPool *data_buffer_pool_ = nullptr;   /// 数据文件关联的buffer pool
   RecordFileHandler *record_handler_ = nullptr;  /// 记录操作
   std::vector<Index *> indexes_;
+  bool view_table_flag{false};
 };

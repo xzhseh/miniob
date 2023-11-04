@@ -46,7 +46,7 @@ class Db {
   RC drop_table(const char *table_name);
   RC create_table(const char *table_name, int attribute_count, const AttrInfoSqlNode *attributes);
 
-  Table *find_table(const char *table_name) const;
+  Table *find_table(const char *table_name, bool rebuild = true) const;
   Table *find_table(int32_t table_id) const;
 
   const char *name() const;

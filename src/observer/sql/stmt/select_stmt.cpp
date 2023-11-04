@@ -338,7 +338,8 @@ RC SelectStmt::resolve_tables(Db *db, const SelectSqlNode &select_sql, std::vect
         return RC::SCHEMA_TABLE_NOT_EXIST;
       }
 
-      tables.push_back(table);
+      tables.emplace_back(table);
+
       table_map.insert(std::pair<std::string, Table *>(table_name, table));
       if (!alias.empty()) {
         // check if the alias is conflict with the table name
@@ -409,7 +410,9 @@ RC SelectStmt::create(Db *db, SelectSqlNode &select_sql, Stmt *&stmt) {
   std::vector<Table *> tables;
   std::unordered_map<std::string, Table *> table_map;
   std::unordered_map<std::string, Table *> parent_table_map;
+
   RC rc = resolve_tables(db, select_sql, tables, table_map, parent_table_map);
+
   if (rc != RC::SUCCESS) {
     LOG_WARN("failed to resolve tables");
     return rc;
@@ -438,6 +441,14 @@ RC SelectStmt::create(Db *db, SelectSqlNode &select_sql, Stmt *&stmt) {
             (select_sql.attributes[i].relation_name.empty())
                 ? select_sql.attributes[i].attribute_name
                 : (select_sql.attributes[i].relation_name + "." + select_sql.attributes[i].attribute_name);
+
+        if (select_sql.attributes[i].aggregate_func != agg::NONE) {
+          f_name = agg_to_string(select_sql.attributes[i].aggregate_func) + "(" + f_name + ")";
+        }
+
+        if (!select_sql.attributes[i].alias_name.empty()) {
+          f_name = f_name + " as " + select_sql.attributes[i].alias_name;
+        }
 
         f->set_name(f_name);
         select_sql.expressions.push_back(f);
@@ -757,6 +768,7 @@ RC SelectStmt::create(Db *db, SelectSqlNode &select_sql, Stmt *&stmt) {
   select_stmt->join_stmts_ = join_stmts;
   select_stmt->order_by_ = order_by_stmts;
   select_stmt->create_table_name_ = select_sql.create_table_name;
+  select_stmt->create_view_name_ = select_sql.create_view_name;
   select_stmt->attrs = select_sql.attr_infos;
   select_stmt->func_fast_path_ = select_sql.func_fast_path;
   stmt = select_stmt;

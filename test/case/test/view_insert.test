@@ -1,0 +1,24 @@
+
+create table create_view_t1(id int, age int, name char(10));
+
+create view create_view_v1 as select * from create_view_t1;
+create view create_view_v2(id, age) as select id, age from create_view_t1;
+insert into create_view_v1 values(12, 12, 'QLZFU8P');
+insert into create_view_v1 values(25, 25, 'NYDTNZ1Y');
+insert into create_view_v1 values(49, 49, '8CI');
+insert into create_view_v1 values(140, 140, 'YE');
+insert into create_view_v1 values(199, 199, '1TBZXZD2C');
+select sum(age) from create_view_v1;
+select sum(age) from create_view_t1;
+delete from  create_view_v1 where age = 12;
+delete from  create_view_v1 where age = 25;
+select sum(age) from create_view_v1;
+select sum(age) from create_view_t1;
+
+update create_view_v1 set age = 150 where id = 140;
+
+select * from create_view_v1;
+
+select sum(age) from create_view_v1;
+select sum(age) from create_view_t1;
+

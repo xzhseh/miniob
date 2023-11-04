@@ -196,6 +196,7 @@ struct SelectSqlNode {
   // The void * is Tuple *
   std::vector<void *> context_tuples;  ///< context tuples for sub query
   std::string create_table_name = "";
+  std::string create_view_name = "";
   std::vector<AttrInfoSqlNode> attr_infos;
   bool func_fast_path{false};
 

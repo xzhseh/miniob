@@ -133,7 +133,7 @@ class FieldExpr : public Expression {
 
   void set_agg_value(Value &v) {
     agg_flag_ = true;
-    agg_value_ = v;
+    agg_value_.set_value(v);
   }
 
   Expression *left() const override { return nullptr; }

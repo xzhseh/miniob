@@ -1,0 +1,12 @@
+create table create_view_t1(id int, age int, name char(10));
+create table create_view_t2(id int, age int, name char(10));
+insert into create_view_t1 values(1, 1, 'ob');
+select count(t1.id) as num, sum(t1.age)+sum(t2.age) as data from create_view_t1 t1, create_view_t2 t2 where t1.id=t2.id;
+create table empty_table(id int, col1 int);
+insert into empty_table VALUES (4, 9);
+insert into empty_table VALUES (4, 1);
+select exp_table.id,9*exp_table2.col1/(exp_table.col2+3) from exp_table,exp_table2 where 6*exp_table2.col1/(exp_table.col2+2)>6;
+create table create_view_t1(id int, age int, name char(10));
+insert into create_view_t1 values(1, 1, 'ob');
+select count(t1.id) as num, sum(t1.age)+sum(t2.age) as data from create_view_t1 t1, create_view_t2 t2 where t1.id=t2.id;
+create view create_view_v7 as select count(t1.id) as num, sum(t1.age)+sum(t2.age) as data from create_view_t1 t1, create_view_t1 t2 where t1.id=t2.id;

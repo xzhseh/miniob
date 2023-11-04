@@ -28,7 +28,7 @@ See the Mulan PSL v2 for more details. */
  */
 class ProjectLogicalOperator : public LogicalOperator {
  public:
-  ProjectLogicalOperator(const std::vector<Field> &fields, std::string create_table_name,
+  ProjectLogicalOperator(const std::vector<Field> &fields, std::string create_table_name, std::string create_view_name,
                          const std::vector<AttrInfoSqlNode> &attrs);
   virtual ~ProjectLogicalOperator() = default;
 
@@ -38,6 +38,7 @@ class ProjectLogicalOperator : public LogicalOperator {
   const std::vector<std::unique_ptr<Expression>> &expressions() const { return expressions_; }
   const std::vector<Field> &fields() const { return fields_; }
   const std::string create_table_name() const { return create_table_name_; }
+  const std::string create_view_name() const {return create_view_name_; }
   const std::vector<AttrInfoSqlNode> attrs() const { return attrs_; }
 
   std::vector<Table *> tables_;
@@ -54,5 +55,6 @@ class ProjectLogicalOperator : public LogicalOperator {
   //! 不过现在简单处理，就使用字段来描述
   std::vector<AttrInfoSqlNode> attrs_;
   std::string create_table_name_;
+  std::string create_view_name_;
   std::vector<Field> fields_;
 };

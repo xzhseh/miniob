@@ -13,7 +13,8 @@ See the Mulan PSL v2 for more details. */
 //
 
 #pragma once
-
+#ifndef PHYSICAL_OPER
+#define PHYSICAL_OPER
 #include <memory>
 #include <string>
 #include <vector>
@@ -83,3 +84,4 @@ class PhysicalOperator {
  protected:
   std::vector<std::unique_ptr<PhysicalOperator>> children_;
 };
+#endif

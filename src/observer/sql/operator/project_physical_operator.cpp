@@ -79,18 +79,58 @@ Tuple *ProjectPhysicalOperator::current_tuple() {
   if (select_expr_flag_) {
     // Construct the `expr_tuple_`
     std::vector<Value> cells;
-    for (auto *expr : select_expr_) {
+    std::vector<RID> rids;
+    for (int i = 0; i < select_expr_.size(); ++i) {
+      auto *expr = select_expr_[i];
       Value v;
+      // We do NOT support expr like id + age
+      RID rid{-1, -1};
       RC rc = expr->get_value(*children_[0]->current_tuple(), v);
       std::cout << "[ProjectPhysicalOperator::current_tuple] current expr: " << expr->name()
                 << " value: " << v.to_string() << std::endl;
       if (rc != RC::SUCCESS) {
-        LOG_WARN("[ProjectPhysicalOperator::current_tuple] failed to get the value of expression");
+        // Try to get the value from underlying tuple
+        // Just a current workaround
+        LOG_WARN("[ProjectPhysicalOperator::current_tuple] failed to get the value of expression, try to get the value from underlying tuple");
+        rc = children_[0]->current_tuple()->cell_at(i, v);
+      }
+      if (rc != RC::SUCCESS) {
+        LOG_WARN("[ProjectPhysicalOperator::current_tuple] eventually failed to get the value of expression");
         return nullptr;
       }
+      // Try to find the correct rid
+      // Note that value may be repetitive and is not unique, so this is currently a sample
+      for (int j = 0; j < children_[0]->current_tuple()->cell_num(); ++j) {
+        Value t_v;
+        rc = children_[0]->current_tuple()->cell_at(j, t_v);
+        if (rc != RC::SUCCESS) {
+          LOG_WARN("[ProjectPhysicalOperator::current_tuple] failed to get the value of the current_tuple cell_at()");
+          continue;
+        }
+        if (v.is_null() || t_v.compare(v) == 0) {
+          // This is the correct column for the current value
+          rc = children_[0]->current_tuple()->cell_rid(j, rid);
+          if (rc != RC::SUCCESS) {
+            LOG_WARN("[ProjectPhysicalOperator::current_tuple] failed to get the rid of value: %s.", t_v.to_string().c_str());
+            return nullptr;
+          }
+          break;
+        }
+      }
       cells.push_back(v);
+      rids.push_back(rid);
     }
     expr_tuple_.set_cells(cells);
+    bool updatable = false;
+    RID rid_not_exist{-1, -1};
+    for (int i = 0; i < rids.size(); i++) {
+      if (rid_not_exist != rids[i]) {
+        updatable = true;
+        break;
+      }
+    }
+    expr_tuple_.set_updatable(updatable);
+    expr_tuple_.set_rids(rids);
     return &expr_tuple_;
   }
 

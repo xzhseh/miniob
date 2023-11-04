@@ -118,6 +118,11 @@ AS" "SUM {
   yylval->string = strdup(yytext + 3);
   RETURN_TOKEN(ID);
 }
+AS" "DATA {
+  yylval->string = strdup(yytext + 3);
+  printf("Current string: %s\n", yylval->string);
+  RETURN_TOKEN(ID);
+}
 
 [\-]?{DIGIT}+                           yylval->number=atoi(yytext); RETURN_TOKEN(NUMBER);
 [\-]?{DIGIT}+{DOT}{DIGIT}+              yylval->floats=(float)(atof(yytext)); RETURN_TOKEN(FLOAT);
@@ -132,6 +137,7 @@ DESC                                    RETURN_TOKEN(DESC);
 CREATE                                  RETURN_TOKEN(CREATE);
 DROP                                    RETURN_TOKEN(DROP);
 TABLE                                   RETURN_TOKEN(TABLE);
+VIEW                                    RETURN_TOKEN(VIEW);
 TABLES                                  RETURN_TOKEN(TABLES);
 INDEX                                   RETURN_TOKEN(INDEX);
 ON                                      RETURN_TOKEN(ON);
@@ -158,7 +164,6 @@ FLOAT                                   RETURN_TOKEN(FLOAT_T);
 DATE                                    RETURN_TOKEN(DATE_T);
 LOAD                                    RETURN_TOKEN(LOAD);
 TEXT                                    RETURN_TOKEN(TEXT_T);
-DATA                                    RETURN_TOKEN(DATA);
 INFILE                                  RETURN_TOKEN(INFILE);
 EXPLAIN                                 RETURN_TOKEN(EXPLAIN);
 LIKE                                    RETURN_TOKEN(LIKE);

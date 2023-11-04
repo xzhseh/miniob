@@ -99,7 +99,8 @@ class Tuple {
    * @param[out] cell 返回的cell
    */
   virtual RC find_cell(const TupleCellSpec &spec, Value &cell) const = 0;
-
+  virtual RC find_rid(const TupleCellSpec &spec, RID &rid) const = 0;
+  virtual RC cell_rid(int index, RID &rid) const = 0;
   virtual std::string to_string() const {
     std::string str;
     const int cell_num = this->cell_num();
@@ -169,7 +170,30 @@ class RowTuple : public Tuple {
     cell.set_data(this->record_->data() + field_meta->offset(), field_meta->len());
     return RC::SUCCESS;
   }
+  RC cell_rid(int index, RID &rid) const override {
+    if (index < 0 || index >= static_cast<int>(speces_.size())) {
+      LOG_WARN("invalid argument. index=%d", index);
+      return RC::INVALID_ARGUMENT;
+    }
+    rid = record_->rid();
+    return RC::SUCCESS;
+  }
+  RC find_rid(const TupleCellSpec &spec, RID &rid) const override {
+    const char *table_name = spec.table_name();
+    const char *field_name = spec.field_name();
+    if (0 != strcmp(table_name, table_->name())) {
+      return RC::NOTFOUND;
+    }
 
+    for (size_t i = 0; i < speces_.size(); ++i) {
+      const FieldExpr *field_expr = speces_[i];
+      const Field &field = field_expr->field();
+      if (0 == strcmp(field_name, field.field_name())) {
+        return cell_rid(i, rid);
+      }
+    }
+    return RC::NOTFOUND;
+  }
   RC find_cell(const TupleCellSpec &spec, Value &cell) const override {
     const char *table_name = spec.table_name();
     const char *field_name = spec.field_name();
@@ -253,6 +277,15 @@ class ProjectTuple : public Tuple {
     const TupleCellSpec *spec = speces_[index];
     return tuple_->find_cell(*spec, cell);
   }
+  RC cell_rid(int index, RID &rid) const override {
+    if (index < 0 || index >= static_cast<int>(speces_.size())) {
+      LOG_WARN("invalid argument. index=%d", index);
+      return RC::INVALID_ARGUMENT;
+    }
+    const TupleCellSpec *spec = speces_[index];
+    return tuple_->find_rid(*spec, rid);
+  }
+  RC find_rid(const TupleCellSpec &spec, RID &rid) const override { return tuple_->find_rid(spec, rid); }
 
   virtual std::unique_ptr<Tuple> copy() const override { return tuple_->copy(); }
   const std::vector<TupleCellSpec *> &get_specs() const { return speces_; }
@@ -289,7 +322,17 @@ class ExpressionTuple : public Tuple {
     const Expression *expr = expressions_[index].get();
     return expr->try_get_value(cell);
   }
-
+  // no need update;
+  RC cell_rid(int index, RID &rid) const override {
+    rid.page_num = -1;
+    rid.slot_num = -1;
+    return RC::SUCCESS;
+  }
+  RC find_rid(const TupleCellSpec &spec, RID &rid) const override {
+    rid.page_num = -1;
+    rid.slot_num = -1;
+    return RC::SUCCESS;
+  }
   RC find_cell(const TupleCellSpec &spec, Value &cell) const override {
     for (const std::unique_ptr<Expression> &expr : expressions_) {
       if (0 == strcmp(spec.alias(), expr->name().c_str())) {
@@ -313,7 +356,7 @@ class ValueListTuple : public Tuple {
   virtual ~ValueListTuple() = default;
 
   void set_cells(const std::vector<Value> &cells) { cells_ = cells; }
-
+  void set_rids(const std::vector<RID> &rids) { rids_ = rids; }
   virtual int cell_num() const override { return static_cast<int>(cells_.size()); }
 
   virtual RC cell_at(int index, Value &cell) const override {
@@ -324,9 +367,25 @@ class ValueListTuple : public Tuple {
     cell = cells_[index];
     return RC::SUCCESS;
   }
+  void set_updatable(bool flag) { updatable_ = flag; }
+
+  bool get_updatable() const { return updatable_; }
 
   virtual RC find_cell(const TupleCellSpec &spec, Value &cell) const override { return RC::INTERNAL; }
-
+  RC cell_rid(int index, RID &rid) const override {
+    if (rids_.size() <= index) {
+      // Set to invalid
+      rid = {-1, -1};
+      return RC::SUCCESS;
+    }
+    rid = rids_[index];
+    return RC::SUCCESS;
+  }
+  RC find_rid(const TupleCellSpec &spec, RID &rid) const override {
+    rid.page_num = -1;
+    rid.slot_num = -1;
+    return RC::SUCCESS;
+  }
   std::vector<Value> get_cells() { return cells_; }
 
   [[nodiscard]] std::unique_ptr<Tuple> copy() const override {
@@ -337,6 +396,8 @@ class ValueListTuple : public Tuple {
 
  private:
   std::vector<Value> cells_;
+  std::vector<RID> rids_;
+  bool updatable_;
 };
 
 /**
@@ -367,13 +428,25 @@ class JoinedTuple : public Tuple {
     return RC::NOTFOUND;
   }
 
-  RC find_cell(const TupleCellSpec &spec, Value &value) const override {
-    RC rc = left_->find_cell(spec, value);
+  RC find_cell(const TupleCellSpec &spec, Value &value) const override;
+
+  RC cell_rid(int index, RID &rid) const override {
+    const int left_cell_num = left_->cell_num();
+    if (index > 0 && index < left_cell_num) {
+      return left_->cell_rid(index, rid);
+    }
+    if (index >= left_cell_num && index < left_cell_num + right_->cell_num()) {
+      return right_->cell_rid(index - left_cell_num, rid);
+    }
+    return RC::NOTFOUND;
+  }
+  RC find_rid(const TupleCellSpec &spec, RID &rid) const override {
+    RC rc = left_->find_rid(spec, rid);
     if (rc == RC::SUCCESS || rc != RC::NOTFOUND) {
       return rc;
     }
 
-    return right_->find_cell(spec, value);
+    return right_->find_rid(spec, rid);
   }
 
   [[nodiscard]] std::unique_ptr<Tuple> copy() const override {
@@ -382,6 +455,8 @@ class JoinedTuple : public Tuple {
     tuple->right_ = right_->copy().release();
     return tuple;
   }
+
+  static void set_find_left_first(bool flag);
 
  private:
   Tuple *left_ = nullptr;

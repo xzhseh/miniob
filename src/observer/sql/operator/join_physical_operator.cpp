@@ -74,6 +74,9 @@ RC NestedLoopJoinPhysicalOperator::next() {
 RC NestedLoopJoinPhysicalOperator::close() {
   RC rc = RC::SUCCESS;
   // FIXME: Ensure this
+  results_.clear();
+  left_tuples_.clear();
+  right_tuples_.clear();
   if (left_) {
     rc = left_->close();
   }

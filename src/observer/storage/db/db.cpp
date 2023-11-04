@@ -26,6 +26,7 @@ See the Mulan PSL v2 for more details. */
 #include "storage/table/table.h"
 #include "storage/table/table_meta.h"
 #include "storage/trx/trx.h"
+#include "storage/table/table_view.h"
 
 Db::~Db() {
   for (auto &iter : opened_tables_) {
@@ -109,9 +110,18 @@ RC Db::create_table(const char *table_name, int attribute_count, const AttrInfoS
   return RC::SUCCESS;
 }
 
-Table *Db::find_table(const char *table_name) const {
+Table *Db::find_table(const char *table_name, bool rebuild) const {
   std::unordered_map<std::string, Table *>::const_iterator iter = opened_tables_.find(table_name);
   if (iter != opened_tables_.end()) {
+    if(iter->second->is_view() && rebuild) {
+      view_rebuild_function(table_name);
+      LOG_TRACE("boring rebuild %s", table_name);
+      iter = opened_tables_.find(table_name);
+      if(iter != opened_tables_.end()) {
+        return iter->second;
+      }
+      LOG_PANIC("no reach");
+    }
     return iter->second;
   }
   return nullptr;
