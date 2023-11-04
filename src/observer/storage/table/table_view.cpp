@@ -99,7 +99,7 @@ void view_rebuild_function(std::string view_name) {
         if (expr_field_meta == nullptr) {
           LOG_WARN("[PlainCommunicator::write_result_internal] failed to retrieve field meta for col: %s.", expr_vec[0].c_str());
         }
-        assert(oper->tables_.size() == 1);
+        assert(oper->tables_.size() >= 1);
         tables.push_back(oper->tables_[0]);
         fields.push_back(expr_field_meta);
         expr_attr.type = expr_field_meta->type();
