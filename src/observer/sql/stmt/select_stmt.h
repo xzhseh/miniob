@@ -64,7 +64,7 @@ class SelectStmt : public Stmt {
                            std::unordered_map<std::string, Table *> &parent_table_map);
 
   AggStmt *agg_stmt() const { return agg_stmt_; }
-  const std::vector<Expression *> & get_select_expr() const { return expressions_; }
+  const std::vector<Expression *> &get_select_expr() const { return expressions_; }
   bool get_select_expr_flag() const { return select_expr_flag_; }
   bool is_fun_fast_path() const { return func_fast_path_; }
   const std::string create_table_name() const { return create_table_name_; }

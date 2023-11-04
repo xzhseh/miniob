@@ -79,9 +79,13 @@ Tuple *ProjectPhysicalOperator::current_tuple() {
   if (select_expr_flag_) {
     // Construct the `expr_tuple_`
     std::vector<Value> cells;
+<<<<<<< HEAD
     std::vector<RID> rids;
     for (int i = 0; i < select_expr_.size(); ++i) {
       auto *expr = select_expr_[i];
+=======
+    for (auto *expr : select_expr_) {
+>>>>>>> main
       Value v;
       // We do NOT support expr like id + age
       RID rid{-1, -1};

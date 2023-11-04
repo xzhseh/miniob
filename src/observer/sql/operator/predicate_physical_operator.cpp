@@ -19,7 +19,8 @@ See the Mulan PSL v2 for more details. */
 #include "storage/field/field.h"
 #include "storage/record/record.h"
 
-PredicatePhysicalOperator::PredicatePhysicalOperator(std::unique_ptr<Expression> expr, bool is_where_expr) : expression_(std::move(expr)) {
+PredicatePhysicalOperator::PredicatePhysicalOperator(std::unique_ptr<Expression> expr, bool is_where_expr)
+    : expression_(std::move(expr)) {
   if (!is_where_expr) {
     ASSERT(expression_->value_type() == BOOLEANS, "predicate's expression should be BOOLEAN type");
   }
@@ -77,7 +78,8 @@ bool filter(ConditionSqlNode *condition, Tuple &tuple) {
     case CompOp::NOT_EQUAL: {
       return lhs.compare(rhs) != 0;
     }
-    default: assert(false); // Not yet support
+    default:
+      assert(false);  // Not yet support
   }
 }
 

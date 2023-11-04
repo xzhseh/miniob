@@ -117,9 +117,10 @@ RC ExecuteStage::handle_request_with_physical_operator(SQLStageEvent *sql_event)
       // FIXME: Hardcoded for expression
       if (select_stmt->get_select_expr_flag()) {
         for (const auto *expr : select_stmt->get_select_expr()) {
-          std::cout << "[ExecuteStage::handle_request_with_physical_operator] current expr: " << expr->name() << std::endl;
+          std::cout << "[ExecuteStage::handle_request_with_physical_operator] current expr: " << expr->name()
+                    << std::endl;
           // For fast function pass
-          FuncExpr *res = dynamic_cast<FuncExpr *>((Expression* )expr);
+          FuncExpr *res = dynamic_cast<FuncExpr *>((Expression *)expr);
           if (res && !res->alias_name().empty()) {
             schema.append_cell(res->alias_name().c_str());
           } else {

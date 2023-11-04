@@ -14,13 +14,13 @@ See the Mulan PSL v2 for more details. */
 
 #pragma once
 
-#include <cstring>
-#include <memory>
-#include <string>
 #include <math.h>
-#include <iostream>
-#include <sstream>
+#include <cstring>
 #include <iomanip>
+#include <iostream>
+#include <memory>
+#include <sstream>
+#include <string>
 
 #include "common/log/log.h"
 #include "sql/parser/parse_defs.h"
@@ -47,8 +47,8 @@ enum class ExprType {
   COMPARISON,   ///< 需要做比较的表达式
   CONJUNCTION,  ///< 多个表达式使用同一种关系(AND或OR)来联结
   ARITHMETIC,   ///< 算术运算
-  SUB_QUERY,    ///< 子查询，比如在IN子句中，子查询的结果是一个集合，需要和字段的值做比较
-  FUNC,         ///< 函数
+  SUB_QUERY,  ///< 子查询，比如在IN子句中，子查询的结果是一个集合，需要和字段的值做比较
+  FUNC,       ///< 函数
 };
 
 /**
@@ -183,7 +183,7 @@ class ValueExpr : public Expression {
   Value value_;
 };
 
-class FuncExpr: public Expression {
+class FuncExpr : public Expression {
  public:
   explicit FuncExpr(std::vector<Expression *> &&param_expr_list, func func_type, std::string &alias)
       : param_expr_list_(std::move(param_expr_list)), func_type_(func_type), alias_(alias) {}
@@ -206,7 +206,7 @@ class FuncExpr: public Expression {
           return AttrType::INTS;
         }
       default:
-          assert(false);
+        assert(false);
     }
     assert(false);
   }
@@ -217,18 +217,31 @@ class FuncExpr: public Expression {
     }
 
     switch (day % 10) {
-      case 1: return "st";
-      case 2: return "nd";
-      case 3: return "rd";
-      default: return "th";
+      case 1:
+        return "st";
+      case 2:
+        return "nd";
+      case 3:
+        return "rd";
+      default:
+        return "th";
     }
   }
 
   std::string getMonthName(int month) {
-    static const std::vector<std::string> months = {
-        "", "January", "February", "March", "April", "May", "June",
-        "July", "August", "September", "October", "November", "December"
-    };
+    static const std::vector<std::string> months = {"",
+                                                    "January",
+                                                    "February",
+                                                    "March",
+                                                    "April",
+                                                    "May",
+                                                    "June",
+                                                    "July",
+                                                    "August",
+                                                    "September",
+                                                    "October",
+                                                    "November",
+                                                    "December"};
 
     if (month > 0 && month <= 12) {
       return months[month];
@@ -252,35 +265,35 @@ class FuncExpr: public Expression {
     std::ostringstream result;
     for (size_t i = 0; i < format.size(); ++i) {
       if (format[i] == '%') {
-          if (++i < format.size()) {
+        if (++i < format.size()) {
           switch (format[i]) {
-            case 'Y': // Year with century
+            case 'Y':  // Year with century
               result << std::setw(4) << std::setfill('0') << year;
               break;
-            case 'y': // Year without century
+            case 'y':  // Year without century
               result << std::setw(2) << std::setfill('0') << (year % 100);
               break;
-            case 'm': // Month, numeric (00..12)
+            case 'm':  // Month, numeric (00..12)
               result << std::setw(2) << std::setfill('0') << month;
               break;
-            case 'd': // Day of the month, numeric (00..31)
+            case 'd':  // Day of the month, numeric (00..31)
               result << std::setw(2) << std::setfill('0') << day;
               break;
-            case 'D': // Day of the month with English suffix
+            case 'D':  // Day of the month with English suffix
               result << day << getEnglishSuffix(day);
               break;
-            case 'M': // Full month name
+            case 'M':  // Full month name
               result << getMonthName(month);
               break;
             // Add more cases for other specifiers as needed.
             default:
               // If the specifier is not recognized, just return it as is.
-//              result << '%' << format[i];
+              result << format[i];
               break;
           }
-          }
+        }
       } else {
-          result << format[i];
+        result << format[i];
       }
     }
     return result.str();
