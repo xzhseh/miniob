@@ -69,22 +69,11 @@ RC OrderByPhysicalOperator::next() {
     return rc;
   }
 
-<<<<<<< HEAD
 //   std::sort(std::execution::par_unseq,
   std::sort(result_tuples.begin(), result_tuples.end(), [this](const SortItem &left, SortItem &right) {
     // Because we use pop_back() to get result
     return !this->compare_tuple(left, right);
   });
-=======
-  std::sort(std::execution::par_unseq,
-//std::sort(
-            result_tuples.begin(),
-            result_tuples.end(),
-            [this](const SortItem &left, SortItem &right) {
-              // Because we use pop_back() to get result
-              return !this->compare_tuple(left, right);
-            });
->>>>>>> main
   // Stop measuring the execution time
   end_time = std::chrono::steady_clock::now();
 

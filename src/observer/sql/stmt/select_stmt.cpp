@@ -441,7 +441,6 @@ RC SelectStmt::create(Db *db, SelectSqlNode &select_sql, Stmt *&stmt) {
             (select_sql.attributes[i].relation_name.empty())
                 ? select_sql.attributes[i].attribute_name
                 : (select_sql.attributes[i].relation_name + "." + select_sql.attributes[i].attribute_name);
-<<<<<<< HEAD
 
         if (select_sql.attributes[i].aggregate_func != agg::NONE) {
           f_name = agg_to_string(select_sql.attributes[i].aggregate_func) + "(" + f_name + ")";
@@ -450,8 +449,6 @@ RC SelectStmt::create(Db *db, SelectSqlNode &select_sql, Stmt *&stmt) {
         if (!select_sql.attributes[i].alias_name.empty()) {
           f_name = f_name + " as " + select_sql.attributes[i].alias_name;
         }
-=======
->>>>>>> main
 
         f->set_name(f_name);
         select_sql.expressions.push_back(f);
