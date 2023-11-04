@@ -100,16 +100,16 @@ Tuple *ProjectPhysicalOperator::current_tuple() {
       }
       // Try to find the correct rid
       // Note that value may be repetitive and is not unique, so this is currently a sample
-      for (int i = 0; i < children_[0]->current_tuple()->cell_num(); ++i) {
+      for (int j = 0; j < children_[0]->current_tuple()->cell_num(); ++j) {
         Value t_v;
-        rc = children_[0]->current_tuple()->cell_at(i, t_v);
+        rc = children_[0]->current_tuple()->cell_at(j, t_v);
         if (rc != RC::SUCCESS) {
           LOG_WARN("[ProjectPhysicalOperator::current_tuple] failed to get the value of the current_tuple cell_at()");
           continue;
         }
         if (v.is_null() || t_v.compare(v) == 0) {
           // This is the correct column for the current value
-          rc = children_[0]->current_tuple()->cell_rid(i, rid);
+          rc = children_[0]->current_tuple()->cell_rid(j, rid);
           if (rc != RC::SUCCESS) {
             LOG_WARN("[ProjectPhysicalOperator::current_tuple] failed to get the rid of value: %s.", t_v.to_string().c_str());
             return nullptr;
