@@ -379,6 +379,11 @@ class ValueListTuple : public Tuple {
 
   virtual RC find_cell(const TupleCellSpec &spec, Value &cell) const override { return RC::INTERNAL; }
   RC cell_rid(int index, RID& rid) const override {
+    if (rids_.size() <= index) {
+      // Set to invalid
+      rid = {-1, -1};
+      return RC::SUCCESS;
+    }
     rid = rids_[index];
     return RC::SUCCESS;
   }
