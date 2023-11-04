@@ -84,6 +84,8 @@ Tuple *ProjectPhysicalOperator::current_tuple() {
       // We do NOT support expr like id + age
       RID rid{-1, -1};
       RC rc = expr->get_value(*children_[0]->current_tuple(), v);
+      
+
       std::cout << "[ProjectPhysicalOperator::current_tuple] current expr: " << expr->name() << " value: " << v.to_string() << std::endl;
       if (rc != RC::SUCCESS) {
         LOG_WARN("[ProjectPhysicalOperator::current_tuple] failed to get the value of expression");
@@ -94,7 +96,7 @@ Tuple *ProjectPhysicalOperator::current_tuple() {
       for (int i = 0; i < children_[0]->current_tuple()->cell_num(); ++i) {
         Value t_v;
         children_[0]->current_tuple()->cell_at(i, t_v);
-        if (v.is_null() || t_v.compare(v) == 0) {
+        if (t_v.compare(v) == 0) {
           // This is the correct column for the current value
           rc = children_[0]->current_tuple()->cell_rid(i, rid);
           if (rc != RC::SUCCESS) {
