@@ -338,10 +338,8 @@ RC SelectStmt::resolve_tables(Db *db, const SelectSqlNode &select_sql, std::vect
         return RC::SCHEMA_TABLE_NOT_EXIST;
       }
 
-      // Check if the table is already in table_map
-      if (table_map.find(table->name()) == table_map.end()) {
-        tables.emplace_back(table);
-      }
+      tables.emplace_back(table);
+
       table_map.insert(std::pair<std::string, Table *>(table_name, table));
       if (!alias.empty()) {
         // check if the alias is conflict with the table name

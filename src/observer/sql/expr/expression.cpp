@@ -23,7 +23,7 @@ See the Mulan PSL v2 for more details. */
 using namespace std;
 
 RC FieldExpr::get_value(const Tuple &tuple, Value &value) {
-  if (agg_flag_)  {
+  if (agg_flag_) {
     value = agg_value_;
     return RC::SUCCESS;
   }
@@ -214,16 +214,19 @@ RC ComparisonExpr::get_value(const Tuple &tuple, Value &value) {
   Value left_value;
   Value right_value;
 
+  JoinedTuple::set_find_left_first(true);
   RC rc = left_->get_value(tuple, left_value);
   if (rc != RC::SUCCESS) {
     LOG_WARN("failed to get value of left expression. rc=%s", strrc(rc));
     return rc;
   }
+  JoinedTuple::set_find_left_first(false);
   rc = right_->get_value(tuple, right_value);
   if (rc != RC::SUCCESS) {
     LOG_WARN("failed to get value of right expression. rc=%s", strrc(rc));
     return rc;
   }
+  JoinedTuple::set_find_left_first(true);
 
   bool bool_value = false;
   rc = compare_value(left_value, right_value, bool_value);
